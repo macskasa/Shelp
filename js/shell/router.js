@@ -5,7 +5,7 @@
 //   - mount() renders into el and may return a cleanup function (unsubscribe, timers…)
 //   - update() is optional: if present it is called instead of a re-mount when only params change
 // URLs look like  #/map?game=g042  so they survive reloads and can be bookmarked.
-import { clear } from '../core/dom.js';
+import { clear, closePanels } from '../core/dom.js';
 import { emit } from '../core/bus.js';
 
 let screens = [];
@@ -28,11 +28,12 @@ export function getScreens() {
 /** Navigate: go('map', { game: 'g042' }) */
 export function go(id, params = {}) {
   const hash = toHash(id, params);
-  if (location.hash === hash && !history.state?.shelpPanel) render();
-  // Leaving from an open panel: replace the panel's history entry, so Back returns to the screen
-  // the panel was opened on. The hashchange then closes the panels (core/dom.js showPanel).
-  else if (history.state?.shelpPanel) location.replace(hash);
-  else location.hash = hash;
+  // Open panels are closed first and their history entries dropped, so Back from the new screen
+  // returns to the screen the panel was opened on (see core/dom.js closePanels).
+  closePanels(() => {
+    if (location.hash === hash) render();
+    else location.hash = hash;
+  });
 }
 
 export function currentRoute() {

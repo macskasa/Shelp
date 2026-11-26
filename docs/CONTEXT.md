@@ -160,7 +160,7 @@ null   // unknown id
 | `shelves.js` | `ZONES`, `GROUPS`, `BRACKET`, `STACK_TOLERANCE`, `bracketLimit(zone, depth)`, `isEasy(zoneId, x, w)`. |
 | `categories.js` | `CATEGORIES` (id, label, cssVar), `OTHER`, `CATEGORY_IDS`, `category(id)`, `colorsFor(game)` → list of CSS colours in fixed order. |
 | `format.js` | `formatDims(dims)` → "30.5 × 22.6 × 5.1 cm", `formatRange(r, unit)` → "2–4", `describeLocation(loc, getTitle)` → "Bottom shelf · stack B3 · at the bottom · 3 boxes on top". |
-| `dom.js` | `h(tag, props, ...children)` for HTML, `s(tag, attrs, ...children)` for SVG, `clear(el)`, `loadCss(url)`, `toast(text, { error })`, `showPanel(dialog)`: opens a `<dialog>` as a modal that the Android back gesture closes. |
+| `dom.js` | `h(tag, props, ...children)` for HTML, `s(tag, attrs, ...children)` for SVG, `clear(el)`, `loadCss(url)`, `toast(text, { error })`, `showPanel(dialog)`: opens a `<dialog>` as a modal that the Android back gesture closes; `closePanels(done)`: closes all of them (`go()` already does this, so navigating from a panel needs no extra code). |
 | `schema.js` | `validateData(obj, knownIds)`, `validateGame(g)`, `validatePlan(plan, ids)`. The store already uses these. |
 | `css/base.css` | Colours and basics: `--cat-party`, `--cat-coop`, `--cat-popular`, `--cat-duo`, `--cat-other`, `--accent`, `--bracket`, `--easy-zone`, … plus `.btn`, `.btn-primary`, `.card`, `.chip`, `dialog.panel`, `.toast`. Light and dark mode. Layout tokens: `--header-h`, and `--tabbar-h` (bottom tab bar height without the safe area: 56px below 1024 px, 0 on desktop). `.app-main` and `.toast` already keep clear of the tab bar. Anything you fix to the bottom of the screen must sit at `calc(var(--tabbar-h) + env(safe-area-inset-bottom))`. |
 | `index.html` | The header has three slots: `.app-title`, `#app-nav` (the screen nav, which becomes the bottom tab bar on phones) and `#app-tools` (global tools such as search). Peter's shell owns what goes into `#app-nav` and `#app-tools`. |
@@ -239,3 +239,4 @@ The placeholder screens in your folders were written by Tony only to test the wi
 - 2026-11-27 – first version (Tony).
 - 2026-11-27 – added **Target devices** (section 2): Galaxy S22/S24 Ultra in Chrome, installed, plus desktop Chrome; and `showPanel()` for the Android back gesture.
 - 2026-11-27 – `--tabbar-h` token in `css/base.css` and the `#app-tools` header slot in `index.html` (requested by Peter). See section 5.
+- 2026-11-27 – `closePanels()` in `js/core/dom.js`; `go()` closes open panels before navigating, also when the target is the current screen.
