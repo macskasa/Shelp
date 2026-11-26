@@ -9,13 +9,33 @@ Your own brief is in `docs/part-a.md`, `docs/part-b.md` or `docs/part-c.md`.
 2. **Data goes through the store.** Never read or write `localStorage` yourself, and never mutate what the store gives you (it is frozen). Use the write functions in `js/core/store.js`.
 3. **Parts talk only through the contracts** in `js/core/contracts.js` (`openGame`, `showOnMap`, `showStack`, `go`). Don't import another part's files.
 4. **No build step, no npm packages, no CDNs.** Plain ES modules that GitHub Pages serves as they are. The app must work offline, so nothing may load from another site.
-5. **Phone first.** It is used on a phone in front of the shelves. Test at 375 px wide, then at desktop width.
+5. **Phone first, desktop too.** The main devices are two Samsung Galaxy Ultra phones, with the app installed from Chrome. It must also work well on a computer. See **Target devices** in section 2.
 6. **English UI.** Game titles stay as they are (mostly Hungarian). Sizes are in cm.
 7. **Small PRs, with tests for logic.** `node --test` must pass.
 
 ## 2. What the app is for
 
 Adam has about 200 board games on IKEA BOAXEL shelves, a few in a cupboard. Over many sessions, Tony and Adam planned where every box goes (plan "v5 – brackets"). Shelp shows that plan as a to-scale drawing, finds any game ("where's my game?"), keeps box sizes and categories, imports the BGG collection export, and backs everything up as one JSON file. There is no server. Data lives in the browser (localStorage) and in backup files.
+
+### Target devices
+
+| Device | Browser | CSS viewport (portrait) | Notes |
+|---|---|---|---|
+| **Samsung Galaxy S22 Ultra** (primary) | Chrome, installed to the home screen | 384 × ~824 px | S Pen built in |
+| **Samsung Galaxy S24 Ultra** (primary) | Chrome, installed to the home screen | 384 × ~832 px | S Pen built in |
+| Computer | Chrome (desktop) | 1280 px and wider | mouse, keyboard, trackpad |
+
+The phone width depends on Samsung's screen zoom setting: 384 px by default, 412 px at a smaller zoom. Test both. Landscape is about 830–915 px wide.
+
+What this means for everyone:
+
+- **Android back gesture.** Back must close an open panel first and only then go to the previous screen. Open every panel and sheet with `showPanel()` from `js/core/dom.js`, which handles this. Never call `dialog.showModal()` yourself.
+- **Installed app (standalone).** There is no browser bar, so the app needs its own way back to every screen (the nav), and it must look right edge to edge. Respect `env(safe-area-inset-*)`, especially above Samsung's gesture bar at the bottom.
+- **Pointer Events, not touch events.** Use `pointerdown` / `pointermove` / `pointerup` so finger, S Pen and mouse all work with the same code. The S Pen is precise and can hover (`pointerType === 'pen'`).
+- **Breakpoints:** phone < 600 px, wide 600–1023 px (phone in landscape), desktop ≥ 1024 px. Use `@media (hover: hover) and (pointer: fine)` for mouse-only touches like hover titles.
+- **Desktop is a real target.** Use the space (bigger map, a table-like catalog), support the keyboard (Tab order, Enter, Esc) and the mouse wheel / trackpad. Drag and drop arrives with story D1.
+- **Dark mode** is common on Samsung phones. Use the CSS variables from `css/base.css` so both themes work.
+- **Testing in Chrome DevTools:** add custom devices "Galaxy S22/S24 Ultra" 384 × 832, DPR 2.8125, mobile + touch, and "Galaxy Ultra (small zoom)" 412 × 915, DPR 3.5. Then check desktop at 1440 × 900.
 
 ## 3. The shelves (domain)
 
@@ -140,7 +160,7 @@ null   // unknown id
 | `shelves.js` | `ZONES`, `GROUPS`, `BRACKET`, `STACK_TOLERANCE`, `bracketLimit(zone, depth)`, `isEasy(zoneId, x, w)`. |
 | `categories.js` | `CATEGORIES` (id, label, cssVar), `OTHER`, `CATEGORY_IDS`, `category(id)`, `colorsFor(game)` → list of CSS colours in fixed order. |
 | `format.js` | `formatDims(dims)` → "30.5 × 22.6 × 5.1 cm", `formatRange(r, unit)` → "2–4", `describeLocation(loc, getTitle)` → "Bottom shelf · stack B3 · at the bottom · 3 boxes on top". |
-| `dom.js` | `h(tag, props, ...children)` for HTML, `s(tag, attrs, ...children)` for SVG, `clear(el)`, `loadCss(url)`, `toast(text, { error })`. |
+| `dom.js` | `h(tag, props, ...children)` for HTML, `s(tag, attrs, ...children)` for SVG, `clear(el)`, `loadCss(url)`, `toast(text, { error })`, `showPanel(dialog)`: opens a `<dialog>` as a modal that the Android back gesture closes. |
 | `schema.js` | `validateData(obj, knownIds)`, `validateGame(g)`, `validatePlan(plan, ids)`. The store already uses these. |
 | `css/base.css` | Colours and basics: `--cat-party`, `--cat-coop`, `--cat-popular`, `--cat-duo`, `--cat-other`, `--accent`, `--bracket`, `--easy-zone`, … plus `.btn`, `.btn-primary`, `.card`, `.chip`, `dialog.panel`, `.toast`. Light and dark mode. |
 
@@ -188,7 +208,7 @@ The placeholder screens in your folders were written by Tony only to test the wi
 - Small modules: one job per file, roughly under 300 lines.
 - Build UI with `h()` / `s()`. No `innerHTML` with game data (titles may contain any character).
 - Accessible: real `<button>`s, labels on inputs, enough contrast, tap targets at least 40 px.
-- No `alert()` / `confirm()`. Use a `<dialog class="panel">` or `toast()`.
+- No `alert()` / `confirm()`. Use a `<dialog class="panel">` opened with `showPanel()`, or `toast()`.
 - Tests: `node:test` files in `tests/`, named `<part>*.test.mjs`. Keep logic (parsing, geometry, filtering) in plain functions without DOM, so it can be tested in Node. Run everything with `node --test` from the repo root.
 - Run locally: `python3 -m http.server 8000` in the repo root, then open http://localhost:8000. Reset local data from the browser console: `localStorage.clear()`.
 
@@ -200,7 +220,7 @@ The placeholder screens in your folders were written by Tony only to test the wi
 4. Tell Adam the PR number. Adam tells Tony, Tony reviews, and Adam merges (or tells Tony to merge).
 5. After a merge, pull `main` before starting the next PR.
 
-**Definition of done:** the stories' acceptance criteria are met, it works at 375 px and on desktop, there are no console errors, `node --test` passes, only your files changed, and the PR description says how you tested it.
+**Definition of done:** the stories' acceptance criteria are met, it works at 384 and 412 px wide (portrait and landscape) and on desktop Chrome, the Android back gesture behaves, there are no console errors, `node --test` passes, only your files changed, and the PR description says how you tested it.
 
 ## 10. Glossary
 
@@ -216,3 +236,4 @@ The placeholder screens in your folders were written by Tony only to test the wi
 ## Changes
 
 - 2026-11-27 – first version (Tony).
+- 2026-11-27 – added **Target devices** (section 2): Galaxy S22/S24 Ultra in Chrome, installed, plus desktop Chrome; and `showPanel()` for the Android back gesture.

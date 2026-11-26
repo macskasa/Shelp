@@ -8,7 +8,7 @@ import { go } from '../shell/router.js';
 import { getGame, locate } from './store.js';
 import { describeLocation, formatDims, formatRange } from './format.js';
 import { category } from './categories.js';
-import { h } from './dom.js';
+import { h, showPanel } from './dom.js';
 
 export { go };
 
@@ -46,9 +46,9 @@ function fallbackOpenGame(id) {
       h('dt', {}, 'Categories'), h('dd', {}, g.categories.map((c) => category(c).label).join(', ') || '–'),
       h('dt', {}, 'Where'), h('dd', {}, describeLocation(locate(id), title)),
     ),
-    h('form', { method: 'dialog' }, h('button', { class: 'btn' }, 'Close')),
+    h('div', { class: 'panel-actions' },
+      h('button', { class: 'btn', onclick: () => showOnMap(id) }, 'Show on map'),
+      h('form', { method: 'dialog' }, h('button', { class: 'btn' }, 'Close'))),
   );
-  dlg.addEventListener('close', () => dlg.remove());
-  document.body.append(dlg);
-  dlg.showModal();
+  showPanel(dlg);
 }

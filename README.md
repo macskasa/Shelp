@@ -8,6 +8,7 @@
 ## Contents
 
 - [Run it locally](#run-it-locally)
+- [Target devices](#target-devices)
 - [How it's built](#how-its-built)
 - [Releases and stories](#releases-and-stories)
 - [Team](#team)
@@ -22,6 +23,13 @@ node --test                   # run all tests (Node 20+)
 ```
 
 There is no build step and nothing to install. Your data lives in the browser's localStorage. To start fresh, run `localStorage.clear()` in the browser console and reload.
+
+## Target devices
+
+- **Samsung Galaxy S22 Ultra and S24 Ultra**: the app is installed from Chrome to the home screen. Screen width 384 CSS px (412 px at a smaller screen zoom). Both phones have an S Pen.
+- **Computer**: desktop Chrome, mouse and keyboard.
+
+It works on other screens too (down to 360 px), but these are the ones it is tuned and tested for. Details are in [docs/CONTEXT.md](docs/CONTEXT.md#target-devices).
 
 ## How it's built
 

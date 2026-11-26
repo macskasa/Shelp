@@ -141,6 +141,8 @@ dialog.panel::backdrop { background: rgb(0 0 0 / 0.35); }
 dialog.panel dl { display: grid; grid-template-columns: max-content 1fr; gap: 4px 12px; margin: 0 0 12px; }
 dialog.panel dt { color: var(--muted); }
 dialog.panel dd { margin: 0; }
+.panel-actions { display: flex; gap: 8px; justify-content: flex-end; }
+.panel-actions form { margin: 0; }
 
 .toast {
   position: fixed;
