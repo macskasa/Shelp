@@ -1,0 +1,167 @@
+/* Shared design tokens and base layout. Owner: Tony (lead).
+   Parts put their own styles in js/<part>/<part>.css and load them with loadCss().
+   Prefix your classes with your part (map-, cat-, io-, game-) so nothing clashes. */
+
+:root {
+  --bg: #fbfaf7;
+  --surface: #ffffff;
+  --text: #2c2c2a;
+  --muted: #73726c;
+  --border: #d3d1c7;
+  --accent: #1d9e75;
+  --accent-text: #ffffff;
+  --danger: #c0392b;
+  --focus: #378add;
+
+  /* category colours (story B1) – used by the map, the catalog and the game panel */
+  --cat-party: #d4537e;
+  --cat-coop: #7f77dd;
+  --cat-popular: #1d9e75;
+  --cat-duo: #378add;
+  --cat-other: #b4b2a9;
+
+  /* map objects */
+  --easy-zone: #1d9e75;
+  --bracket: #5f5e5a;
+  --shelf-line: #888780;
+
+  --radius: 8px;
+  --gap: 12px;
+  --header-h: 52px;
+  --font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1f1f1d;
+    --surface: #2a2a27;
+    --text: #ecebe6;
+    --muted: #a3a29b;
+    --border: #44443f;
+    --shelf-line: #8a897f;
+    --bracket: #b4b2a9;
+  }
+}
+
+* { box-sizing: border-box; }
+
+html, body { margin: 0; height: 100%; }
+
+body {
+  font-family: var(--font);
+  font-size: 16px;
+  line-height: 1.45;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.app-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: var(--gap);
+  min-height: var(--header-h);
+  padding: 0 var(--gap);
+  padding-top: env(safe-area-inset-top);
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+
+.app-title {
+  font-weight: 700;
+  font-size: 1.15rem;
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.app-nav { display: flex; gap: 4px; overflow-x: auto; }
+
+.nav-btn {
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  padding: 8px 10px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.nav-btn[aria-current] { color: var(--text); background: var(--bg); font-weight: 600; }
+
+.app-main { padding: var(--gap); padding-bottom: calc(var(--gap) + env(safe-area-inset-bottom)); max-width: 1200px; margin: 0 auto; }
+
+h1, h2, h3 { line-height: 1.2; margin: 0 0 8px; }
+h2 { font-size: 1.2rem; }
+
+.muted { color: var(--muted); }
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: var(--gap);
+}
+
+.btn {
+  font: inherit;
+  padding: 8px 14px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+}
+.btn-primary { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+.btn-danger { color: var(--danger); border-color: var(--danger); }
+.btn:disabled { opacity: 0.5; cursor: default; }
+
+input, select, textarea {
+  font: inherit;
+  color: inherit;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 8px 10px;
+}
+
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+dialog.panel {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
+  padding: 16px;
+  width: min(480px, calc(100vw - 24px));
+}
+dialog.panel::backdrop { background: rgb(0 0 0 / 0.35); }
+dialog.panel dl { display: grid; grid-template-columns: max-content 1fr; gap: 4px 12px; margin: 0 0 12px; }
+dialog.panel dt { color: var(--muted); }
+dialog.panel dd { margin: 0; }
+
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(16px + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  z-index: 100;
+  max-width: calc(100vw - 32px);
+  padding: 10px 16px;
+  border-radius: var(--radius);
+  background: var(--text);
+  color: var(--bg);
+}
+.toast-error { background: var(--danger); color: #fff; }
+
+.chip {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  color: #fff;
+}
+
+.placeholder { border-style: dashed; }
