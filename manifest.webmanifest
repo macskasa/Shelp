@@ -1,0 +1,12 @@
+{
+  "name": "Shelp – board game shelves",
+  "short_name": "Shelp",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#fbfaf7",
+  "theme_color": "#1d9e75",
+  "icons": [
+    { "src": "icons/icon.svg", "sizes": "any", "type": "image/svg+xml" }
+  ]
+}
