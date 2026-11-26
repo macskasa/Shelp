@@ -28,8 +28,14 @@
   --radius: 8px;
   --gap: 12px;
   --header-h: 52px;
+  --tabbar-h: 0px; /* height of the bottom tab bar, WITHOUT the safe area; 0 when there is none */
   --font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   color-scheme: light dark;
+}
+
+/* Phones and phone landscape: the nav is a bottom tab bar (Peter may change the height in shell.css). */
+@media (max-width: 1023px) {
+  :root { --tabbar-h: 56px; }
 }
 
 @media (prefers-color-scheme: dark) {
@@ -79,6 +85,8 @@ body {
 
 .app-nav { display: flex; gap: 4px; overflow-x: auto; }
 
+.app-tools { display: flex; align-items: center; gap: 4px; margin-left: auto; }
+
 .nav-btn {
   border: 0;
   background: none;
@@ -91,7 +99,13 @@ body {
 }
 .nav-btn[aria-current] { color: var(--text); background: var(--bg); font-weight: 600; }
 
-.app-main { padding: var(--gap); padding-bottom: calc(var(--gap) + env(safe-area-inset-bottom)); max-width: 1200px; margin: 0 auto; }
+.app-main {
+  padding: var(--gap);
+  /* keep content clear of the bottom tab bar and Samsung's gesture bar */
+  padding-bottom: calc(var(--gap) + var(--tabbar-h) + env(safe-area-inset-bottom));
+  max-width: 1200px;
+  margin: 0 auto;
+}
 
 h1, h2, h3 { line-height: 1.2; margin: 0 0 8px; }
 h2 { font-size: 1.2rem; }
@@ -147,7 +161,7 @@ dialog.panel dd { margin: 0; }
 .toast {
   position: fixed;
   left: 50%;
-  bottom: calc(16px + env(safe-area-inset-bottom));
+  bottom: calc(16px + var(--tabbar-h) + env(safe-area-inset-bottom));
   transform: translateX(-50%);
   z-index: 100;
   max-width: calc(100vw - 32px);
