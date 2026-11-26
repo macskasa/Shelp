@@ -28,7 +28,10 @@ export function getScreens() {
 /** Navigate: go('map', { game: 'g042' }) */
 export function go(id, params = {}) {
   const hash = toHash(id, params);
-  if (location.hash === hash) render();
+  if (location.hash === hash && !history.state?.shelpPanel) render();
+  // Leaving from an open panel: replace the panel's history entry, so Back returns to the screen
+  // the panel was opened on. The hashchange then closes the panels (core/dom.js showPanel).
+  else if (history.state?.shelpPanel) location.replace(hash);
   else location.hash = hash;
 }
 

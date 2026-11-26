@@ -46,6 +46,60 @@ export function clear(el) {
   return el;
 }
 
+// ---- Panels and the Android back button -------------------------------------------------
+// On Android (the main target) the back gesture must close an open panel, not leave the screen.
+// showPanel() pushes a history entry for each open panel and closes the top panel on Back.
+// Closing a panel any other way (button, Esc) removes its history entry again.
+// Navigating (go / showOnMap) while panels are open closes them all.
+const panels = [];
+let ignorePops = 0;
+let wired = false;
+
+function wirePanels() {
+  if (wired) return;
+  wired = true;
+  window.addEventListener('popstate', () => {
+    if (ignorePops > 0) {
+      ignorePops--;
+      return;
+    }
+    const top = panels.at(-1);
+    if (top) {
+      top.how = 'back';
+      top.dlg.close();
+    }
+  });
+  window.addEventListener('hashchange', () => {
+    for (const p of [...panels].reverse()) {
+      p.how = 'nav';
+      p.dlg.close();
+    }
+  });
+}
+
+/**
+ * Show a <dialog> as a modal panel that the Back button closes. The dialog is removed on close.
+ * Use it for every panel and sheet: showPanel(h('dialog', { class: 'panel' }, …))
+ */
+export function showPanel(dlg) {
+  wirePanels();
+  if (!dlg.isConnected) document.body.append(dlg);
+  const entry = { dlg, how: null };
+  panels.push(entry);
+  history.pushState({ shelpPanel: panels.length }, '');
+  dlg.showModal();
+  dlg.addEventListener('close', () => {
+    const i = panels.indexOf(entry);
+    if (i >= 0) panels.splice(i, 1);
+    if (!entry.how && history.state?.shelpPanel) {
+      ignorePops++;
+      history.back();
+    }
+    dlg.remove();
+  }, { once: true });
+  return dlg;
+}
+
 /** Short message at the bottom of the screen: toast('Saved'), toast(err.message, { error: true }) */
 export function toast(text, { error = false, ms = 3500 } = {}) {
   const el = h('div', { class: `toast${error ? ' toast-error' : ''}`, role: 'status' }, text);

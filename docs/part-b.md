@@ -24,13 +24,15 @@ The shelf numbers are ready in `js/core/shelves.js`. You write the geometry on t
 - Draw each zone's outline at its physical height, the dashed overhang area past x = 200, brackets as dark bars 0.4 wide and 6 tall hanging from the top at each `brackets` x, and easy-to-reach ranges as a dashed green outline. Approximate zones (`approximate: true`) get a dashed outline.
 - Boxes to scale, filled with `colorsFor(game)`: one colour, or vertical stripes when it has several. Thin outline. Titles when there's room (or on zoom), stack ids under the stacks.
 - Two-row stacks: draw the front row; mark the stack "2 deep" (the back row is listed in stack details).
-- Fits a 375 px phone screen at first, with zoom (buttons and pinch) and scroll. Tap targets stay usable.
+- Opens showing the full width of the wall shelves on a 384 px phone (about 1.8 px per cm). Titles appear only from a zoom level where they are readable (11 px or more). In landscape (about 830 px) that's about 4 px per cm.
+- Zoom and pan with **Pointer Events**: one finger pans, two fingers pinch, the S Pen taps precisely and hovers. On desktop, use the mouse wheel / trackpad pinch to zoom and drag to pan. Add +, − and "fit" buttons. Put `touch-action: none` on the map area only, never on the whole page.
+- Hover (S Pen or mouse) shows the box title.
 - A legend: the four categories, "Other", "striped = several", "easy to reach", "bracket".
 - Re-render on `store:changed`.
 
 ### C3 – Stack details
 
-Tap a stack → a panel (bottom sheet on phones) with: stack id, shelf, size (w × h, from your model), "2 deep" / "standing" / topper, the plan notes, then the boxes **top to bottom** (front row first): title, category chips, size, "long side out", "side by side". Tap a box → `openGame(id)`. A **Move to cupboard** button per box (asks an optional reason) → `store.moveToCupboard`.
+Tap a stack → a panel opened with `showPanel()` (a bottom sheet on phones; the back gesture closes it) with: stack id, shelf, size (w × h, from your model), "2 deep" / "standing" / topper, the plan notes, then the boxes **top to bottom** (front row first): title, category chips, size, "long side out", "side by side". Tap a box → `openGame(id)`. A **Move to cupboard** button per box (asks an optional reason) → `store.moveToCupboard`.
 
 ### C5 – Special placements
 

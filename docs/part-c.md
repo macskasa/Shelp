@@ -12,7 +12,8 @@ Read `README.md` and `docs/CONTEXT.md` first.
 ### Frame and navigation (`js/shell/`)
 
 - Make the starter router and nav production-ready: active state, the page title, unknown routes falling back to the map, `update(params)` support (already sketched).
-- Phones: a bottom tab bar (Shelves, Games, Cupboard, Data) that respects the safe area. Desktop: the top bar.
+- Phones: a bottom tab bar (Shelves, Games, Cupboard, Data) sitting above Samsung's gesture bar (`env(safe-area-inset-bottom)`). Desktop (≥ 1024 px): the top bar.
+- Back: panels are opened with `showPanel()` (core) and close on the Android back gesture. Keep the panel handling in `go()` (it replaces the panel's history entry), and make sure Back walks through screens sensibly in the installed app.
 - A search button or field in the header that opens "Where's my game?" from any screen.
 - Styles in `js/shell/shell.css`, loaded with `loadCss`. Don't edit `css/base.css`; ask Tony for token changes.
 
@@ -24,6 +25,8 @@ Read `README.md` and `docs/CONTEXT.md` first.
 - Show the count ("37 games"). Remember the filters in the URL params so Back works.
 - Tap a row → `openGame(id)`.
 - Must stay fast with 200+ games on a phone (no lag while typing).
+- Search field: `type="search"`, `enterkeyhint="search"`, `autocapitalize="off"`, `autocorrect="off"`, `spellcheck="false"`. The Samsung keyboard otherwise "corrects" Hungarian titles.
+- Desktop (≥ 1024 px): a table-like list with sortable columns, `/` focuses the search, and Enter opens the first match.
 - Filtering and matching are plain functions (no DOM), tested in Node.
 
 ### C4 – Where's my game?
@@ -40,7 +43,8 @@ Read `README.md` and `docs/CONTEXT.md` first.
 - Version the cache name and delete old caches on `activate`. When a new version is waiting, show a toast-style banner "New version – Reload".
 - `manifest.webmanifest`: name, short name, `start_url: "./"`, `display: "standalone"`, theme colours, PNG icons 192 and 512 (plus maskable). `index.html` already links `icons/icon-192.png` as the Apple touch icon; create that file. Keep or redraw `icons/icon.svg`.
 - Ask for persistent storage (`navigator.storage.persist()`), so the browser doesn't drop the data.
-- Test: load once, go offline (DevTools), reload. Everything works, including a game opened from search. It installs from Chrome on Android and from Safari's "Add to Home Screen".
+- Primary install target: **Chrome on the Galaxy S22 Ultra and S24 Ultra**, which installs the app as a real Android app (WebAPK). For that the manifest needs `id`, `start_url`, `scope`, `display: "standalone"`, and PNG icons at 192 and 512 px, including a **maskable** one. The Samsung launcher crops icons to a squircle.
+- Test: load once, go offline (DevTools), reload. Everything works, including a game opened from search. Chrome offers "Install app". Desktop Chrome can install it too.
 
 ## What you get ready made
 

@@ -4,7 +4,7 @@
 
 ## How I tested
 
-<!-- Phone width (375 px) and desktop? Which flows did you click through? `node --test` result. -->
+<!-- Galaxy Ultra width (384 and 412 px, portrait and landscape), Android back gesture, desktop Chrome? Which flows did you click through? `node --test` result. -->
 
 ## Screenshots
 
@@ -19,5 +19,5 @@
 - [ ] Only files I own are changed
 - [ ] Data is read and written only through `js/core/store.js`
 - [ ] Other parts are reached only through `js/core/contracts.js`
-- [ ] Works at 375 px wide and on desktop, no console errors
+- [ ] Works at 384 and 412 px wide and in desktop Chrome, Back closes panels, no console errors
 - [ ] `node --test` passes

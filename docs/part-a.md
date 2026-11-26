@@ -11,11 +11,11 @@ Read `README.md` and `docs/CONTEXT.md` first.
 
 ### A3 + A5 + B1 – Game details panel (`js/game/`) – do this first, everyone uses it
 
-`openGame(id)` opens a panel (a `<dialog class="panel">` or a bottom sheet on phones) for one game.
+`openGame(id)` opens a panel for one game, always through `showPanel()` so the Android back gesture closes it. On phones make it a bottom sheet (up to about 90% of the height, scrolls inside). On desktop a centred panel is fine.
 
 Shows: title, BGG name with a link to `https://boardgamegeek.com/boardgame/<bggId>` (or a BGG search link when `bggId` is null), type, players, play time, age, notes, and the location in words (`describeLocation`) with a **Show on map** button (`showOnMap(id)`).
 
-- **A3 Box size.** Show the size with `formatDims`. Edit it as three number inputs; the order doesn't matter, the store sorts. Also edit `sizeSource`. Link to `https://boardgamegeek.com/boardgame/<bggId>/versions` so Adam can look up the edition's size. When the size is missing, say so clearly.
+- **A3 Box size.** Show the size with `formatDims`. Edit it as three inputs; the order doesn't matter, the store sorts. Use `type="text" inputmode="decimal"` and accept both `22.6` and `22,6`: the phones have a Hungarian keyboard, which types a decimal comma. Also edit `sizeSource`. Link to `https://boardgamegeek.com/boardgame/<bggId>/versions` so Adam can look up the edition's size. When the size is missing, say so clearly.
 - **B1 Categories.** Four toggles (Party, Co-op, Popular, Duo), several at once, each in its category colour (`CATEGORIES`, `var(--cat-…)`).
 - **A5 Inside another box.** For any game: "Stored inside: [choose a game | not inside]". Choosing a host calls `store.setInside(id, hostId)`. Taking it out calls `store.moveToCupboard(id, 'Taken out of the <host> box')`. For a host, list the games stored inside it, each tappable (`openGame`).
 - Edit notes. Save each change straight away through `store.updateGame`, catch errors and show them with `toast(msg, { error: true })`.
@@ -48,6 +48,13 @@ Acceptance: importing the fixture twice changes nothing the second time; titles 
 - Show `meta.lastImport` and when the last backup was downloaded (keep that in `meta.lastBackup`).
 
 Acceptance: backup → `localStorage.clear()` → restore gives back the same data; a plan file Tony makes in chat (`{ "app": "shelp", "schema": 1, "plan": {…} }`) imports.
+
+## Target devices (see CONTEXT section 2)
+
+- Galaxy S22/S24 Ultra, app installed from Chrome, 384 px wide (412 px at a smaller screen zoom), and desktop Chrome.
+- File inputs: `accept=".csv,text/csv,text/comma-separated-values"` for BGG and `accept=".json,application/json"` for backups. On Android the files usually come from Downloads or Google Drive. Test that the picker shows them.
+- Downloads: a blob URL with `<a download>` works in Chrome and in the installed app (the file lands in Downloads).
+- Desktop: dropping a file onto the Data screen is a nice extra.
 
 ## What you get ready made
 
