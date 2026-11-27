@@ -14,7 +14,8 @@ Read `README.md` and `docs/CONTEXT.md` first.
 - Make the starter router and nav production-ready: active state, the page title, unknown routes falling back to the map, `update(params)` support (already sketched).
 - Phones: a bottom tab bar (Shelves, Games, Cupboard, Data) sitting above Samsung's gesture bar (`env(safe-area-inset-bottom)`). Desktop (≥ 1024 px): the top bar.
 - Back: panels are opened with `showPanel()` (core) and close on the Android back gesture. Keep the panel handling in `go()` (it replaces the panel's history entry), and make sure Back walks through screens sensibly in the installed app.
-- A search button or field in the header that opens "Where's my game?" from any screen.
+- A search button or field in the header that opens "Where's my game?" from any screen. Put it in `#app-tools`.
+- Size the tab bar with `--tabbar-h` (default 56px below 1024 px, 0 on desktop, excluding the safe area). If you want another height, override the token in `shell.css` (`:root { --tabbar-h: 64px; }`). The main area and toasts follow it automatically.
 - Styles in `js/shell/shell.css`, loaded with `loadCss`. Don't edit `css/base.css`; ask Tony for token changes.
 
 ### A6 – Searchable catalog list (screen `catalog`)
