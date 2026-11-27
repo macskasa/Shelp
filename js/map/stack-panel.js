@@ -1,14 +1,16 @@
-// Stack details panel (story C3). Owner: Bruce (Part B).
+// Stack details panel (stories C3, B2.2). Owner: Bruce (Part B).
 // A bottom sheet on phones (a centred panel on wider screens), opened with showPanel() so the
-// Android back gesture closes it. It lists the boxes top to bottom, front row first; a title opens
-// the game panel, and each box can be moved to the cupboard with an optional reason.
+// Android back gesture closes it. Schema 2: it lists the boxes top to bottom by height, front row
+// first, each with what it rests on; a title opens the game panel; each box can go to the cupboard
+// (with an optional reason) or to the board – the boxes above settle down by themselves.
+// Warnings come from Stephen's v2 rule checker: block = red, warn = amber.
 import { h, showPanel, toast } from '../core/dom.js';
 import { on } from '../core/bus.js';
 import * as store from '../core/store.js';
 import { openGame } from '../core/contracts.js';
-import { layoutStack } from './model.js';
+import { layoutStack2 } from '../core/geometry.js';
+import { checkPlan2, forStack } from '../rules/index.js';
 import { stackDetails } from './details.js';
-import { stackWarnings } from './cupboard.js';
 import { categoryChips, warningList } from './ui.js';
 
 let uniq = 0;
@@ -18,7 +20,7 @@ let uniq = 0;
  * Returns the dialog, or null if there is no such stack.
  */
 export function openStackPanel(stackId, { onClose } = {}) {
-  if (!store.getStack(stackId)) {
+  if (!store.getStack2(stackId)) {
     toast(`There is no stack ${stackId} in this plan`, { error: true });
     return null;
   }
@@ -32,13 +34,15 @@ export function openStackPanel(stackId, { onClose } = {}) {
     body);
 
   function render() {
-    const st = store.getStack(stackId);
+    const st = store.getStack2(stackId);
     if (!st) {
       dlg.close(); // the plan was replaced and this stack is gone
       return;
     }
-    const d = stackDetails(st, layoutStack(st, store.getGame), store.getGame);
-    const warnings = stackWarnings(store.getPlan(), store.getGame, stackId);
+    const d = stackDetails(st, layoutStack2(st, store.getGame), store.getGame);
+    // overlaps are reported once per pair; forStack shows them on both stacks
+    const warnings = forStack(checkPlan2(store.getPlan2(), store.getGame), stackId)
+      .sort((a, b) => (a.severity === 'block' ? 0 : 1) - (b.severity === 'block' ? 0 : 1));
     heading.textContent = `Stack ${d.id}`;
     // a wrapper built with h(), which skips nulls and flattens lists (replaceChildren does neither)
     body.replaceChildren(h('div', {},
@@ -52,7 +56,7 @@ export function openStackPanel(stackId, { onClose } = {}) {
       d.tags.length ? h('p', { class: 'map-tags' }, d.tags.map((t) => h('span', { class: 'map-tag' }, t))) : null,
       d.notes.length ? h('ul', { class: 'map-notes' }, d.notes.map((n) => h('li', {}, n))) : null,
       d.rows.map((row) => h('section', { class: 'map-row' },
-        h('h3', {}, row.label ? `${row.label} · ${row.order}` : `Boxes · ${row.order}`),
+        h('h3', {}, row.label ? `${row.label} · top to bottom` : 'Boxes · top to bottom'),
         row.boxes.length
           ? h('ol', { class: 'map-boxlist' }, row.boxes.map(boxItem))
           : h('p', { class: 'muted' }, 'No boxes here.'))),
@@ -72,14 +76,27 @@ export function openStackPanel(stackId, { onClose } = {}) {
 function boxItem(b) {
   return h('li', { class: 'map-boxitem' },
     h('button', { type: 'button', class: 'map-boxitem-title', onclick: () => openGame(b.gameId) }, b.title),
-    h('div', { class: 'map-boxitem-meta' },
-      categoryChips(b.categories),
-      h('span', {}, b.size),
-      b.flags.map((f) => h('span', { class: 'map-flag' }, f))),
-    h('button', {
-      type: 'button', class: 'btn map-boxitem-move', 'aria-label': `Move ${b.title} to the cupboard`,
-      onclick: () => askMoveToCupboard(b.gameId, b.title),
-    }, 'To cupboard'));
+    h('p', { class: 'map-rests' }, b.rests, b.flags.length ? ` · ${b.flags.join(' · ')}` : null),
+    h('div', { class: 'map-boxitem-meta' }, categoryChips(b.categories), h('span', {}, b.size)),
+    h('div', { class: 'map-boxitem-moves' },
+      h('button', {
+        type: 'button', class: 'btn', 'aria-label': `Move ${b.title} to the cupboard`,
+        onclick: () => askMoveToCupboard(b.gameId, b.title),
+      }, 'To cupboard'),
+      h('button', {
+        type: 'button', class: 'btn', 'aria-label': `Move ${b.title} to the board`,
+        onclick: () => moveToBoard(b.gameId, b.title),
+      }, 'To the board')));
+}
+
+/** Move a game to the board; the boxes above it settle down (the store does that). */
+function moveToBoard(gameId, title) {
+  try {
+    store.moveToBoard(gameId);
+    toast(`${title} is on the board now`);
+  } catch (err) {
+    toast(err.message, { error: true });
+  }
 }
 
 /** Ask for an optional reason, then move the game to the cupboard. */
