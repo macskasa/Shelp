@@ -11,7 +11,7 @@ Phase C is Adam's top priority: he wants to rearrange the shelves in the app, bo
 4. Pick up a box + the turn chooser (items 1 and 4)
 5. Placing mode + the board strip (items 3 and 2)
 6. Stacks (item 5)
-7. Drag and drop on desktop (item 6), only after Adam has tried 4–6 on his phone
+7. Drag and drop on desktop (item 6): Adam has tried moving on his phone and wants it (2026-11-27), right after `docs/part-b5.md`
 
 Also on #51 (Tony's topper fix, issue #45): push the one-line change to `tests/map-scene.test.mjs` shown in the PR to its branch `tony/topper-centre`.
 
@@ -70,6 +70,8 @@ Also on #51 (Tony's topper fix, issue #45): push the one-line change to `tests/m
 - **Renumber left to right** (Adam's decision: an explicit action): a button on the Shelves screen. A confirmation lists the renames from a preview, then `renumberStacks()` runs.
 
 ## 6. Drag and drop on desktop (last PR)
+
+**Changed by Tony (2026-11-27):** Adam tried moving on his phone and said drag and drop "will be the way to do it" on desktop. It comes right after `docs/part-b5.md`, so dropping opens the spot sheet that lists only working spots, with the dropped spot chosen when it works (otherwise the best working one, and the reason in the blocked list).
 
 - Mouse only (`pointerType === 'mouse'`). On the phone a drag would fight pan and zoom, and tapping through placing mode is the phone way.
 - Drag a box from the map or a chip from the board strip onto a stack. While dragging, the nearest spot under the pointer is outlined. Dropping opens the spot sheet with that spot chosen. Same check, same Place / Place anyway.
