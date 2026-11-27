@@ -8,6 +8,8 @@ import { migrateDataV1, migratePlanV1 } from './plan2.js';
 
 export const APP = 'shelp';
 export const SCHEMA = 2;
+export const MAX_VERSIONS = 10; // saved versions (D6)
+export const VERSION_NAME_MAX = 60;
 
 const isObj = (v) => v != null && typeof v === 'object' && !Array.isArray(v);
 const isStrOrNull = (v) => v == null || typeof v === 'string';
@@ -240,7 +242,51 @@ export function checkData(obj, current = knownFrom([])) {
     e.push(...validatePlan2(plan, known));
     obj = { ...obj, plan };
   }
+  if (obj.versions != null) {
+    if (!obj.games) e.push('"versions" can only be in a full backup (with "games")');
+    else {
+      const v = checkVersions(obj.versions);
+      e.push(...v.problems);
+      obj = { ...obj, versions: v.versions };
+    }
+  }
   return e.length ? { problems: e, data: null } : { problems: [], data: obj };
+}
+
+/**
+ * Saved versions (D6), as kept by the store and in full backups:
+ *   [{ id: "v3", name: "Before the top shelf", savedAt: ISO date, games: [Game…], plan: Plan }]  (schema 2)
+ * Returns { problems, versions }: versions holds the valid ones (names trimmed, plans completed),
+ * so the store can keep those when a few are broken; an import refuses the file if there are problems.
+ */
+export function checkVersions(list) {
+  if (!Array.isArray(list)) return { problems: ['"versions" must be a list'], versions: [] };
+  const problems = [];
+  const versions = [];
+  const ids = new Set();
+  for (const v of list) {
+    const label = `saved version "${typeof v?.name === 'string' ? v.name : '?'}"`;
+    const e = [];
+    if (!isObj(v)) e.push('not an object');
+    else {
+      if (typeof v.id !== 'string' || !v.id) e.push('"id" must be text');
+      else if (ids.has(v.id)) e.push(`id "${v.id}" used twice`);
+      if (typeof v.name !== 'string' || !v.name.trim()) e.push('"name" must be text');
+      else if (v.name.trim().length > VERSION_NAME_MAX) e.push(`"name" can be at most ${VERSION_NAME_MAX} characters`);
+      if (typeof v.savedAt !== 'string' || Number.isNaN(Date.parse(v.savedAt))) e.push('"savedAt" must be a date');
+      if (!e.length) {
+        const r = checkData({ app: APP, schema: SCHEMA, games: v.games, plan: v.plan });
+        if (r.problems.length) e.push(...r.problems);
+        else {
+          ids.add(v.id);
+          versions.push({ id: v.id, name: v.name.trim(), savedAt: v.savedAt, games: r.data.games, plan: r.data.plan });
+        }
+      }
+    }
+    if (e.length) problems.push(...e.slice(0, 3).map((p) => `${label}: ${p}`));
+  }
+  if (versions.length > MAX_VERSIONS) problems.push(`at most ${MAX_VERSIONS} saved versions (this file has ${versions.length})`);
+  return { problems, versions: versions.slice(-MAX_VERSIONS) };
 }
 
 /** Problems only (empty = fine). Kept for callers that just want the list. */

@@ -26,6 +26,8 @@ From the #27 review: `bracket` uses the whole stack's height and depth. With tre
 
 The nit from #29: `refresh()` in `pizzaSection` also clears the error hint, so an old message doesn't stay after an Undo or a turn elsewhere.
 
+Also in this PR: backups can now carry **saved versions** (CONTEXT section 4). When a full backup has `versions`, the restore confirmation adds a line: "It also has 3 saved versions; they replace the ones on this device." Without `versions`, say nothing: the current ones stay.
+
 ## 3. Move button in the game panel
 
 - A **Move** button next to "Show on map": it calls `pickUp(id)` from `js/core/contracts.js`. That's Bruce's placing mode: `#/map?pick=<id>`.

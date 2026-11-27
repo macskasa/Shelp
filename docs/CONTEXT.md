@@ -82,7 +82,8 @@ One file format is used for the seed (`data/seed.json`), for backups and for pla
   "schema": 2,
   "games": [ Game, … ],        // optional in a plan-only import
   "plan": Plan,
-  "meta": { }                  // optional, free-form (e.g. lastImport)
+  "meta": { },                 // optional, free-form (e.g. lastImport)
+  "versions": [ Version, … ]   // optional, full backups only: the saved versions (D6)
 }
 ```
 
@@ -173,6 +174,17 @@ null   // unknown id
 - `above` holds every box resting on it, directly or higher up, nearest first; `below` holds everything under it.
 - `describeLocation2(loc, getTitle)` turns a location into text, e.g. "Bottom shelf · stack B3 · on Takenokolor · nothing on top".
 
+### Saved versions (D6)
+
+```jsonc
+{ "id": "v3", "name": "Before the top shelf", "savedAt": "2026-11-27T10:15:00.000Z", "games": [ Game, … ], "plan": Plan }
+```
+
+- A saved version is a named copy of the games and the plan (schema 2).
+- At most 10 are kept, under their own localStorage key.
+- A backup carries them only when there are any. Importing a full backup **with** `versions` replaces them; any other import, and "Reset to the original data", leaves them alone.
+- One broken version makes a backup invalid.
+
 ### The v1 shape, during Phase B only
 
 Until every part has moved to schema 2, the old reads still work. They are computed from the v2 data:
@@ -186,17 +198,17 @@ Until every part has moved to schema 2, the old reads still work. They are compu
 
 | Module | What it gives you |
 |---|---|
-| `store.js` | `init()`. **Reads (v2):** `getGames()` (sorted by title), `getGame(id)`, `getPlan2()`, `getStack2(id)`, `locate2(id)`, `getBoard()`, `getMeta()`, `exportData()`, `validate(obj)`, `canUndo()`, `canRedo()`. **Writes:** `updateGame(id, patch)`, `addGame(fields) → id`, `removeGame(id)`, `moveToBoard(id)`, `moveToCupboard(id, reason)`, `setInside(id, hostId)`, `placeBox(id, { stackId, row, on, index, up, rot })`, `placeUnder(id, targetIds, { up, rot })`, `turnBox(id, { up, rot })`, `createStack(zone, { x }) → id`, `moveStack(id, x)`, `removeStack(id)` (games go to the board), `renumberStacks() → { old: new }`, `undo()`, `redo()`, `preview(fn) → { plan, games, error }` (try writes without keeping them), `replacePlan(plan)`, `importData(obj) → 'all' \| 'plan'`, `resetToSeed()`, `setMeta(key, value)`, `batch(fn)`. Every write except `setMeta` is one undo step (a `batch` is one step, up to 30 kept). Writes throw an `Error` with a readable message (and `err.problems`, a list, when there are several). **v1 (Phase B only):** `getPlan()`, `getStack(id)`, `locate(id)`, `placeOnStack(id, stackId, { row, index })`. |
+| `store.js` | `init()`. **Reads (v2):** `getGames()` (sorted by title), `getGame(id)`, `getPlan2()`, `getStack2(id)`, `locate2(id)`, `getBoard()`, `getMeta()`, `exportData()`, `validate(obj)`, `canUndo()`, `canRedo()`. **Writes:** `updateGame(id, patch)`, `addGame(fields) → id`, `removeGame(id)`, `moveToBoard(id)`, `moveToCupboard(id, reason)`, `setInside(id, hostId)`, `placeBox(id, { stackId, row, on, index, up, rot })`, `placeUnder(id, targetIds, { up, rot })`, `turnBox(id, { up, rot })`, `createStack(zone, { x }) → id`, `moveStack(id, x)`, `removeStack(id)` (games go to the board), `renumberStacks() → { old: new }`, `undo()`, `redo()`, `preview(fn) → { plan, games, error }` (try writes without keeping them), `replacePlan(plan)`, `importData(obj) → 'all' \| 'plan'`, `resetToSeed()`, `setMeta(key, value)`, `batch(fn)`. **Saved versions:** `listVersions()` (newest first, `{ id, name, savedAt, games, stacks }` with counts), `getVersion(id)`, `saveVersion(name) → id` (1–60 characters, at most `MAX_VERSIONS` = 10), `restoreVersion(id)` (one undo step), `renameVersion(id, name)`, `deleteVersion(id)`. Saving, renaming and deleting fire `store:changed` with `versions: true`, aren't undo steps, and are refused inside `preview` / `batch`. Every write except `setMeta` and those three is one undo step (a `batch` is one step, up to 30 kept). Writes throw an `Error` with a readable message (and `err.problems`, a list, when there are several). **v1 (Phase B only):** `getPlan()`, `getStack(id)`, `locate(id)`, `placeOnStack(id, stackId, { row, index })`. |
 | `geometry.js` | `boxSize(dims, up, rot) → { w, d, h }`, `layoutStack2(stack, getGame) → { w, d, h, pileH, rows, boxes, topper }`. The geometry of schema 2, shared by everyone. |
 | `plan2.js` | The upgrade from schema 1, the v1 view and the edit operations behind the store. **Don't call it directly**; use the store. Two exceptions: `locations2(plan)` is a pure read that works on any plan (Peter's compare), and Stephen's `js/rules/suggest.js` may run `detach` / `insertOn` on its **own copy** of a plan. Never on store data. |
 | `bus.js` | `on(type, fn) → unsubscribe`, `emit(type, detail)`. Events: `store:changed` `{ games: id[] \| null, plan: bool }` (null = everything changed), `store:error` `{ message }` (app.js shows it), `route:changed` `{ id, params }`. |
-| `contracts.js` | `openGame(id)`, `showOnMap(gameId)`, `showStack(stackId)`, `go(screen, params)`, `provide(name, fn)`. |
+| `contracts.js` | `openGame(id)`, `showOnMap(gameId)`, `showStack(stackId)`, `pickUp(gameId)` (placing mode, `#/map?pick=<id>`), `go(screen, params)`, `provide(name, fn)`. |
 | `shelves.js` | `ZONES`, `GROUPS`, `BRACKET`, `STACK_TOLERANCE`, `bracketLimit(zone, depth)`, `isEasy(zoneId, x, w)`. |
 | `categories.js` | `CATEGORIES` (id, label, cssVar), `OTHER`, `CATEGORY_IDS`, `category(id)`, `colorsFor(game)` → list of CSS colours in fixed order. |
 | `format.js` | `formatDims(dims)` → "30.5 × 22.6 × 5.1 cm", `formatRange(r, unit)` → "2–4", `describeLocation2(loc, getTitle)` → "Bottom shelf · stack B3 · on Takenokolor · nothing on top" / "On the board". (`describeLocation` is the v1 version, Phase B only.) |
-| `dom.js` | `h(tag, props, ...children)` for HTML, `s(tag, attrs, ...children)` for SVG, `clear(el)`, `loadCss(url)`, `toast(text, { error })`, `showPanel(dialog)`: opens a `<dialog>` as a modal that the Android back gesture closes; `closePanels(done)`: closes all of them (`go()` already does this, so navigating from a panel needs no extra code). |
+| `dom.js` | `h(tag, props, ...children)` for HTML, `s(tag, attrs, ...children)` for SVG, `clear(el)`, `loadCss(url)`, `toast(text, { error, ms, action })`: with `action: { label, run }` it gets a button and stays 6 s, one at a time (e.g. Undo after a move; close the panels first, a modal makes it untappable), `showPanel(dialog)`: opens a `<dialog>` as a modal that the Android back gesture closes; `closePanels(done)`: closes all of them (`go()` already does this, so navigating from a panel needs no extra code). |
 | `schema.js` | `checkData(obj, known) → { problems, data }` (schema 1 or 2, upgraded to 2), `validateData`, `validateGame`, `validatePlan2`, `knownFrom(games)`. The store already uses these. |
-| `css/base.css` | Colours and basics: `--cat-party`, `--cat-coop`, `--cat-popular`, `--cat-duo`, `--cat-other`, `--accent`, `--bracket`, `--easy-zone`, … plus `.btn`, `.btn-primary`, `.card`, `.chip`, `dialog.panel`, `.toast`. Light and dark mode. Layout tokens: `--header-h`, and `--tabbar-h` (bottom tab bar height without the safe area: 56px below 1024 px, 0 on desktop). `.app-main` and `.toast` already keep clear of the tab bar. Anything you fix to the bottom of the screen must sit at `calc(var(--tabbar-h) + env(safe-area-inset-bottom))`. |
+| `css/base.css` | Colours and basics: `--cat-party`, `--cat-coop`, `--cat-popular`, `--cat-duo`, `--cat-other`, `--accent`, `--danger` (block problems), `--warn` (amber, warnings), `--bracket`, `--easy-zone`, … plus `.btn`, `.btn-primary`, `.card`, `.chip`, `dialog.panel`, `.toast`. Light and dark mode. Layout tokens: `--header-h`, and `--tabbar-h` (bottom tab bar height without the safe area: 56px below 1024 px, 0 on desktop). `.app-main` and `.toast` already keep clear of the tab bar. Anything you fix to the bottom of the screen must sit at `calc(var(--tabbar-h) + env(safe-area-inset-bottom))`. |
 | `index.html` | The header has three slots: `.app-title`, `#app-nav` (the screen nav, which becomes the bottom tab bar on phones) and `#app-tools` (global tools such as search). Peter's shell owns what goes into `#app-nav` and `#app-tools`. |
 
 ### Screens and parts
@@ -220,6 +232,7 @@ Load your stylesheet once in your module: `loadCss(new URL('./map.css', import.m
 
 | From → to | How | Status |
 |---|---|---|
+| anyone → placing mode (B) | `pickUp(id)` → `#/map?pick=id` | Phase C |
 | anyone → game panel (A) | `openGame(id)` | fallback panel in `contracts.js` until Stephen calls `provide('openGame', …)` |
 | catalog/search (C) → map (B) | `showOnMap(id)` → `#/map?game=id` | placeholder map already highlights the stack |
 | game panel (A) → map (B) | `showOnMap(id)` | – |
@@ -294,3 +307,4 @@ The placeholder screens in your folders were written by Tony only to test the wi
 - 2026-11-27 – **Schema 2 (Phase A):** games on games, bridges, which side is up, the pizza flag, the board, undo/redo, the final block/warn rules (section 3). New core modules `geometry.js` and `plan2.js`, v2 reads and writes in the store, and `describeLocation2`. The v1 reads keep working during Phase B. Briefs: `docs/part-a3.md`, `docs/part-b2.md`, `docs/part-c2.md`.
 - 2026-11-27 – **Leaner workflow:** the full test suite runs on GitHub for every push ("Tests" check), and locally you run only your own tests with the dot reporter (section 8). Reviews live only on the PR, and messages through Adam are one line. Read diffs at the start of a round, keep PR descriptions short, never print `seed.json`, and use a fresh chat per phase (section 9). New `docs/kickoff.md` holds the opening messages.
 - 2026-11-27 – **Phase C briefs (moving by hand):** `docs/part-b3.md` (Bruce: pick up, placing mode, the board strip, turn chooser, stacks, then drag and drop), `docs/part-a4.md` (Stephen: bracket rule per box, Move in the game panel, D4 suggest a spot), `docs/part-c3.md` (Peter: Move in "Where's my game?", D6 saved versions, compare). Every move is one undo step, closes the panels and shows a toast with Undo. Peter owns the new `js/versions/` (section 7). Two allowed uses of `plan2.js` (section 5). Tony's core PR comes next: `toast()` with an action, the `pickUp` contract (`#/map?pick=<id>`), saved versions in the store and in backups.
+- 2026-11-27 – **Core for Phase C:** `toast()` takes `action: { label, run }` (a button, 6 s, one at a time); the `pickUp(id)` contract (`#/map?pick=<id>`); saved versions in the store (`listVersions`, `getVersion`, `saveVersion`, `restoreVersion`, `renameVersion`, `deleteVersion`, at most 10) and in full backups (`versions`, section 4); `--warn` (amber) in `css/base.css`. The fallback game panel uses `locate2`. Stephen: one more line in `docs/part-a4.md` item 2 (the restore confirmation mentions saved versions).

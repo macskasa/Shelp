@@ -212,3 +212,121 @@ test('shelf helpers', () => {
   assert.ok(!isEasy('top', 36.5, 28));
   assert.ok(!isEasy('middle', 0, 10));
 });
+
+// ---------------------------------------------------------------- saved versions (D6)
+
+test('saved versions: save, list, get, rename, delete; not undo steps', async () => {
+  await fresh();
+  const events = [];
+  const off = on('store:changed', (d) => events.push(d));
+  const v1 = store.saveVersion('  Before   the top shelf ');
+  store.moveToCupboard(id('Azul'), 'x');
+  const v2 = store.saveVersion('After Azul');
+  off();
+  assert.deepEqual([v1, v2], ['v1', 'v2']);
+  const list = store.listVersions();
+  assert.deepEqual(list.map((v) => v.name), ['After Azul', 'Before the top shelf']); // newest first
+  assert.equal(list[0].games, 204);
+  assert.equal(list[0].stacks, store.getPlan2().stacks.length);
+  assert.ok(Object.isFrozen(list) && Object.isFrozen(list[0]));
+  assert.equal(events.filter((e) => e.versions).length, 2);
+  assert.equal(store.getVersion(v1).plan.cupboard.some((c) => c.game === id('Azul')), false);
+  assert.equal(store.getVersion(v2).plan.cupboard.some((c) => c.game === id('Azul')), true);
+  assert.ok(Object.isFrozen(store.getVersion(v1).plan.stacks[0]));
+  assert.equal(store.getVersion('nope'), null);
+
+  store.renameVersion(v1, 'Start');
+  assert.equal(store.getVersion(v1).name, 'Start');
+  store.deleteVersion(v2);
+  assert.deepEqual(store.listVersions().map((v) => v.id), ['v1']);
+  // only the cupboard move is an undo step
+  assert.equal(store.undo(), true);
+  assert.equal(store.canUndo(), false);
+  assert.throws(() => store.renameVersion('v9', 'x'), /no such saved version/);
+});
+
+test('saved versions: names, the limit of 10, not inside preview or batch', async () => {
+  await fresh();
+  assert.throws(() => store.saveVersion('   '), /Give the version a name/);
+  assert.throws(() => store.saveVersion('x'.repeat(61)), /at most 60/);
+  for (let i = 1; i <= store.MAX_VERSIONS; i++) store.saveVersion(`V${i}`);
+  assert.throws(() => store.saveVersion('one more'), /10 saved versions is the most/);
+  store.deleteVersion('v3');
+  assert.equal(store.saveVersion('again'), 'v11');
+  assert.throws(() => store.batch(() => store.saveVersion('in batch')), /cannot run inside preview\(\) or batch\(\)/);
+  const p = store.preview(() => store.deleteVersion('v1'));
+  assert.match(p.error.message, /cannot run inside/);
+  assert.equal(store.listVersions().length, 10);
+});
+
+test('saved versions: switching to one is one undo step and keeps metadata', async () => {
+  await fresh();
+  const before = store.exportData();
+  const v = store.saveVersion('Start');
+  store.batch(() => {
+    store.moveToBoard(id('Azul'));
+    store.updateGame(id('Azul'), { notes: 'changed' });
+  });
+  store.setMeta('lastImport', { at: 'today' });
+  store.restoreVersion(v);
+  assert.deepEqual(store.exportData().plan, before.plan);
+  assert.equal(store.getGame(id('Azul')).notes, before.games.find((g) => g.id === id('Azul')).notes);
+  assert.deepEqual(store.getMeta().lastImport, { at: 'today' });
+  store.undo();
+  assert.equal(store.locate2(id('Azul')).kind, 'board');
+  assert.equal(store.getGame(id('Azul')).notes, 'changed');
+  // restoreVersion may run inside preview (it only changes games and plan)
+  const p = store.preview(() => store.restoreVersion(v));
+  assert.equal(p.error, null);
+  assert.equal(store.locate2(id('Azul')).kind, 'board');
+});
+
+test('saved versions persist; broken ones are left out', async () => {
+  const storage = await fresh();
+  store.saveVersion('Kept');
+  await store.init({ seed, storage });
+  assert.deepEqual(store.listVersions().map((v) => v.name), ['Kept']);
+
+  const good = JSON.parse(storage.getItem(store.VERSIONS_KEY))[0];
+  const mixed = memoryStorage({ [store.VERSIONS_KEY]: JSON.stringify([good, { id: 'v2', name: 'Bad', savedAt: 'x', games: [], plan: {} }]) });
+  const errors = [];
+  const orig = console.error;
+  console.error = (...a) => errors.push(a);
+  try {
+    await store.init({ seed, storage: mixed });
+  } finally {
+    console.error = orig;
+  }
+  assert.deepEqual(store.listVersions().map((v) => v.name), ['Kept']);
+  assert.equal(errors.length, 1);
+});
+
+test('backups carry saved versions; importing replaces them only when the file has them', async () => {
+  await fresh();
+  assert.equal('versions' in store.exportData(), false); // none saved: no field
+  store.saveVersion('A');
+  store.saveVersion('B');
+  const backup = store.exportData();
+  assert.equal(backup.versions.length, 2);
+  assert.deepEqual(store.validate(backup), []);
+
+  store.deleteVersion('v1');
+  store.deleteVersion('v2');
+  store.saveVersion('Local');
+  store.importData(backup);
+  assert.deepEqual(store.listVersions().map((v) => v.name), ['B', 'A']);
+
+  // a backup without versions (older file) and a plan-only file leave them alone
+  const { versions, ...older } = backup; // eslint-disable-line no-unused-vars
+  store.importData(older);
+  store.importData({ app: 'shelp', schema: 2, plan: backup.plan });
+  assert.equal(store.listVersions().length, 2);
+
+  // a broken version makes the whole file invalid; versions in a plan-only file are refused
+  const bad = structuredClone(backup);
+  bad.versions[0].plan.stacks[0].boxes[0].game = 'g999';
+  assert.match(store.validate(bad).join('\n'), /saved version "A"/);
+  assert.match(store.validate({ app: 'shelp', schema: 2, plan: backup.plan, versions: [] }).join('\n'), /only be in a full backup/);
+  assert.throws(() => store.importData(bad), /saved version "A"/);
+  assert.equal(store.listVersions().length, 2);
+});
