@@ -3,7 +3,8 @@
 //
 // A screen is: { id, title, order, mount(el, params) => cleanup?, update?(params) }
 //   - mount() renders into el and may return a cleanup function (unsubscribe, timers…)
-//   - update() is optional: if present it is called instead of a re-mount when only params change
+//   - update() is optional: if present it is called instead of a re-mount when only params change.
+//     The scroll position is not touched then; the screen decides (a mount starts at the top, or restores on Back).
 // URLs look like  #/map?game=g042  so they survive reloads and can be bookmarked.
 //
 // Back button: every screen change is one history step, so Back walks back through the screens you
@@ -81,8 +82,10 @@ function render() {
       root.textContent = `Something went wrong on this screen: ${err.message}`;
     }
     active = { screen, cleanup };
+    // Only a real mount moves the scroll. update() leaves it alone, so a screen can scroll to
+    // something itself (the map brings the highlighted game into view).
+    window.scrollTo(0, restore ? (scrollOf.get(id) ?? 0) : 0);
   }
-  window.scrollTo(0, restore ? (scrollOf.get(id) ?? 0) : 0);
   document.title = `${screen.title} · Shelp`;
   emit('route:changed', { id, params });
 }

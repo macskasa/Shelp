@@ -1,6 +1,9 @@
 // Shelf geometry (story C1). Pure functions, no DOM, so Node can test them. Owner: Bruce (Part B).
 // The shelf numbers come from js/core/shelves.js; this file works out how boxes sit in a stack.
 //
+// CONTRACT: the rule checker (js/rules/, Stephen) imports footprint() and layoutStack().
+// Keep their signatures and results stable; changes go through Tony (CONTEXT section 6).
+//
 // Coordinates inside a stack, all in cm:
 //   x  along the shelf, from the stack's left edge
 //   y  up from the shelf floor
