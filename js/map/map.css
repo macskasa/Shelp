@@ -477,3 +477,17 @@ dialog.panel.map-put { width: min(520px, calc(100vw - 24px)); max-height: min(90
 .map-pv-new { stroke: var(--accent); stroke-opacity: 1; stroke-width: 2.5px; }
 .map-pv-ghost { fill: none; stroke: var(--text); stroke-opacity: 0.5; stroke-width: 1px; stroke-dasharray: 3 2; }
 .map-pv-topper { fill: none; stroke: var(--muted); stroke-width: 1px; stroke-dasharray: 4 3; }
+
+/* ---- stacks (part-b3 item 5) ------------------------------------------------------------------ */
+.map-empty { fill: none; stroke: var(--map-line); stroke-width: 1px; stroke-dasharray: 3 2; vector-effect: non-scaling-stroke; }
+.map-stack:hover .map-empty, .map-stack:focus-visible .map-empty { stroke: var(--accent); }
+.map-stack-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 4px; }
+.map-stack-actions .btn { min-height: 40px; }
+.map-renumber { flex: none; margin-left: auto; min-height: 40px; padding: 6px 12px; font-size: 0.9rem; }
+.map-move-row { display: flex; align-items: center; justify-content: center; gap: 6px; margin: 8px 0; }
+.map-move-step { min-width: 48px; min-height: 44px; font-variant-numeric: tabular-nums; }
+.map-move-x { min-width: 5.5em; text-align: center; font-size: 1.1rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+.map-move-keys { margin: 0 0 8px; font-size: 0.8rem; text-align: center; }
+@media (hover: none) { .map-move-keys { display: none; } }
+.map-new-where { margin: 0 0 8px; }
+.map-renames { margin: 4px 0 8px; padding-left: 1.2em; max-height: 40vh; overflow-y: auto; columns: 2; font-variant-numeric: tabular-nums; }

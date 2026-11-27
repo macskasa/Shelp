@@ -66,23 +66,23 @@ export function tapTarget(scene, pt) {
 }
 
 /**
- * The suggestions for the placing bar: the first n that go on an existing stack, in Stephen's
- * order. New-stack suggestions wait for item 5 (stacks), which builds "New stack here".
+ * The suggestions for the placing bar: the first n, in Stephen's order, on an existing stack
+ * (kind 'stack') or as a new stack in a free gap (kind 'new-stack', item 5).
  * @param spots  suggestSpots(plan, games, gameId)
  */
 export function topSuggestions(spots, n = SUGGESTIONS) {
-  return (spots ?? []).filter((s) => s.kind === 'stack').slice(0, n);
+  return (spots ?? []).filter((s) => s.kind === 'stack' || s.kind === 'new-stack').slice(0, n);
 }
 
 /**
  * A short chip label from a suggestion's text: "Bottom shelf · stack B3 · on Takenokolor · flat"
  * → "B3 · on Takenokolor". The shelf name goes (the stack id says it), and so does "flat", the
- * usual way; any other way up stays.
+ * usual way; any other way up stays. A new stack keeps its shelf: "Narrow shelf · new stack at 70 cm".
  */
 export function chipText(spot) {
   const parts = String(spot?.text ?? '').split(' · ');
   const i = parts.findIndex((p) => /^stack /.test(p));
-  if (i < 0) return parts.join(' · ');
+  if (i < 0) return parts.filter((p) => p !== 'flat').join(' · ');
   return [parts[i].slice(6), ...parts.slice(i + 1).filter((p) => p !== 'flat')].join(' · ');
 }
 

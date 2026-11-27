@@ -99,13 +99,15 @@ export function moveFn(store, gameId, spot, { up = 's', rot = false } = {}) {
 
 /**
  * The problems a move adds: checkPlan2 after, minus what checkPlan2 already found before
- * (same stack, other stack, rule and game). Only new problems count (part-b3).
+ * (same stack, other stack, rule and game; a family warning by family name). Only new problems count (part-b3).
+ * @param check  the checker (default checkPlan2), for tests
  * @returns {{ block: Warning[], warn: Warning[] }}
  */
-export function newProblems(before, after, getGame) {
-  const key = (w) => `${w.stackId}|${w.otherStackId ?? ''}|${w.rule}|${w.gameId ?? ''}`;
-  const old = new Set(checkPlan2(before, getGame).map(key));
-  const fresh = checkPlan2(after, getGame).filter((w) => !old.has(key(w)));
+export function newProblems(before, after, getGame, check = checkPlan2) {
+  // a family warning (one per game family) is keyed by its name: its stackId follows the first member
+  const key = (w) => (w.family ? `family|${w.family}` : `${w.stackId}|${w.otherStackId ?? ''}|${w.rule}|${w.gameId ?? ''}`);
+  const old = new Set(check(before, getGame).map(key));
+  const fresh = check(after, getGame).filter((w) => !old.has(key(w)));
   return { block: fresh.filter((w) => w.severity === 'block'), warn: fresh.filter((w) => w.severity !== 'block') };
 }
 

@@ -63,7 +63,7 @@ test('a tap: frame px → drawing cm, then a stack, an empty shelf spot or nothi
   assert.equal(tapTarget(scene, { x: 0.5, y: 0.5 }), null);
 });
 
-test('suggestions: the first three on an existing stack, with short chip labels', () => {
+test('suggestions: the first three, on a stack or a new stack, with short chip labels', () => {
   const spots = [
     { kind: 'new-stack', zone: 'narrow', x: 70, text: 'Narrow shelf · new stack at 70 cm' },
     { kind: 'stack', target: { stackId: 'B3' }, text: 'Bottom shelf · stack B3 · on Takenokolor · flat' },
@@ -73,25 +73,27 @@ test('suggestions: the first three on an existing stack, with short chip labels'
   ];
   const top = topSuggestions(spots);
   assert.equal(SUGGESTIONS, 3);
-  assert.deepEqual(top.map((s) => s.target.stackId), ['B3', 'T1', 'M4'], 'new stacks wait for item 5');
+  assert.deepEqual(top.map((s) => s.target?.stackId ?? s.kind), ['new-stack', 'B3', 'T1'], "in Stephen's order (item 5)");
   assert.deepEqual(top.map(chipText), [
+    'Narrow shelf · new stack at 70 cm',
     'B3 · on Takenokolor',
     'T1 · back row · on the shelf, left of Imagine · on its side',
-    'M4 · across A and B · flat, long side out',
   ]);
+  assert.equal(chipText({ text: 'Narrow shelf · new stack at 70 cm · on its side' }), 'Narrow shelf · new stack at 70 cm · on its side');
+  assert.equal(topSuggestions([{ kind: 'other' }]).length, 0);
   assert.deepEqual(topSuggestions(null), []);
   // Stephen's real suggestions for the v5 plan
   const ark = byTitle('Ark Nova');
   const real = topSuggestions(suggestSpots(store.getPlan2(), store.getGames(), ark, { limit: 12 }));
   assert.ok(real.length > 0 && real.length <= 3);
-  for (const s of real) assert.match(chipText(s), /^[A-Z]\d+ · /);
+  for (const s of real) assert.match(chipText(s), s.kind === 'stack' ? /^[A-Z]\d+ · / : /new stack at/);
 });
 
 test('a suggestion → the spot sheet preset: spot and way up', () => {
   const ark = getGame(byTitle('Ark Nova'));
   const plan = store.getPlan2();
   const orients = orientationChoices(ark);
-  for (const s of topSuggestions(suggestSpots(plan, store.getGames(), ark.id, { limit: 12 }))) {
+  for (const s of topSuggestions(suggestSpots(plan, store.getGames(), ark.id, { limit: 12 })).filter((x) => x.kind === 'stack')) {
     const t = s.target;
     const stack = plan.stacks.find((x) => x.id === t.stackId);
     const spots = spotChoices(stack, getGame, { row: t.row });

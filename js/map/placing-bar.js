@@ -1,5 +1,5 @@
 // The placing bar under the drawing in placing mode (part-b3 item 3). Owner: Bruce (Part B).
-// "Placing Ark Nova · 30 × 30 × 7 cm · tap a stack", up to three suggestions and Cancel. It takes
+// "Placing Ark Nova · 30 × 30 × 7 cm · tap a stack or an empty spot", up to three suggestions and Cancel. It takes
 // the caption's room (the caption is hidden while placing), so the frame doesn't get shorter:
 // one line from 600 px up, with the suggestions scrolling sideways; two lines on a phone.
 import { h } from '../core/dom.js';
@@ -19,7 +19,7 @@ export function placingBar({ onCancel, onSuggest }) {
   return {
     el,
     show(game, suggestions) {
-      text.replaceChildren('Placing ', h('strong', {}, game.title), h('span', { class: 'muted' }, ` · ${formatDims(game.dims)}`), ' · tap a stack');
+      text.replaceChildren('Placing ', h('strong', {}, game.title), h('span', { class: 'muted' }, ` · ${formatDims(game.dims)}`), ' · tap a stack or an empty spot');
       list.replaceChildren(...(suggestions.length ? [h('span', { class: 'map-placing-label muted' }, 'Suggested')] : []),
         ...suggestions.map((spot) => h('button', {
           type: 'button', class: 'btn map-chip map-placing-chip', title: spot.text, 'aria-label': `Suggested: ${spot.text}`,

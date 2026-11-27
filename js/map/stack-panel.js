@@ -4,6 +4,7 @@
 // first, each with what it rests on; a title opens the game panel; Pick up opens the pick-up sheet
 // (move, turn, to the board or the cupboard, inside a box).
 // Warnings come from Stephen's v2 rule checker: block = red, warn = amber.
+// Item 5: Move stack (stack-move-panel.js) and Remove stack (stack-confirm.js; asks first when it has games).
 import { h, showPanel, toast } from '../core/dom.js';
 import { on } from '../core/bus.js';
 import * as store from '../core/store.js';
@@ -13,6 +14,8 @@ import { checkPlan2, forStack } from '../rules/index.js';
 import { stackDetails } from './details.js';
 import { categoryChips, warningList } from './ui.js';
 import { openPickUp } from './pickup-sheet.js';
+import { openStackMove } from './stack-move-panel.js';
+import { removeStack } from './stack-confirm.js';
 
 let uniq = 0;
 
@@ -60,7 +63,10 @@ export function openStackPanel(stackId, { onClose } = {}) {
         h('h3', {}, row.label ? `${row.label} · top to bottom` : 'Boxes · top to bottom'),
         row.boxes.length
           ? h('ol', { class: 'map-boxlist' }, row.boxes.map(boxItem))
-          : h('p', { class: 'muted' }, 'No boxes here.'))),
+          : h('p', { class: 'muted' }, d.count ? 'No boxes here.' : 'An empty stack. To put a game here, pick it up and tap this stack.'))),
+      h('div', { class: 'map-stack-actions' },
+        h('button', { type: 'button', class: 'btn', onclick: () => openStackMove(stackId) }, 'Move stack'),
+        h('button', { type: 'button', class: 'btn btn-danger', onclick: () => removeStack(stackId) }, 'Remove stack')),
     ));
   }
 

@@ -41,6 +41,8 @@ export function drawScene(scene, getGame) {
     },
     // tap target: the whole column of the stack, from the top of the shelf down to its id
     s('rect', { class: 'map-stack-hit', x: st.x, y: zone.top, width: Math.max(st.w, 2), height: st.label.y - zone.top + 3 }));
+    // an empty stack: a thin dashed outline, so it can be seen and tapped (part-b3 item 5)
+    if (st.empty) g.append(s('rect', { class: 'map-empty', x: st.x, y: st.top, width: st.w, height: st.h }));
     for (const b of st.boxes) {
       const node = drawBox(b, getGame(b.gameId), titles);
       boxNodes.set(b.gameId, node);

@@ -5,12 +5,12 @@
 // #/map?stack=<id>. A new highlight pans to it but keeps the zoom.
 // The Front row / Back row switch picks which row of the 2-deep stacks is drawn (issue #47);
 // ?game= for a back-row game opens the back view. Every mount starts in the front view.
-// Placing mode (part-b3 item 3): #/map?pick=<id> (pickUp). The placing bar takes the caption's
-// room; a tap on a stack opens the spot sheet (put-panel.js) for it, a suggestion opens it preset.
-// Placing leaves on #/map?game=<id>, Cancel / Esc on #/map, both replacing the ?pick entry, so
-// Back and a reload never come back into placing mode; Back leaves it as any screen change does.
-// The board strip (item 2) sits in the row-switch line; a chip opens the pick-up sheet.
-import { h, loadCss, toast } from '../core/dom.js';
+// Placing mode (part-b3 items 3, 5): #/map?pick=<id> (pickUp), run by view-placing.js. Its bar
+// takes the caption's room. Placing leaves on #/map?game=<id>, Cancel / Esc on #/map, both
+// replacing the ?pick entry, so Back and a reload never come back into placing mode.
+// The board strip (item 2) and Renumber (item 5) sit in the row-switch line.
+// Input (hover, tap, keys) is in view-input.js.
+import { h, loadCss } from '../core/dom.js';
 import { on } from '../core/bus.js';
 import * as store from '../core/store.js';
 import { ZONES } from '../core/shelves.js';
@@ -20,22 +20,22 @@ import { buildScene, findInScene } from './scene.js';
 import { drawScene } from './draw.js';
 import { legend } from './legend.js';
 import { frameHeight } from './fit.js';
-import { TITLE_PX } from './labels.js';
 import { openStackPanel } from './stack-panel.js';
 import { deepStackIds, viewForLocation } from './rows.js';
 import { rowSwitch } from './row-switch.js';
 import { createPanZoom } from './pan-zoom.js';
-import { openPutPanel } from './put-panel.js';
 import { openPickUp } from './pickup-sheet.js';
-import { suggestSpots } from '../rules/index.js';
-import { placingFor, hashAfter, toDrawing, tapTarget, topSuggestions } from './placing.js';
-import { placingBar } from './placing-bar.js';
+import { hashAfter } from './placing.js';
 import { boardStrip } from './board-strip.js';
+import { textMeasurer } from './measure.js';
+import { wireInput, ZOOM_STEP } from './view-input.js';
+import { createPlacing } from './view-placing.js';
+import { askRenumber } from './stack-confirm.js';
 
 loadCss(new URL('./map.css', import.meta.url));
 
 const titleOf = (id) => store.getGame(id)?.title ?? id;
-const ZOOM_STEP = 1.6;
+const NEW = '+new'; // `selected` while the "New stack here" sheet is open (no stack to mark)
 
 /** Mount the map into el. Returns { update(params), destroy() }. */
 export function mountMap(el, params) {
@@ -58,12 +58,12 @@ export function mountMap(el, params) {
   const body = h('div', { class: 'map-body' }, frame, key);
   const rows = rowSwitch((v) => setView(v));
   const board = boardStrip((id) => openPickUp(id));
+  const renumber = h('button', {
+    type: 'button', class: 'btn map-renumber', title: 'Rename the stacks of every shelf left to right', onclick: () => askRenumber(),
+  }, 'Renumber');
+  rows.el.firstChild.after(renumber); // beside the row switch: no extra line on a phone
   rows.el.append(board.el);
-  const bar = placingBar({ onCancel: () => leavePlacing('cancel'), onSuggest: (spot) => openSpot(spot.target.stackId, spot) });
-  const root = h('section', { class: 'map-view', 'aria-label': 'Shelves' }, caption, rows.el, body, bar.el);
-  el.append(root);
 
-  const measure = textMeasurer(root);
   let current = params ?? {};
   let scene = null;
   let drawing = null;
@@ -71,18 +71,19 @@ export function mountMap(el, params) {
   let view = 'front'; // which row of the 2-deep stacks is drawn
   let refitTimer = 0;
   let fittedK = 0; // the k the titles were last fitted for
-  let placing = null; // id of the game being placed (placing mode), or null
-  let suggestions = []; // the placing bar's suggestions for it
 
   const panZoom = createPanZoom(stage, { onChange: onView });
+  const placing = createPlacing({ stage, panZoom, getScene: () => scene, openOver, onLeave: (how) => leavePlacing(how) });
+  const root = h('section', { class: 'map-view', 'aria-label': 'Shelves' }, caption, rows.el, body, placing.el);
+  el.append(root);
+  const measure = textMeasurer(root);
 
   function render() {
     const plan = store.getPlan2();
-    if (placing && !store.getGame(placing)?.dims) {
+    if (!placing.refresh()) {
       leavePlacing('cancel'); // deleted, or its size removed, while placing
       return;
     }
-    if (placing) suggestions = topSuggestions(suggestSpots(plan, store.getGames(), placing, { limit: 12 }));
     rows.set(view, deepStackIds(plan));
     board.set(store.getBoard(), store.getGame);
     root.classList.toggle('map-has-board', store.getBoard().length > 0);
@@ -164,11 +165,10 @@ export function mountMap(el, params) {
   /** Show the highlight and caption for the current route params. reveal: pan to it. */
   function applyParams({ reveal = false } = {}) {
     caption.hidden = true;
-    root.classList.toggle('map-placing-on', !!placing);
-    if (placing) bar.show(store.getGame(placing), suggestions);
-    else bar.hide();
+    root.classList.toggle('map-placing-on', !!placing.gameId);
+    placing.showBar();
     let target = null;
-    if (placing) {
+    if (placing.gameId) {
       // placing mode: the bar replaces the caption; only the stack being placed on is marked
     } else if (current.game) {
       const loc = store.locate2(current.game);
@@ -209,19 +209,11 @@ export function mountMap(el, params) {
       view = v;
       render();
     }
-    const p = placingFor(current, store.getGame);
-    if (p?.error) toast(p.error, { error: true });
-    if (p?.error || (!p && placing)) {
-      placing = null;
-      if (p?.error) {
-        history.replaceState(history.state, '', hashAfter('cancel'));
-        current = {};
-      }
-    } else if (p) {
-      placing = p.gameId;
-      suggestions = topSuggestions(suggestSpots(store.getPlan2(), store.getGames(), placing, { limit: 12 }));
+    if (placing.fromRoute(current) === 'error') {
+      history.replaceState(history.state, '', hashAfter('cancel'));
+      current = {};
     }
-    if (!placing && current.stack && scene.stacks.some((x) => x.id === current.stack)) openDetails(current.stack);
+    if (!placing.gameId && current.stack && scene.stacks.some((x) => x.id === current.stack)) openDetails(current.stack);
     applyParams({ reveal: true });
   }
 
@@ -230,9 +222,8 @@ export function mountMap(el, params) {
    * the ?pick history entry, so neither Back nor a reload returns to placing mode.
    */
   function leavePlacing(how) {
-    if (!placing) return;
-    const id = placing;
-    placing = null;
+    const id = placing.stop();
+    if (!id) return;
     history.replaceState(history.state, '', hashAfter(how, id));
     current = how === 'placed' ? { game: id } : {};
     afterRoute();
@@ -249,86 +240,26 @@ export function mountMap(el, params) {
     });
   }
 
-  /** Open a stack's details panel (one at a time). */
-  function openDetails(stackId) {
+  /** Open a panel over a stack (null: a new stack), one at a time. open(onClose) → dialog | null. */
+  function openOver(stackId, open) {
     if (selected) return;
-    const dlg = openStackPanel(stackId, { onClose: () => panelClosed(stackId) });
+    const dlg = open(() => panelClosed(stackId));
     if (!dlg) return;
-    selected = stackId;
+    selected = stackId ?? NEW;
     applyParams();
   }
 
-  /** Placing mode: the spot sheet for a stack, or preset from a suggestion (suggestSpots). */
-  function openSpot(stackId, suggestion = null) {
-    if (selected || !placing) return;
-    const preset = suggestion ? { target: suggestion.target, label: suggestion.text } : null;
-    const dlg = openPutPanel(placing, {
-      stackId, preset, onPlaced: () => leavePlacing('placed'), onClose: () => panelClosed(stackId),
-    });
-    if (!dlg) return;
-    selected = stackId;
-    applyParams();
-  }
+  const openDetails = (stackId) => openOver(stackId, (onClose) => openStackPanel(stackId, { onClose }));
 
-  /** Placing mode: a tap at client point (cx, cy) on a stack opens its spot sheet. */
-  function placeTap(cx, cy) {
-    const r = stage.getBoundingClientRect();
-    const hit = tapTarget(scene, toDrawing(panZoom.view, cx - r.left, cy - r.top));
-    if (hit?.kind === 'stack') openSpot(hit.stackId);
-    else if (hit?.kind === 'empty') toast('A new stack in empty space comes in a later update. For now, tap a stack.');
-  }
-
-  // Hover title for the mouse and the S Pen (touch has no hover; nothing while dragging).
-  stage.addEventListener('pointermove', (e) => {
-    const box = e.pointerType !== 'touch' && !e.buttons ? e.target.closest?.('[data-game]') : null;
-    if (!box) {
-      tip.hidden = true;
-      return;
-    }
-    tip.textContent = titleOf(box.dataset.game);
-    tip.hidden = false;
-    const r = frame.getBoundingClientRect();
-    const x = Math.min(e.clientX - r.left + 14, r.width - tip.offsetWidth - 4);
-    tip.style.left = `${Math.max(4, x)}px`;
-    tip.style.top = `${Math.min(e.clientY - r.top + 18, r.height - tip.offsetHeight - 4)}px`;
-  });
-  stage.addEventListener('pointerleave', () => { tip.hidden = true; });
-
-  // A tap anywhere in a stack's column (boxes are only a few px tall on a phone) opens its details.
-  // pan-zoom.js swallows the click that ends a drag or a pinch.
-  stage.addEventListener('click', (e) => {
-    if (placing) {
-      placeTap(e.clientX, e.clientY);
-      return;
-    }
-    const st = e.target.closest?.('[data-stack]');
-    if (st) openDetails(st.dataset.stack);
-  });
-  // Keyboard: Tab to a stack, then Enter or Space. + and − zoom, 0 fits.
-  stage.addEventListener('keydown', (e) => {
-    if (e.key === '+' || e.key === '=') panZoom.zoomBy(ZOOM_STEP);
-    else if (e.key === '-') panZoom.zoomBy(1 / ZOOM_STEP);
-    else if (e.key === '0') panZoom.fit();
-    else if (e.key === 'Enter' || e.key === ' ') {
-      const st = e.target.closest?.('[data-stack]');
-      if (!st) return;
-      if (placing) openSpot(st.dataset.stack);
-      else openDetails(st.dataset.stack);
-    } else return;
-    e.preventDefault();
-  });
-  // Esc closes the legend card (a panel's own Esc closes the panel first: it is modal)
-  root.addEventListener('keydown', (e) => {
-    if (e.key !== 'Escape' || !root.classList.contains('map-key-open')) return;
-    e.preventDefault(); // the legend first, then placing mode (onEscape)
-    showKey(false);
-    keyBtn.focus();
-  });
-  // A stack reached with Tab is panned into view.
-  stage.addEventListener('focusin', (e) => {
-    const id = e.target.dataset?.stack;
-    const r = id && e.target.matches(':focus-visible') ? stackRect(id) : null;
-    if (r) panZoom.reveal(r, { animate: false });
+  // A tap anywhere in a stack's column (boxes are only a few px tall on a phone) opens its details;
+  // in placing mode a tap picks a stack or an empty spot.
+  wireInput({ root, stage, frame, tip, keyBtn }, {
+    panZoom, titleOf, showKey, stackRect,
+    onClick: (e) => {
+      if (placing.gameId) placing.tap(e.clientX, e.clientY);
+      else if (e.target.closest?.('[data-stack]')) openDetails(e.target.closest('[data-stack]').dataset.stack);
+    },
+    onEnter: (stackId) => (placing.gameId ? placing.openSpot(stackId) : openDetails(stackId)),
   });
 
   let lastWidth = 0;
@@ -346,7 +277,7 @@ export function mountMap(el, params) {
   const off = on('store:changed', () => render());
   // Esc leaves placing mode, once no panel is open (a panel's Esc closes the panel first)
   const onEscape = (e) => {
-    if (e.key !== 'Escape' || !placing || e.defaultPrevented || document.querySelector('dialog[open]')) return;
+    if (e.key !== 'Escape' || !placing.gameId || e.defaultPrevented || document.querySelector('dialog[open]')) return;
     e.preventDefault();
     leavePlacing('cancel');
   };
@@ -370,22 +301,5 @@ export function mountMap(el, params) {
       panZoom.destroy();
       root.remove();
     },
-  };
-}
-
-/** measure(text) → width in px of the map's title font, using a canvas. */
-function textMeasurer(el) {
-  const ctx = document.createElement('canvas').getContext('2d');
-  const family = getComputedStyle(el).fontFamily || 'sans-serif';
-  ctx.font = `${TITLE_PX}px ${family}`;
-  const cache = new Map();
-  return (text) => {
-    let w = cache.get(text);
-    if (w === undefined) {
-      if (cache.size > 5000) cache.clear();
-      w = ctx.measureText(text).width;
-      cache.set(text, w);
-    }
-    return w;
   };
 }
