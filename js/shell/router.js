@@ -38,11 +38,10 @@ export function getScreens() {
 /** Navigate: go('map', { game: 'g042' }) */
 export function go(id, params = {}) {
   const hash = toHash(id, params);
-  forward = true;
-  // Open panels are closed first and their history entries dropped, so Back from the new screen
-  // returns to the screen the panel was opened on (see core/dom.js closePanels).
+  // Close open panels first and drop their history steps (core/dom.js), then navigate.
   closePanels(() => {
-    if (location.hash === hash) render(); // same address: the browser fires no hashchange
+    forward = true;
+    if (location.hash === hash) render();
     else location.hash = hash;
   });
 }
