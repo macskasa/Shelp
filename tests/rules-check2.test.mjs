@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import * as store from '../js/core/store.js';
-import { checkStack2, checkPlan2, RULES2, SEVERITY, blocking, forStack, groupWarnings, boardLine } from '../js/rules/index.js';
+import { checkStack2, checkPlan2, overlapsWith, RULES2, SEVERITY, blocking, forStack, groupWarnings, boardLine } from '../js/rules/index.js';
 
 const seed = JSON.parse(readFileSync(new URL('../data/seed.json', import.meta.url), 'utf8'));
 
@@ -91,6 +91,19 @@ test('overlap (block): two stacks in one zone, with otherStackId; the other zone
   // touching is fine, and so is another zone
   assert.deepEqual(checkPlan2({ stacks: [a, stack('B', 'bottom', 30, pile('oc', 1, 7))] }, getGame), []);
   assert.deepEqual(checkPlan2({ stacks: [a, stack('B', 'middle', 20, pile('od', 1, 7))] }, getGame), []);
+});
+
+test('overlapsWith: the overlaps of one stack with the others of its shelf, like checkPlan2 finds them', () => {
+  const a = stack('A', 'bottom', 0, pile('ow1', 1, 7)); // 0 – 30
+  const b = stack('B', 'bottom', 20, pile('ow2', 1, 7)); // 20 – 50
+  const c = stack('C', 'bottom', 60, pile('ow3', 1, 7)); // 60 – 90
+  const others = [{ st: a, end: 30 }, { st: c, end: 90 }];
+  const w = overlapsWith(b, 50, others);
+  assert.deepEqual(w.map((x) => [x.stackId, x.otherStackId, x.rule, x.severity]), [['B', 'A', 'overlap', 'block']]);
+  assert.deepEqual(w, checkPlan2({ stacks: [a, b, c] }, getGame));
+  assert.deepEqual(overlapsWith(b, 50, [{ st: b, end: 50 }]), [], 'never against itself');
+  const early = overlapsWith(stack('E', 'bottom', 10, []), 25, [{ st: a, end: 30 }]);
+  assert.deepEqual(early.map((x) => [x.stackId, x.otherStackId]), [['E', 'A']], 'the stack that starts later carries the warning');
 });
 
 test('overlap: a long stack over two others gives one warning per pair, and plan order is kept', () => {

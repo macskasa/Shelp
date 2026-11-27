@@ -39,11 +39,10 @@ const fmt = (n) => String(Math.round(n * 10) / 10);
 const sizeText = (w, d) => `${fmt(Math.max(w, d))} × ${fmt(Math.min(w, d))}`;
 const UP_TEXT = { s: 'flat', m: 'on its side', l: 'on end' };
 
-/** Checks of one stack. */
-export function checkStack2(stack, getGame) {
+/** Checks of one stack. Pass the layout if you already have it (layoutStack2); callers that try many spots do. */
+export function checkStack2(stack, getGame, layout = layoutStack2(stack, getGame)) {
   const zone = ZONES[stack.zone];
   if (!zone) return [];
-  const layout = layoutStack2(stack, getGame);
   const title = (id) => getGame(id)?.title ?? id;
   const names = (boxes) => boxes.map((b) => title(b.gameId)).join(' + ');
   const out = [];
@@ -179,6 +178,11 @@ export function checkStack2(stack, getGame) {
   return out;
 }
 
+const overlapWarning = (a, b) => ({
+  stackId: b.st.id, gameId: null, otherStackId: a.st.id, rule: 'overlap', severity: SEVERITY.overlap,
+  message: `Stack ${b.st.id} starts at ${fmt(b.st.x)} cm, but stack ${a.st.id} still takes space until ${fmt(a.end)} cm.`,
+});
+
 /** Overlaps: within a zone two stacks may not share space. One warning per pair, on the stack that starts later. */
 function overlaps2(plan, getGame) {
   const found = new Map(); // stackId -> warnings
@@ -191,15 +195,26 @@ function overlaps2(plan, getGame) {
     const sorted = [...list].sort((a, b) => a.st.x - b.st.x);
     for (let i = 0; i < sorted.length; i++) {
       for (let j = i + 1; j < sorted.length && sorted[j].st.x < sorted[i].end - SLACK; j++) {
-        const [a, b] = [sorted[i], sorted[j]];
-        found.set(b.st.id, [...(found.get(b.st.id) ?? []), {
-          stackId: b.st.id, gameId: null, otherStackId: a.st.id, rule: 'overlap', severity: SEVERITY.overlap,
-          message: `Stack ${b.st.id} starts at ${fmt(b.st.x)} cm, but stack ${a.st.id} still takes space until ${fmt(a.end)} cm.`,
-        }]);
+        found.set(sorted[j].st.id, [...(found.get(sorted[j].st.id) ?? []), overlapWarning(sorted[i], sorted[j])]);
       }
     }
   }
   return found;
+}
+
+/**
+ * The overlaps of ONE stack (which ends at `end`) with the other stacks of its shelf: others = [{ st, end }].
+ * For callers that try many spots and only need what one change can affect (js/rules/suggest.js).
+ */
+export function overlapsWith(stack, end, others) {
+  const me = { st: stack, end };
+  const out = [];
+  for (const o of others) {
+    if (o.st.id === stack.id) continue;
+    const [a, b] = o.st.x <= stack.x ? [o, me] : [me, o];
+    if (b.st.x < a.end - SLACK) out.push(overlapWarning(a, b));
+  }
+  return out;
 }
 
 const blocksFirst = (list) => [...list.filter((w) => w.severity === 'block'), ...list.filter((w) => w.severity !== 'block')];
