@@ -108,12 +108,13 @@ test('special placements are where the plan says (C5)', () => {
   const ice = stack('S1').boxes[0];
   near(ice.h, 41, 'Ice Cool height');
   near(ice.y + ice.h, zone('under-gap').floor, 'Ice Cool on the floor');
-  // castle and bonsai: centred on top of their piles
+  // castle and bonsai: centred on the box they stand on, the top of the pile (issue #45)
   for (const [id, label] of [['M4', 'LEGO castle'], ['M3', 'Bonsai']]) {
     const st = stack(id);
     assert.equal(st.topper.label, label);
     near(st.topper.y + st.topper.h, st.floor - st.layout.pileH, `${label} on the pile`);
-    near(st.topper.x + st.topper.w / 2, st.x + st.w / 2, `${label} centred`);
+    const top = st.boxes.reduce((a, b) => (b.y < a.y ? b : a)); // y runs down: the smallest y is the top box
+    near(st.topper.x + st.topper.w / 2, top.x + top.w / 2, `${label} centred on its box`);
   }
   // Compile + Kontroll side by side on top of B3
   const b3 = stack('B3').boxes;
