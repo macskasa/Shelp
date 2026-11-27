@@ -174,3 +174,5 @@
 @media (min-width: 1024px) {
   .cat-item { contain-intrinsic-size: auto 55px; } /* measured average table row */
 }
+
+.cat-pizza { margin-left: 0.35em; font-size: 0.85em; white-space: nowrap; }

@@ -17,12 +17,17 @@ export const WHERE_OPTIONS = [
   ['inside', 'Inside a box'],
   ['board', 'On the board'],
 ];
+export const PIZZA_OPTIONS = [
+  ['any', 'Any'],
+  ['yes', 'Pizza'],
+  ['no', 'Not pizza'],
+];
 export const SORT_KEYS = ['title', 'players', 'time', 'where'];
 
 export const MAX_QUERY = 80;
 
 export const DEFAULT_STATE = Object.freeze({
-  q: '', cats: [], players: null, time: null, where: 'any', sizeMissing: false, sort: 'title', dir: 'asc',
+  q: '', cats: [], players: null, time: null, where: 'any', pizza: 'any', sizeMissing: false, sort: 'title', dir: 'asc',
 });
 
 // ---------------------------------------------------------------- entries
@@ -72,6 +77,7 @@ export function stateFromParams(params = {}) {
     players: players >= 1 ? players : null,
     time: TIME_STEPS.includes(time) ? time : null,
     where: whereFromParam(params.where),
+    pizza: params.pizza === '1' ? 'yes' : params.pizza === '0' ? 'no' : 'any',
     sizeMissing: params.nosize === '1',
     sort: SORT_KEYS.includes(params.sort) ? params.sort : 'title',
     dir: params.dir === 'desc' ? 'desc' : 'asc',
@@ -86,6 +92,8 @@ export function stateToParams(state) {
   if (state.players != null) p.players = state.players;
   if (state.time != null) p.time = state.time;
   if (state.where !== 'any') p.where = state.where;
+  if (state.pizza === 'yes') p.pizza = '1';
+  if (state.pizza === 'no') p.pizza = '0';
   if (state.sizeMissing) p.nosize = '1';
   if (state.sort !== 'title') p.sort = state.sort;
   if (state.dir !== 'asc') p.dir = state.dir;
@@ -95,7 +103,7 @@ export function stateToParams(state) {
 /** How many filters are switched on (the sort and the search text do not count: the search field is always visible). */
 export function activeFilterCount(state) {
   return (state.cats.length ? 1 : 0) + (state.players != null) + (state.time != null)
-    + (state.where !== 'any') + (state.sizeMissing ? 1 : 0);
+    + (state.where !== 'any') + (state.pizza !== 'any' ? 1 : 0) + (state.sizeMissing ? 1 : 0);
 }
 
 // ---------------------------------------------------------------- filtering
@@ -128,6 +136,7 @@ export function matches(entry, state) {
   if (state.players != null && !(g.players && g.players.min <= state.players && state.players <= g.players.max)) return false;
   if (state.time != null && !(g.time && g.time.max <= state.time)) return false; // the whole range fits
   if (state.where !== 'any' && entry.kind !== state.where) return false;
+  if (state.pizza !== 'any' && (g.pizza === true) !== (state.pizza === 'yes')) return false;
   if (state.sizeMissing && g.dims !== null) return false;
   return true;
 }
