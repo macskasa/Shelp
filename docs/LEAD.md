@@ -18,7 +18,7 @@ Tony is the lead and code reviewer.
 - **MVP, Phase A, Phase B:** all merged, and the v1 code is gone from every part (#54, #57, #59) and from the core (Tony's v1 PR).
 - **Phase C, moving by hand** (Adam's top priority). Merged: core (#39), Stephen's bracket rule, `suggestSpots`, Move and Delete game (#37, #38, #42, #55), Peter's saved versions, compare and pizza in the catalog (#41, #43, #54), Bruce's wheel pan and back row (#56, #58), the topper fix (#51). Next per developer:
   - **Bruce** (`docs/part-b3.md`): items 1 and 4 (pick up + turn chooser), then 3 and 2 (placing mode + the board strip), 5 (stacks), 6 (drag and drop, after Adam has tried 4–6 on his phone).
-  - **Stephen** (`docs/part-a4.md`): brief done. Open thread: make the 200 ms `suggestSpots` timing test robust on CI (`stephen/suggest-timing`).
+  - **Stephen** (`docs/part-a4.md`): brief done, and the flaky timing test is fixed (#60).
   - **Peter** (`docs/part-c3.md`): brief done.
 - **Open issues:** #48 only.
 - **Tony next:**
