@@ -38,15 +38,8 @@ export function openPanel(id) {
     h('div', { class: 'game-body' },
       bgg, facts,
       h('section', { class: 'game-sec' }, h('h3', {}, 'Where is it?'), where,
-        h('button', { type: 'button', class: 'btn btn-primary', onclick: showMap }, 'Show on map')),
+        h('button', { type: 'button', class: 'btn btn-primary', onclick: () => showOnMap(id) }, 'Show on map')),
       ...sections.map((s) => s.el)));
-
-  function showMap() {
-    showOnMap(id);
-    // Navigation closes panels through the hashchange. If the map was already open on this game nothing
-    // changes, so close the panel ourselves.
-    setTimeout(() => { if (dlg.open) dlg.close(); }, 150);
-  }
 
   function refresh() {
     const g = store.getGame(id);
