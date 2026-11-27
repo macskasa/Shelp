@@ -61,3 +61,7 @@
 .space-more-toggle[aria-expanded="true"]::after { content: ' ▴'; }
 .space-more-list { margin: 0; padding-left: 1.1em; font-size: 0.85rem; color: var(--muted); }
 .space-more-list li { margin-bottom: 2px; }
+
+/* Standing room: the same faint band, but it sits on its surface and grows up (set inline: bottom + height). */
+.space-bar-standing { top: auto; }
+.space-more + .space-more { margin-top: -8px; }
