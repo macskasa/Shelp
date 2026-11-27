@@ -6,6 +6,7 @@ Phase C is about moving games by hand. Bruce builds the moving screens on the ma
 1. Items 1 and 2
 2. Item 3, once Tony's core PR with the `pickUp` contract is merged
 3. Item 4
+4. Item 5 (issue #50)
 
 ## 1. The bracket rule per box
 
@@ -55,6 +56,13 @@ Also in this PR: backups can now carry **saved versions** (CONTEXT section 4). W
   - `warnings` are the new ones.
 - **How to try a spot:** work on your own `structuredClone(plan)` with `detach` and `insertOn` from `js/core/plan2.js`. That's the one place outside the store allowed to call them, because thousands of `store.preview` calls would be too slow. Never touch store data. Check only what a spot can change: `checkStack2` on the target stack, plus overlaps with its neighbours on that shelf.
 - **Speed:** under 200 ms in Node for any game on the seed plan (add a test with a time limit), so it's quick on the phone.
+
+## 5. Delete a game (issue #50)
+
+- The store already does it: `removeGame(id)` deletes the game everywhere in **one undo step**. Boxes on top of it settle down, and boxes stored inside it go to the cupboard ("Was stored inside the … box"), as the BGG import already says.
+- Add **Delete game…** at the bottom of the game panel, as a danger button. It asks first and says what happens: "Ark Nova is removed from the app and from the shelf plan. 2 boxes on top of it settle down. Lairs: Box Zero, stored inside it, goes to the cupboard."
+- After deleting: close the panels, then show a toast with Undo, as in Phase C: `toast('Deleted Ark Nova', { action: { label: 'Undo', run: store.undo } })`.
+- Saved versions keep the game: they're snapshots.
 
 ## What you get ready made
 
