@@ -190,6 +190,8 @@ Load your stylesheet once in your module: `loadCss(new URL('./map.css', import.m
 | catalog/search (C) → map (B) | `showOnMap(id)` → `#/map?game=id` | placeholder map already highlights the stack |
 | game panel (A) → map (B) | `showOnMap(id)` | – |
 | BGG import (A) → cupboard screen (B) | new games are added **unplaced**; Bruce lists unplaced games | test with `store.addGame({ title: 'Test' })` in the console |
+| rule checker (A) → shelf model (B) | `js/rules/` imports `footprint()` and `layoutStack()` from `js/map/model.js`, read-only. Bruce keeps those two signatures stable; changes go through Tony. | – |
+| map / stack details (B) → rule checker (A) | Bruce calls `checkStack(stack, getGame)` from `js/rules/` to show warnings | when D2 is merged |
 | everyone → offline (C) | Peter's service worker caches every same-origin file at runtime, so nobody maintains a file list | – |
 
 ## 7. Who owns what
@@ -197,7 +199,7 @@ Load your stylesheet once in your module: `loadCss(new URL('./map.css', import.m
 | Path | Owner |
 |---|---|
 | `index.html`, `js/app.js`, `js/core/**`, `css/base.css`, `data/**`, `docs/**`, `README.md`, `tests/store.test.mjs`, `tests/fixtures/v5-geometry.json` | **Tony** (lead) |
-| `js/io/**`, `js/game/**`, `tests/io*.test.mjs`, `tests/game*.test.mjs`, `tests/fixtures/bgg-*` | **Stephen** (Part A) |
+| `js/io/**`, `js/game/**`, `js/rules/**`, `tests/io*.test.mjs`, `tests/game*.test.mjs`, `tests/rules*.test.mjs`, `tests/fixtures/bgg-*` | **Stephen** (Part A) |
 | `js/map/**`, `tests/map*.test.mjs` | **Bruce** (Part B) |
 | `js/catalog/**`, `js/shell/**`, `sw.js`, `manifest.webmanifest`, `icons/**`, `tests/catalog*.test.mjs`, `tests/shell*.test.mjs` | **Peter** (Part C) |
 
@@ -211,7 +213,7 @@ The placeholder screens in your folders were written by Tony only to test the wi
 - Accessible: real `<button>`s, labels on inputs, enough contrast, tap targets at least 40 px.
 - No `alert()` / `confirm()`. Use a `<dialog class="panel">` opened with `showPanel()`, or `toast()`.
 - Tests: `node:test` files in `tests/`, named `<part>*.test.mjs`. Keep logic (parsing, geometry, filtering) in plain functions without DOM, so it can be tested in Node. Run everything with `node --test` from the repo root.
-- Run locally: `python3 -m http.server 8000` in the repo root, then open http://localhost:8000. Reset local data from the browser console: `localStorage.clear()`.
+- Run locally: `python3 -m http.server 8000` in the repo root, then open **http://localhost:8000/?nosw**. The `?nosw` switch removes the service worker; without it you see your own changes one reload late. Reset local data from the browser console: `localStorage.clear()`.
 
 ## 9. Workflow
 
@@ -240,3 +242,4 @@ The placeholder screens in your folders were written by Tony only to test the wi
 - 2026-11-27 – added **Target devices** (section 2): Galaxy S22/S24 Ultra in Chrome, installed, plus desktop Chrome; and `showPanel()` for the Android back gesture.
 - 2026-11-27 – `--tabbar-h` token in `css/base.css` and the `#app-tools` header slot in `index.html` (requested by Peter). See section 5.
 - 2026-11-27 – `closePanels()` in `js/core/dom.js`; `go()` closes open panels before navigating, also when the target is the current screen.
+- 2026-11-27 – Stephen round 2 (`docs/part-a2.md`): new folder `js/rules/` (D2), which may import `footprint()` / `layoutStack()` from `js/map/model.js` read-only. Local testing: open the app with `?nosw` (section 8).
