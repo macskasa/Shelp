@@ -57,7 +57,7 @@ Size: S ≈ 1–2 points, M ≈ 3–5, L ≈ 8, XL ≈ 13.
 | A1 | Import my BGG collection export | M5 | Stephen | ✅ |
 | A2 | Start with today's catalog and plan (seed data) | S2 | Tony | ✅ |
 | A3 | Box sizes: edit, "size missing", link to BGG versions | S2 | Stephen (panel) · Peter (filter) | ✅ |
-| A5 | Expansions stored inside the base box | S2 | Stephen | ✅ (choosing the host box is hard: #62) |
+| A5 | Expansions stored inside the base box | S2 | Stephen | ✅ (search by title or BGG name, #62) |
 | A6 | Searchable catalog list | S3 | Peter | ✅ |
 | B1 | Categories with several tags and colours | S2 | Stephen (editing) · Tony (colours) | ✅ |
 | C1 | Built-in shelf model | M3 | Tony (numbers) · Bruce (geometry) | ✅ |
@@ -98,7 +98,6 @@ Size: S ≈ 1–2 points, M ≈ 3–5, L ≈ 8, XL ≈ 13.
 ### Not built yet
 
 - **Placing a box by tapping the drawing** (D1, above). Until then, Move opens the Put on a stack… panel.
-- **Finding the box to store a game in** (#62): the "Stored inside" picker is a plain list of all ~200 box titles, by the title on the box. So Terraforming Mars is listed as "A Mars terraformálása". A search that also matches BGG names isn't built yet.
 - **Being on top counts as easier to reach** (#48): parked for later.
 - Game families (B2), free space at a glance (D3), the moving checklist (D7), live BGG refresh (E4).
 

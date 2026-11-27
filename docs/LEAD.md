@@ -21,7 +21,7 @@ Tony is the lead and code reviewer.
   - **Bruce** (`docs/part-b3.md`): items 1 and 4 (pick up + turn chooser), then 3 and 2 (placing mode + the board strip), 5 (stacks), 6 (drag and drop, after Adam has tried 4–6 on his phone).
   - **Stephen** (`docs/part-a4.md`): brief done, and the flaky timing test is fixed (#60).
   - **Peter** (`docs/part-c3.md`): brief done.
-- **Open issues:** #48 (later) and #62 (the "Stored inside" picker needs a search that also matches BGG names: Stephen, `js/game/fields.js` `insideSection`). README "Releases and stories" says what's built and what isn't; keep it current after each merge.
+- **Open issues:** #48 (later), #65 (the Shelves screen fits the window: Bruce's open thread), #67 (the header scrolled away: fixed in Tony's seed PR). README "Releases and stories" says what's built and what isn't; keep it current after each merge.
 - **Tony next:**
   - the seed is schema 2 once Tony's seed PR is merged; it waits for Peter's and Stephen's seed-agnostic test changes (see the PR body);
   - review the PRs as they come.
