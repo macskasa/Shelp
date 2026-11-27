@@ -14,18 +14,18 @@ Tony is the lead and code reviewer.
   - Bruce: Part B, the map (Opus).
   - Peter: Part C, catalog, search, frame and offline (Sonnet).
 
-## Where things stand (2026-11-27, evening)
+## Where things stand (2026-11-27, paused by Adam)
 
-- **MVP, Phase A, Phase B:** all merged, and the v1 code is gone from every part (#54, #57, #59) and from the core (Tony's v1 PR).
-- **Phase C, moving by hand** (Adam's top priority). Merged: core (#39), Stephen's bracket rule, `suggestSpots`, Move and Delete game (#37, #38, #42, #55), Peter's saved versions, compare and pizza in the catalog (#41, #43, #54), Bruce's wheel pan and back row (#56, #58), the topper fix (#51). Next per developer:
-  - **Bruce** (`docs/part-b3.md`): items 1 and 4 (pick up + turn chooser), then 3 and 2 (placing mode + the board strip), 5 (stacks), 6 (drag and drop, after Adam has tried 4–6 on his phone).
-  - **Stephen** (`docs/part-a4.md`): brief done, and the flaky timing test is fixed (#60).
-  - **Peter** (`docs/part-c3.md`): brief done.
-- **Open issues:** #48 (later), #65 (the Shelves screen fits the window: Bruce's open thread), #67 (the header scrolled away: fixed in Tony's seed PR). README "Releases and stories" says what's built and what isn't; keep it current after each merge.
-- **Tony next:**
-  - the seed is schema 2 once Tony's seed PR is merged; it waits for Peter's and Stephen's seed-agnostic test changes (see the PR body);
-  - review the PRs as they come.
-- **Later:** B2 game families (Stephen; Tony adds the schema field first), D7 moving checklist (on top of Peter's compare), issue #48 (fewer boxes on top counts as easier to reach: Stephen's rules and `suggestSpots`), the next briefs for Stephen and Peter.
+- **Merged:** everything up to #70. The seed is schema 2 (#69), v1 is gone, and Phase C has Pick up, Turn, and Move through the put panel (#66). Also the "Stored inside" search (#68), the Shelves screen fitting the window (#70), and the sticky header fix (#67, in #69). README "Releases and stories" is current.
+- **Running:** one thread, Bruce's placing mode + the board strip (`docs/part-b3.md` items 3 and 2; branch `bruce/placing-mode`; session `session_01Tt1EfB5bQdjpSsVq7r2brt`). It reports to the old Tony session, so a new Tony checks the open PRs for it and reviews it as usual. After it: item 5 (stacks), then item 6 (drag and drop, only after Adam has tried 4–6 on his phone).
+- **Paused (Adam):** Stephen and Peter have nothing running. Adam chose their next stories: **Stephen → B2 game families**, **Peter → D3 free space at a glance**. Before their briefs, two decisions are still open; ask Adam, don't assume:
+  1. **B2 "far apart" rule.** Story: "I can link games into a family (Azul, 7 Wonders, Mars, Root, Tokaido…). The map can highlight a family, and the rule checker warns when its members end up far apart." Tony's proposal: warn when a family's boxes on shelves aren't on one shelf with no other stack between them. Cupboard and board don't count; a box inside another counts where its host is. On today's plan that gives 0 warnings (families by BGG-name prefix are in one stack or in neighbours: Sky Team N1/N2, SETI M2/M3, Tokaido M3/M4). Alternatives: "same shelf" (looser), "same stack" (3 warnings today).
+  2. **D3, where it shows.** Story: "Each unit shows how much width and height is left. I can see at once where a new box could go." Tony's proposal: a core `js/core/space.js` (free width and tallest gap per unit: 60 | 80 | 60, under the stairs, narrow), then Peter builds a "Free space" screen in a new `js/space/` (Peter); Bruce can put the same numbers on the map later. Alternative: only a map toggle, by Bruce, after drag and drop.
+- **Tony's prep once decided:**
+  - B2: the `family` field (a name or null, one per game) in `schema.js`, the store and CONTEXT section 4; then `docs/part-a5.md` for Stephen: family editing in the game panel with suggestions, the rule, and `suggestSpots` keeping families together. The map highlight (Bruce, `#/map?family=`) and a catalog family filter (Peter) come after.
+  - D3: `js/core/space.js` with tests, then `docs/part-c4.md` for Peter, and ownership in CONTEXT section 7.
+- **Open issues:** #48 (later).
+- **Later:** D7 moving checklist (on top of Peter's compare), #48 (fewer boxes on top counts as easier to reach: Stephen's rules and `suggestSpots`).
 - **How the team runs:** a Claude Code project since 2026-11-27. The project conversation is Tony. Each piece of developer work is a thread (a new session from `create_session`, one PR each, Opus for Bruce, Sonnet for Stephen and Peter) whose prompt names the brief item, the branch (`outcome_branch`) and asks for a one-line `send_message` to Tony when the PR is green. Tony verifies on GitHub, reviews, and tells Adam one line. The opening messages are in `docs/kickoff.md`.
 
 ## Adam's decisions (don't reopen)
@@ -65,6 +65,7 @@ Tony is the lead and code reviewer.
 - **Don't edit a file a developer owns,** even to fix a conflict. Give them the exact code instead.
 - **A core change can break a developer's test** (#51: the topper fix broke one assertion in `tests/map-scene.test.mjs`). Run the full suite before opening the PR. Put the exact test change in the PR body and ask the developer to push it to your branch, so both land together.
 - **Two docs PRs both append to CONTEXT's Changes list,** so the second one conflicts (#51). Merge `main` into the branch and keep both entries; never force-push.
+- **A thread can stall on a permission prompt** (Stephen's #62 thread waited on "may I start a local web server?"). Check a quiet thread with `get_session`. Browser checks don't need a server: serve the repo with Playwright's `context.route`, and put that in the thread prompt.
 - **Wall-clock limits in tests flake on CI:** `node --test` runs the files in parallel on a small shared runner (#58's first run: 215 ms against a 200 ms limit). Ask for best-of-N and headroom, not a bare limit.
 
 ## Environment notes
