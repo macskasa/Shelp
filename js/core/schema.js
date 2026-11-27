@@ -10,6 +10,7 @@ export const APP = 'shelp';
 export const SCHEMA = 2;
 export const MAX_VERSIONS = 10; // saved versions (D6)
 export const VERSION_NAME_MAX = 60;
+export const FAMILY_MAX = 40; // game family names (B2)
 
 const isObj = (v) => v != null && typeof v === 'object' && !Array.isArray(v);
 const isStrOrNull = (v) => v == null || typeof v === 'string';
@@ -40,7 +41,20 @@ export function validateGame(g, { schema = SCHEMA } = {}) {
   if (typeof g.inBgg !== 'boolean') e.push(`${name}: inBgg must be true or false`);
   if (!isStrOrNull(g.notes)) e.push(`${name}: notes must be text or null`);
   if (schema >= 2 && typeof g.pizza !== 'boolean') e.push(`${name}: pizza must be true or false`);
+  if (!(g.family == null || (typeof g.family === 'string' && g.family.trim() && g.family.trim().length <= FAMILY_MAX))) {
+    e.push(`${name}: family must be a name (1–${FAMILY_MAX} characters) or null`);
+  }
   return e;
+}
+
+/**
+ * A family name as it is stored: trimmed, inner spaces collapsed, '' → null (B2).
+ * Anything that isn't text is returned as it is, so validateGame can report it.
+ */
+export function cleanFamily(v) {
+  if (typeof v !== 'string') return v ?? null;
+  const t = v.trim().replace(/\s+/g, ' ');
+  return t || null;
 }
 
 function itemGames(item) {
@@ -236,7 +250,11 @@ export function checkData(obj, current = knownFrom([])) {
       obj = { ...obj, schema: 2, plan: migratePlanV1(obj.plan, (id) => current.byId?.get(id)) };
     }
   }
-  if (obj.games) known = knownFrom(obj.games);
+  if (obj.games) {
+    // `family` (B2) is optional in files made before it existed; in the store every game has it.
+    obj = { ...obj, games: obj.games.map((g) => ({ ...g, family: cleanFamily(g.family) })) };
+    known = knownFrom(obj.games);
+  }
   if (obj.plan != null) {
     const plan = { cupboard: [], inside: {}, board: [], ...obj.plan };
     e.push(...validatePlan2(plan, known));

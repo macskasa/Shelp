@@ -72,7 +72,7 @@ test('upgrade: v1 → v2 keeps every stack, every game in its stack and row, the
 test('the seed is schema 2 and is exactly the upgrade of the v5 plan from chat', () => {
   assert.equal(seed.schema, 2);
   assert.deepEqual(checkData(seed).problems, []);
-  const up = migrateDataV1(structuredClone(seedV1));
+  const up = checkData(structuredClone(seedV1)).data; // what the store makes of it (migrateDataV1, then family: null)
   assert.deepEqual(seed.games, up.games);
   assert.deepEqual(seed.plan, up.plan);
 });

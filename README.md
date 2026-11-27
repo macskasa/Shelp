@@ -3,7 +3,7 @@
 **Where is each board game on the shelves?** Shelp is a personal web app for Adam's board game collection. It shows a to-scale drawing of the IKEA BOAXEL shelves with every box on it, finds any game, keeps box sizes and categories, imports the BoardGameGeek collection export, and works offline on a phone.
 
 - **Live app:** https://macskasa.github.io/Shelp/
-- **Status:** the MVP is done. Phase A (Tony) moved the data to schema 2: games on games, bridges, which side is up, pizza games, the board, and undo. Phase B moved the three parts onto it, and the old v1 code is gone. **Phase C is moving games by hand:** saved versions, compare and Delete game are in; placing a box on the map is next (Bruce, `docs/part-b3.md`). What works and what isn't built yet: [Releases and stories](#releases-and-stories).
+- **Status:** the MVP is done. Phase A (Tony) moved the data to schema 2: games on games, bridges, which side is up, pizza games, the board, and undo. Phase B moved the three parts onto it, and the old v1 code is gone. **Phase C is moving games by hand:** saved versions, compare, Delete game, placing mode and the board strip are in; new and moved stacks are next (Bruce, `docs/part-b3.md`). Game families (B2) and free space (D3) are being built. What works and what isn't built yet: [Releases and stories](#releases-and-stories).
 
 ## Contents
 
@@ -74,18 +74,20 @@ Size: S ≈ 1–2 points, M ≈ 3–5, L ≈ 8, XL ≈ 13.
 | ID | Story | Size | Owner | Status |
 |---|---|---|---|---|
 | A4 | Add games that aren't in my BGG list | S1 | Stephen | ✅ (and Delete game, #50) |
-| B2 | Game families (Azul, 7 Wonders, Mars…) | S2 | Tony (schema) · Stephen | ⬜ |
-| D1 | Move a game (drag on desktop, pick a spot on phone) | L8 | Bruce | 🚧 moving works from lists; tapping the drawing comes next (see below) |
+| B2 | Game families (Azul, 7 Wonders, Mars…) | S2 | Tony (schema) · Stephen | 🚧 family editing, the rule and suggestions ([part-a5](docs/part-a5.md)); the map highlight and a catalog filter later |
+| D1 | Move a game (drag on desktop, pick a spot on phone) | L8 | Bruce | 🚧 moving works from lists and by tapping the drawing; stacks and drag and drop come next (see below) |
 | D2 | Rule checker (1 cm overhang rule, heights, brackets, 2 deep only in easy spots…) | M5 | Stephen | ✅ (Data screen; behind every move) |
-| D3 | Free space at a glance | S2 | – | ⬜ not scheduled |
-| D4 | Suggest a spot for a new game | L8 | Stephen (logic) · Bruce (screen) | 🚧 the logic is done; it shows in placing mode, which isn't built yet |
+| D3 | Free space at a glance | S2 | Tony (logic) · Peter (screen) | 🚧 the Free space screen ([part-c4](docs/part-c4.md)) |
+| D4 | Suggest a spot for a new game | L8 | Stephen (logic) · Bruce (screen) | 🚧 placing mode shows three suggestions on existing stacks; new-stack suggestions come with Bruce's stacks |
 | D6 | Undo and saved versions | M5 | Tony · Peter | ✅ (undo/redo, save, restore, compare) |
 | E3 | Export to spreadsheet (CSV) | S1 | Stephen | ✅ |
 
 **D1 today:**
 - ✅ **Pick up** (in stack details and on the Cupboard screen) opens a sheet: **Move**, **Turn** (only the orientations allowed, drawn to scale), **To the board**, **To the cupboard…** and **Put inside a box…** (the game panel). It says first what happens to the boxes on top.
 - ✅ **Move** (in that sheet, the game panel and "Where's my game?") opens **Put on a stack…**: you choose the stack, the spot (on the shelf, on top of a box, across two boxes, or under one) and which way up. Rule problems are shown first. Every move closes the panels and shows a toast with Undo.
-- ⬜ Bruce's next PRs, in order: placing mode (tap a stack or an empty spot on the drawing) + the board strip (with suggested spots) → new, moved and removed stacks → drag and drop on desktop.
+- ✅ **Placing mode** (`#/map?pick=<id>`, from Move): tap a stack on the drawing, or one of three suggested spots, to open the spot sheet with the stack as it would be. Cancel, Esc and Back leave it.
+- ✅ **The board strip** on the Shelves screen: "Board (n)" and a chip per game; a chip opens the pick-up sheet.
+- ⬜ Bruce's next PRs, in order: new, moved and removed stacks, and renumbering → drag and drop on desktop (after Adam has tried moving on his phone).
 
 ### Later
 
@@ -97,9 +99,9 @@ Size: S ≈ 1–2 points, M ≈ 3–5, L ≈ 8, XL ≈ 13.
 
 ### Not built yet
 
-- **Placing a box by tapping the drawing** (D1, above). Until then, Move opens the Put on a stack… panel.
+- **New stacks in empty space, moving and removing stacks, renumbering, drag and drop** (D1, above).
 - **Being on top counts as easier to reach** (#48): parked for later.
-- Game families (B2), free space at a glance (D3), the moving checklist (D7), live BGG refresh (E4).
+- Game families (B2) and free space at a glance (D3), in progress; the moving checklist (D7), live BGG refresh (E4).
 
 The full story texts are in the "App user stories" tab of the planning workbook and, for the MVP, in the part briefs.
 
@@ -111,9 +113,9 @@ Each developer is a separate Claude chat with this repo attached. They don't see
 |---|---|---|---|
 | **Adam** | Product owner. Merges PRs. | – | – |
 | **Tony** | Lead and code reviewer. Owns the shared core, data and docs. | – | `js/core/`, `js/app.js`, `index.html`, `css/base.css`, `data/`, `docs/` |
-| **Stephen** | Part A – data in and out: BGG import, game panel, backup and restore. Round 2: rule checker, CSV export, add a game. Phase B: rules, export and pizza on schema 2. Phase C: bracket rule per box, Move, suggest a spot (D4) | [part-a](docs/part-a.md), [a2](docs/part-a2.md), [a3](docs/part-a3.md), [a4](docs/part-a4.md) | `js/io/`, `js/game/`, `js/rules/` |
+| **Stephen** | Part A – data in and out: BGG import, game panel, backup and restore. Round 2: rule checker, CSV export, add a game. Phase B: rules, export and pizza on schema 2. Phase C: bracket rule per box, Move, suggest a spot (D4), game families (B2) | [part-a](docs/part-a.md), [a2](docs/part-a2.md), [a3](docs/part-a3.md), [a4](docs/part-a4.md), [a5](docs/part-a5.md) | `js/io/`, `js/game/`, `js/rules/` |
 | **Bruce** | Part B – shelf map: model, drawing, stack details, special placements, cupboard. Phase B: the map and the picker on schema 2. Phase C: moving by hand (pick up, placing mode, the board strip, stacks, drag and drop) | [part-b](docs/part-b.md), [b2](docs/part-b2.md), [b3](docs/part-b3.md) | `js/map/` |
-| **Peter** | Part C – catalog, search, app frame, offline. Phase B: search wording, the board, Undo. Phase C: saved versions (D6), compare, Move | [part-c](docs/part-c.md), [c2](docs/part-c2.md), [c3](docs/part-c3.md) | `js/catalog/`, `js/shell/`, `js/versions/`, `sw.js`, `manifest.webmanifest`, `icons/` |
+| **Peter** | Part C – catalog, search, app frame, offline. Phase B: search wording, the board, Undo. Phase C: saved versions (D6), compare, Move, free space (D3) | [part-c](docs/part-c.md), [c2](docs/part-c2.md), [c3](docs/part-c3.md), [c4](docs/part-c4.md) | `js/catalog/`, `js/shell/`, `js/versions/`, `js/space/`, `sw.js`, `manifest.webmanifest`, `icons/` |
 
 The three parts only meet through the contracts in `js/core/contracts.js` (`openGame`, `showOnMap`, `showStack`, `go`) and the store. Placeholders exist for each, so every part can start today and be merged in any order.
 
@@ -137,10 +139,11 @@ css/base.css             colours, basics, light/dark (Tony)
 data/seed.json           204 games + plan v5 (Tony)
 icons/                   app icons (Peter)
 js/app.js                entry point: loads data, starts the parts (Tony)
-js/core/                 store, bus, contracts, shelves, categories, format, dom, schema, geometry, plan2 (Tony)
+js/core/                 store, bus, contracts, shelves, categories, format, dom, schema, geometry, plan2, space (Tony)
 js/shell/                router, navigation, service worker registration (Peter)
 js/catalog/              catalog list, search, where's my game (Peter)
 js/versions/             saved versions and compare (Peter)
+js/space/                free space at a glance (Peter)
 js/map/                  shelf model, drawing, stack details, cupboard (Bruce)
 js/io/                   BGG import, backup, restore, plan import (Stephen)
 js/game/                 game details panel (Stephen)

@@ -336,3 +336,49 @@ test('backups carry saved versions; importing replaces them only when the file h
   assert.throws(() => store.importData(bad), /saved version "A"/);
   assert.equal(store.listVersions().length, 2);
 });
+
+test('family (B2): every game has one; cleaned, letter case joins an existing family, old files load', async () => {
+  await fresh();
+  assert.ok(store.getGames().every((g) => g.family === null));
+  assert.deepEqual(store.getFamilies(), []);
+  const azul = id('Azul');
+  const kids = id('Azul Kids');
+  store.updateGame(azul, { family: '  Azul  ' });
+  store.updateGame(kids, { family: 'azul' });
+  assert.equal(store.getGame(kids).family, 'Azul', 'joins the existing spelling');
+  assert.deepEqual(store.getFamilies(), [{ name: 'Azul', ids: [azul, kids] }]);
+  assert.ok(Object.isFrozen(store.getFamilies()[0].ids));
+  store.updateGame(kids, { family: '   ' });
+  assert.equal(store.getGame(kids).family, null);
+  assert.throws(() => store.updateGame(azul, { family: 'x'.repeat(41) }), /family/);
+  assert.throws(() => store.updateGame(azul, { family: 7 }), /family/);
+  const added = store.addGame({ title: 'Azul Mini', family: 'AZUL' });
+  assert.equal(store.getGame(added).family, 'Azul');
+  // a backup from before families: no `family` key → null
+  const old = store.exportData();
+  for (const g of old.games) delete g.family;
+  delete old.versions;
+  store.importData(old);
+  assert.ok(store.getGames().every((g) => g.family === null));
+  assert.deepEqual(validateData(old), []);
+});
+
+test('renameFamily: one undo step, merges, case fix, null unlinks', async () => {
+  await fresh();
+  const [a, b, c] = [id('Azul'), id('Azul Kids'), id('Lairs')];
+  store.batch(() => {
+    store.updateGame(a, { family: 'azul' });
+    store.updateGame(b, { family: 'azul' });
+    store.updateGame(c, { family: 'Lairs' });
+  });
+  assert.equal(store.renameFamily('azul', 'Azul'), 2, 'a case fix renames every member');
+  assert.deepEqual(store.getFamilies().map((f) => f.name), ['Azul', 'Lairs']);
+  store.undo();
+  assert.equal(store.getGame(a).family, 'azul');
+  store.redo();
+  assert.equal(store.renameFamily('Lairs', 'AZUL'), 1);
+  assert.deepEqual(store.getFamilies(), [{ name: 'Azul', ids: [a, b, c].sort((x, y) => store.getGames().findIndex((g) => g.id === x) - store.getGames().findIndex((g) => g.id === y)) }]);
+  assert.equal(store.renameFamily('Azul', null), 3);
+  assert.deepEqual(store.getFamilies(), []);
+  assert.throws(() => store.renameFamily('Nope', 'X'), /No game is in the family/);
+});

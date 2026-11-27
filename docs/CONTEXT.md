@@ -69,6 +69,7 @@ All numbers are in `js/core/shelves.js` (`ZONES`, `GROUPS`, `BRACKET`). Don't co
 | Past the wall end (length + 8 cm overhang) | Deeper than the shelf + 0.5 cm (a stack of one standing box, like KLASK, may stick out) |
 | Taller than the physical shelf gap | Two rows (2 deep) outside an easy-to-reach spot |
 | A **bridge** whose two supports differ in height by more than 0.5 cm (it would tilt) | A **bridge** without enough support: its centre must be over the supports, and the gap between them at most a third of its width |
+| | A **family** spread out (B2): its boxes on shelves are not on one stack, or on one shelf with no other stack between them. A box inside another counts where its host is; the board and the cupboard don't count. |
 
 The store itself refuses the first two (missing size, pizza not flat), whatever path a change takes. The rest are the rule checker's job. The moving screens never offer "place anyway" for a blocking rule, and a plan import that breaks one is refused.
 
@@ -104,11 +105,14 @@ One file format is used for the seed (`data/seed.json`), for backups and for pla
   "categories": ["popular"],    // any of "party", "coop", "popular", "duo"
   "inBgg": true,                // is it in Adam's BGG collection?
   "notes": null,                // free text, or null
-  "pizza": true                 // true: may only lie flat on its biggest side (a quarter turn is fine)
+  "pizza": true,                // true: may only lie flat on its biggest side (a quarter turn is fine)
+  "family": "Ark Nova"          // the game's family (B2), a name of 1–40 characters, or null
 }
 ```
 
 Pizza starts as `true` for every game except the 20 that stood in v5 (the card games under the stairs, KLASK, Ice Cool). New games are pizza. Don't add fields on your own. Ask Tony; the schema check (`js/core/schema.js`) and this file change together.
+
+**Family (B2):** games with the same `family` name belong together (Azul, 7 Wonders, Terraforming Mars…). A game is in at most one family, and a family may have just one game so far. In the store every game has `family` (null when none). Files from before families have no `family` key and load as null. The store cleans a name (trimmed, inner spaces collapsed, `''` → null) and gives it the spelling of an existing family that differs only in letter case, so "azul" joins "Azul". `getFamilies()` lists them and `renameFamily()` renames one on all its games.
 
 ### Plan
 
@@ -189,8 +193,9 @@ null   // unknown id
 
 | Module | What it gives you |
 |---|---|
-| `store.js` | `init()`. **Reads (v2):** `getGames()` (sorted by title), `getGame(id)`, `getPlan2()`, `getStack2(id)`, `locate2(id)`, `getBoard()`, `getMeta()`, `exportData()`, `validate(obj)`, `canUndo()`, `canRedo()`. **Writes:** `updateGame(id, patch)`, `addGame(fields) → id`, `removeGame(id)`, `moveToBoard(id)`, `moveToCupboard(id, reason)`, `setInside(id, hostId)`, `placeBox(id, { stackId, row, on, index, up, rot })`, `placeUnder(id, targetIds, { up, rot })`, `turnBox(id, { up, rot })`, `createStack(zone, { x }) → id`, `moveStack(id, x)`, `removeStack(id)` (games go to the board), `renumberStacks() → { old: new }`, `undo()`, `redo()`, `preview(fn) → { plan, games, error }` (try writes without keeping them), `replacePlan(plan)`, `importData(obj) → 'all' \| 'plan'`, `resetToSeed()`, `setMeta(key, value)`, `batch(fn)`. **Saved versions:** `listVersions()` (newest first, `{ id, name, savedAt, games, stacks }` with counts), `getVersion(id)`, `saveVersion(name) → id` (1–60 characters, at most `MAX_VERSIONS` = 10), `restoreVersion(id)` (one undo step), `renameVersion(id, name)`, `deleteVersion(id)`. Saving, renaming and deleting fire `store:changed` with `versions: true`, aren't undo steps, and are refused inside `preview` / `batch`. Every write except `setMeta` and those three is one undo step (a `batch` is one step, up to 30 kept). Writes throw an `Error` with a readable message (and `err.problems`, a list, when there are several). |
+| `store.js` | `init()`. **Reads (v2):** `getGames()` (sorted by title), `getGame(id)`, `getPlan2()`, `getStack2(id)`, `locate2(id)`, `getBoard()`, `getFamilies()` (`[{ name, ids }]` by name, ids in title order), `getMeta()`, `exportData()`, `validate(obj)`, `canUndo()`, `canRedo()`. **Writes:** `updateGame(id, patch)`, `addGame(fields) → id`, `removeGame(id)`, `renameFamily(name, newName) → count` (every game in the family, one undo step; an existing name merges the two, null unlinks them), `moveToBoard(id)`, `moveToCupboard(id, reason)`, `setInside(id, hostId)`, `placeBox(id, { stackId, row, on, index, up, rot })`, `placeUnder(id, targetIds, { up, rot })`, `turnBox(id, { up, rot })`, `createStack(zone, { x }) → id`, `moveStack(id, x)`, `removeStack(id)` (games go to the board), `renumberStacks() → { old: new }`, `undo()`, `redo()`, `preview(fn) → { plan, games, error }` (try writes without keeping them), `replacePlan(plan)`, `importData(obj) → 'all' \| 'plan'`, `resetToSeed()`, `setMeta(key, value)`, `batch(fn)`. **Saved versions:** `listVersions()` (newest first, `{ id, name, savedAt, games, stacks }` with counts), `getVersion(id)`, `saveVersion(name) → id` (1–60 characters, at most `MAX_VERSIONS` = 10), `restoreVersion(id)` (one undo step), `renameVersion(id, name)`, `deleteVersion(id)`. Saving, renaming and deleting fire `store:changed` with `versions: true`, aren't undo steps, and are refused inside `preview` / `batch`. Every write except `setMeta` and those three is one undo step (a `batch` is one step, up to 30 kept). Writes throw an `Error` with a readable message (and `err.problems`, a list, when there are several). |
 | `geometry.js` | `boxSize(dims, up, rot) → { w, d, h }`, `layoutStack2(stack, getGame) → { w, d, h, pileH, rows, boxes, topper }`. The geometry of schema 2, shared by everyone. |
+| `space.js` | Free space (D3): `UNITS` (each wall shelf as left 60 \| middle 80 \| right 60, then the three parts under the stairs and the narrow shelf) and `freeSpace(plan, getGame) → Unit[]`: per unit the empty shelf floor (`free`, `widest`, `gaps: [{ x, w }]`), the stacks that reach into it with the height left above each (`room`), and the most room above any stack (`room: { stackId, h }`). Front view only, "at a glance": the rule checker decides. The comment at the top has the details. |
 | `plan2.js` | The upgrade from schema 1 and the edit operations behind the store. **Don't call it directly**; use the store. Two exceptions: `locations2(plan)` is a pure read that works on any plan (Peter's compare), and Stephen's `js/rules/suggest.js` may run `detach` / `insertOn` on its **own copy** of a plan. Never on store data. |
 | `bus.js` | `on(type, fn) → unsubscribe`, `emit(type, detail)`. Events: `store:changed` `{ games: id[] \| null, plan: bool }` (null = everything changed), `store:error` `{ message }` (app.js shows it), `route:changed` `{ id, params }`. |
 | `contracts.js` | `openGame(id)`, `showOnMap(gameId)`, `showStack(stackId)`, `pickUp(gameId)` (placing mode, `#/map?pick=<id>`), `go(screen, params)`, `provide(name, fn)`. |
@@ -231,15 +236,17 @@ Load your stylesheet once in your module: `loadCss(new URL('./map.css', import.m
 | geometry (core) → everyone | `js/core/geometry.js` (`boxSize`, `layoutStack2`): the rule checker, the CSV export and the map all use it | in use |
 | map / stack details (B) → rule checker (A) | Bruce calls `checkStack2` / `checkPlan2` from `js/rules/` for warnings and previews, with `severity: 'block' \| 'warn'` | in use |
 | everyone → offline (C) | Peter's service worker caches every same-origin file at runtime, so nobody maintains a file list | – |
+| families (core) → rules, game panel (A) | `game.family`, `getFamilies()`, `renameFamily()`; Stephen's `family` warning in `checkPlan2` | B2 (`docs/part-a5.md`) |
+| free space (core) → Free space screen (C) | `freeSpace(plan, getGame)` from `js/core/space.js`; Bruce may show the same numbers on the map later | D3 (`docs/part-c4.md`) |
 
 ## 7. Who owns what
 
 | Path | Owner |
 |---|---|
-| `index.html`, `js/app.js`, `js/core/**`, `css/base.css`, `data/**`, `docs/**`, `README.md`, `.github/**`, `tests/store.test.mjs`, `tests/plan2.test.mjs`, `tests/fixtures/v5-geometry.json`, `tests/fixtures/seed-v1.json` | **Tony** (lead) |
+| `index.html`, `js/app.js`, `js/core/**`, `css/base.css`, `data/**`, `docs/**`, `README.md`, `.github/**`, `tests/store.test.mjs`, `tests/plan2.test.mjs`, `tests/core-*.test.mjs`, `tests/fixtures/v5-geometry.json`, `tests/fixtures/seed-v1.json` | **Tony** (lead) |
 | `js/io/**`, `js/game/**`, `js/rules/**`, `tests/io*.test.mjs`, `tests/game*.test.mjs`, `tests/rules*.test.mjs`, `tests/fixtures/bgg-*` | **Stephen** (Part A) |
 | `js/map/**`, `tests/map*.test.mjs` | **Bruce** (Part B) |
-| `js/catalog/**`, `js/shell/**`, `js/versions/**`, `sw.js`, `manifest.webmanifest`, `icons/**`, `tests/catalog*.test.mjs`, `tests/shell*.test.mjs`, `tests/versions*.test.mjs` | **Peter** (Part C) |
+| `js/catalog/**`, `js/shell/**`, `js/versions/**`, `js/space/**`, `sw.js`, `manifest.webmanifest`, `icons/**`, `tests/catalog*.test.mjs`, `tests/shell*.test.mjs`, `tests/versions*.test.mjs`, `tests/space*.test.mjs` | **Peter** (Part C) |
 
 The placeholder screens in your folders were written by Tony only to test the wiring. Replace them completely.
 
@@ -303,3 +310,4 @@ The placeholder screens in your folders were written by Tony only to test the wi
 - 2026-11-27 – **Topper centring (issue #45):** `layoutStack2` centres a topper on the box (or the boxes side by side) at the top of the pile, not on the whole stack. The Bonsai in M3 now sits over Tokaido Duo. The matching assertion in `tests/map-scene.test.mjs` (Bruce) lands in the same PR.
 - 2026-11-27 – **v1 removed from the core:** every part is on schema 2 (#57, #59, and Peter's #54), so the store no longer has `getPlan`, `getStack`, `locate` or `placeOnStack`, `format.js` no longer has `describeLocation`, and `plan2.js` no longer has `toV1Plan`. Use `getPlan2`, `getStack2`, `locate2`, the v2 writes and `describeLocation2`. Schema 1 **files** (old backups, plan files from chat, today's seed) are still accepted and upgraded. Section 4's v1 notes and the glossary's "Unplaced" are gone.
 - 2026-11-27 – **The seed is schema 2:** `data/seed.json` is now exactly what the store made of the v5 plan on first start: stacks with `boxes`, the `pizza` flag on every game, `board: []`. Nothing changes in the app. Tests that need a schema 1 file read `tests/fixtures/seed-v1.json` (Tony), and tests should read the plan through the store, not from the seed's raw shape (Peter's and Stephen's prep PRs did that for theirs).
+- 2026-11-27 – **Families and free space (core):** every game has `family` (B2, section 4): a name or null, cleaned by the store, letter case joins an existing family. New store read `getFamilies()` and write `renameFamily()`. New core module `js/core/space.js` (D3): `UNITS` and `freeSpace(plan, getGame)` (section 5). Peter owns the new `js/space/` and `tests/space*.test.mjs`; `app.js` already imports a placeholder `js/space/index.js` (section 7). Briefs: `docs/part-a5.md` (Stephen, B2), `docs/part-c4.md` (Peter, D3). Tests for the core get the `core-` prefix (`tests/core-space.test.mjs`).
