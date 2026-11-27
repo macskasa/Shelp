@@ -5,7 +5,9 @@
 // #/map?stack=<id>. A new highlight pans to it but keeps the zoom.
 // The Front row / Back row switch picks which row of the 2-deep stacks is drawn (issue #47);
 // ?game= for a back-row game opens the back view. Every mount starts in the front view.
-import { h, loadCss } from '../core/dom.js';
+// #/map?pick=<id> (pickUp) opens "Put on a stack…" for that game until placing mode exists;
+// ?pick is dropped from the address when the panel closes, so Back and a reload don't reopen it.
+import { h, loadCss, toast } from '../core/dom.js';
 import { on } from '../core/bus.js';
 import * as store from '../core/store.js';
 import { ZONES } from '../core/shelves.js';
@@ -19,6 +21,7 @@ import { openStackPanel } from './stack-panel.js';
 import { deepStackIds, viewForLocation } from './rows.js';
 import { rowSwitch } from './row-switch.js';
 import { createPanZoom } from './pan-zoom.js';
+import { openPutPanel } from './put-panel.js';
 
 loadCss(new URL('./map.css', import.meta.url));
 
@@ -161,7 +164,29 @@ export function mountMap(el, params) {
       render();
     }
     if (current.stack && scene.stacks.some((x) => x.id === current.stack)) openDetails(current.stack);
+    if (current.pick) openPick(current.pick);
     applyParams({ reveal: true });
+  }
+
+  /** ?pick=<id>: "Put on a stack…" for the game (placing mode replaces this, part-b3 item 3). */
+  function openPick(gameId) {
+    const game = store.getGame(gameId);
+    const dlg = game?.dims ? openPutPanel(gameId, { onClose: () => dropPick(gameId) }) : null;
+    if (dlg) return;
+    toast(game ? `${game.title} has no box size yet, so it can’t go on a shelf` : 'There is no such game', { error: true });
+    dropPick(gameId);
+  }
+
+  /** Take ?pick out of the address without a new history step, once the panel's own step is gone. */
+  function dropPick(gameId) {
+    const fix = () => {
+      if (!new URLSearchParams(location.hash.split('?')[1] ?? '').has('pick')) return; // navigated away
+      history.replaceState(history.state, '', '#/map');
+      if (current.pick === gameId) current = {};
+    };
+    // closing by ×, Esc or a placement goes back over the panel's step first (core/dom.js)
+    if (history.state?.shelpPanel) window.addEventListener('popstate', fix, { once: true });
+    else fix();
   }
 
   /** Open a stack's details panel (one at a time). */
@@ -240,7 +265,7 @@ export function mountMap(el, params) {
   const off = on('store:changed', () => render());
 
   render();
-  if (current.game || current.stack) afterRoute();
+  if (current.game || current.stack || current.pick) afterRoute();
 
   return {
     update(params) {

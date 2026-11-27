@@ -3,7 +3,8 @@
 // Every change is tried with store.preview() and checked with Stephen's checkPlan2; only new
 // problems count. A blocking problem (or a store refusal) disables the button; warnings make it
 // "… anyway". After placing: the panel closes and a toast offers Undo.
-// Phase C reuses this as the spot sheet (openPutPanel(gameId, { stackId })).
+// Phase C reuses this as the spot sheet (openPutPanel(gameId, { stackId })); until placing mode
+// exists, #/map?pick=<id> opens it too (view.js).
 import { h, showPanel, closePanels, toast } from '../core/dom.js';
 import * as store from '../core/store.js';
 import { formatDims } from '../core/format.js';
@@ -16,8 +17,8 @@ const KIND = { shelf: 'On the shelf', on: 'On top of a box', across: 'Across two
 const num = (n) => (Math.round(n * 10) / 10).toLocaleString('en', { maximumFractionDigits: 1 });
 let uniq = 0;
 
-/** Open the picker for a game. stackId: preselect that stack. */
-export function openPutPanel(gameId, { stackId = '' } = {}) {
+/** Open the picker for a game. stackId: preselect that stack. onClose runs once it is gone. */
+export function openPutPanel(gameId, { stackId = '', onClose } = {}) {
   const game = store.getGame(gameId);
   if (!game) return null;
   // spots are worked out on the plan without this game (it may already be on a stack)
@@ -122,6 +123,7 @@ export function openPutPanel(gameId, { stackId = '' } = {}) {
   rowSel.addEventListener('change', fillSpots);
   spotSel.addEventListener('change', update);
   upSel.addEventListener('change', update);
+  if (onClose) dlg.addEventListener('close', () => onClose(), { once: true });
   showPanel(dlg);
   if (stackId) onStack();
   return dlg;

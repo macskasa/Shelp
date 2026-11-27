@@ -55,8 +55,9 @@ test('activeFilterCount counts switched-on filters, not the sort', () => {
 test('short location text', async () => {
   const all = await entries();
   const byId = new Map(all.map((e) => [e.game.id, e]));
-  const stacked = seed.plan.stacks[0].rows[0][0].game ?? seed.plan.stacks[0].rows[0][0].side[0].game;
-  assert.equal(byId.get(stacked).where, seed.plan.stacks[0].id);
+  const stack = store.getPlan2().stacks[0]; // through the store, so a schema 1 or a schema 2 seed both work
+  const stacked = stack.boxes[0].game;
+  assert.equal(byId.get(stacked).where, stack.id);
   assert.equal(byId.get(stacked).kind, 'shelf');
   const [exp, host] = Object.entries(seed.plan.inside)[0];
   assert.equal(byId.get(exp).where, `In ${store.getGame(host).title}`);
