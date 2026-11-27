@@ -5,6 +5,7 @@ import * as store from '../core/store.js';
 import { bggSection } from './bgg-view.js';
 import { backupSection } from './backup-view.js';
 import { checkSection } from './check-view.js';
+import { exportSection } from './export-view.js';
 
 const hasFiles = (e) => [...(e.dataTransfer?.types ?? [])].includes('Files');
 
@@ -24,7 +25,12 @@ export const screens = [
         counts.textContent = `${store.getGames().length} games · plan “${p.name}” · ${p.stacks.length} stacks · ${p.cupboard.length} in the cupboard`;
       };
       showCounts();
-      const root = h('div', { class: 'io-screen' }, counts, check.el, bgg.el, backup.el);
+      const root = h('div', { class: 'io-screen' },
+        counts,
+        check.el,
+        bgg.el,
+        backup.el,
+        exportSection());
 
       // Desktop: drop a BGG .csv or a backup .json anywhere on the screen. It goes through the same checks as the pickers.
       let depth = 0;
