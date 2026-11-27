@@ -116,18 +116,24 @@ export function exportData() {
 
 /** Check a backup or plan file before importing. Returns a list of problems (empty = OK). */
 export function validate(obj) {
-  return validateData(obj, new Set(byId.keys()));
+  return validateData(obj, new Set(byId.keys()), sizelessIds());
 }
 
 // ---------------------------------------------------------------- writes: games
 
-/** Change fields of a game. `id` cannot change. Throws if the result is invalid. */
+/**
+ * Change fields of a game. `id` cannot change. Throws if the result is invalid.
+ * The size of a game on a stack cannot be removed (games on shelves always have a size).
+ */
 export function updateGame(id, patch) {
   const i = indexOf(id);
   if ('id' in patch && patch.id !== id) throw new Error('The id of a game cannot change');
   const next = { ...data.games[i], ...structuredClone(patch) };
   if (next.dims) next.dims = [...next.dims].sort((a, b) => a - b);
   check(validateGame(next));
+  if (next.dims == null && where.get(id)?.kind === 'stack') {
+    throw new Error(`${next.title} is on a shelf, so its box size cannot be removed. Move it to the cupboard first.`);
+  }
   data.games[i] = next;
   changed({ games: [id] });
 }
@@ -176,10 +182,11 @@ export function moveToCupboard(id, reason = '') {
 /**
  * Put a game on a stack (from wherever it is).
  * row: 0 = front (default), 1 = back.  index: position in the row, default = on top / rightmost.
- * No rule checking here – the rule checker is story D2.
+ * A game without a box size cannot go on a stack. No other rule checking here (that's js/rules/).
  */
 export function placeOnStack(id, stackId, { row = 0, index } = {}) {
-  indexOf(id);
+  const game = data.games[indexOf(id)];
+  if (!game.dims) throw new Error(`Add the box size of ${game.title} first – a game without a size cannot go on a shelf.`);
   const st = data.plan.stacks.find((s) => s.id === stackId);
   if (!st) throw new Error(`There is no stack ${stackId}`);
   if (!st.rows[row]) throw new Error(`Stack ${stackId} has no ${row === 0 ? 'front' : 'back'} row`);
@@ -207,7 +214,7 @@ export function setInside(id, hostId) {
 /** Replace the whole plan (e.g. a plan made in chat). Games stay as they are. */
 export function replacePlan(plan) {
   const next = normalizePlan(structuredClone(plan));
-  check(validatePlan(next, new Set(byId.keys())));
+  check(validatePlan(next, new Set(byId.keys()), sizelessIds()));
   data.plan = next;
   changed({ games: null, plan: true });
 }
@@ -274,6 +281,8 @@ function indexOf(id) {
 }
 
 const title = (id) => data.games.find((g) => g.id === id)?.title ?? id;
+
+const sizelessIds = () => new Set(data.games.filter((g) => g.dims == null).map((g) => g.id));
 
 function check(errors) {
   if (errors.length) {

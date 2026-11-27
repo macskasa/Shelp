@@ -16,7 +16,7 @@ The shelf numbers are ready in `js/core/shelves.js`. You write the geometry on t
 - `footprint(game, item, zone, orientation) → { w, d, h }` following "How a box sits" in CONTEXT section 4.
 - `layoutStack(stack, getGame) → { w, d, h, boxes: [{ gameId, x, y, w, d, h, row }], topper }`: positions inside the stack (x from the stack's left edge, y up from the shelf floor). Flat: items bottom → top, a side group puts its boxes next to each other on one level. Standing: left → right. Two rows: rows[0] front, rows[1] back, depth = front + back.
 - Unit tests: every stack in `tests/fixtures/v5-geometry.json` must match `w`, `d`, `h` within 0.05 cm (the fixture's `h` includes the topper).
-- A box with `dims: null` (possible after a move) is drawn as a 10 × 10 × 3 placeholder marked "?".
+- A game with `dims: null` can never be on a stack (CONTEXT section 4), so the 10 × 10 × 3 placeholder is only a safety net. In C6, "Put on a stack…" for a game without a size should say "measure it first" instead of offering stacks (the store refuses it anyway).
 
 ### C2 – To-scale front view (`js/map/`)
 

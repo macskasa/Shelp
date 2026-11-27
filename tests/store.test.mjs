@@ -106,6 +106,28 @@ test('setInside refuses nesting', async () => {
   assert.equal(store.locate(id('Zombie Fluxx')).hostId, id('Fluxx'));
 });
 
+test('games without a box size never go on a shelf', async () => {
+  await fresh();
+  const boxZero = id('Lairs: Box Zero'); // dims: null, stored inside Lairs
+  assert.throws(() => store.placeOnStack(boxZero, 'B4'), /box size/);
+  assert.equal(store.locate(boxZero).kind, 'inside');
+  // its size may stay empty while it is inside a box or in the cupboard
+  store.moveToCupboard(boxZero, 'test');
+  store.updateGame(boxZero, { notes: 'still no size' });
+  // a game on a shelf cannot lose its size
+  assert.throws(() => store.updateGame(id('Ark Nova'), { dims: null }), /cannot be removed/);
+  assert.deepEqual(store.getGame(id('Ark Nova')).dims, [7, 30, 37]);
+  // a plan or backup that puts a size-less game on a stack is refused
+  const plan = structuredClone(seed.plan);
+  plan.inside = Object.fromEntries(Object.entries(plan.inside).filter(([k]) => k !== boxZero));
+  plan.stacks.find((s) => s.id === 'B4').rows[0].push({ game: boxZero });
+  plan.cupboard = plan.cupboard.filter((c) => c.game !== boxZero);
+  assert.ok(store.validate({ app: 'shelp', schema: 1, plan }).some((p) => p.includes('no box size')));
+  assert.throws(() => store.replacePlan(plan), /no box size/);
+  const full = { app: 'shelp', schema: 1, games: structuredClone(seed.games), plan };
+  assert.ok(validateData(full).some((p) => p.includes('no box size')));
+});
+
 test('batch: one event, and rollback on error', async () => {
   await fresh();
   const events = [];
