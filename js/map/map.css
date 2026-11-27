@@ -310,3 +310,4 @@ dialog.panel.map-put { width: min(520px, calc(100vw - 24px)); max-height: min(90
 .map-preview:empty { display: none; }
 .map-preview { margin: 0 0 12px; padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--radius); }
 .map-preview p { margin: 0 0 4px; }
+.map-put-error { color: var(--danger); font-weight: 600; }
