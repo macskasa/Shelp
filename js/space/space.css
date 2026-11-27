@@ -1,0 +1,53 @@
+/* Free space screen. Owner: Peter (Part C). Classes are prefixed space-. */
+.space { max-width: 1100px; margin: 0 auto; padding-bottom: var(--gap); }
+.space-title { margin: 0 0 4px; font-size: 1.2rem; }
+.space-summary { margin: 0 0 var(--gap); color: var(--muted); }
+.space-group { margin-bottom: var(--gap); }
+.space-group-title { margin: 0 0 6px; font-size: 1rem; }
+.space-cards { display: grid; gap: 8px; grid-template-columns: 1fr; }
+@media (min-width: 600px) and (max-width: 1023px) {
+  .space-cards { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+}
+/* Desktop: a wall shelf is one row, 60 : 80 : 60 like the real shelf. */
+@media (min-width: 1024px) {
+  .space-wall .space-cards { grid-template-columns: 60fr 80fr 60fr; }
+  .space-group:not(.space-wall) .space-cards { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
+}
+.space-card {
+  min-width: 0;
+  padding: 10px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.space-card-title { display: flex; justify-content: space-between; gap: 8px; margin: 0 0 2px; font-size: 0.85rem; font-weight: 600; color: var(--muted); }
+.space-floor { margin: 0; font-size: 1.15rem; }
+.space-full { color: var(--muted); }
+.space-extra { font-size: 0.9rem; color: var(--muted); }
+.space-room { margin: 2px 0 8px; font-size: 0.9rem; color: var(--muted); min-height: 1.3em; }
+
+/* The to-scale bar: the floor is a line at the bottom, stacks stand on it, gaps are marked in the accent. */
+.space-bar { position: relative; height: 56px; }
+.space-bar-floor { position: absolute; left: 0; bottom: 0; height: 4px; background: var(--shelf-line); border-radius: 2px; }
+.space-bar-overhang { position: absolute; right: 0; bottom: 0; height: 4px; background: var(--shelf-line); opacity: 0.35; border-radius: 2px; }
+.space-bar-gap { position: absolute; bottom: 0; height: 100%; background: var(--accent); opacity: 0.22; border-bottom: 4px solid var(--accent); box-sizing: border-box; border-radius: 3px 3px 0 0; }
+.space-stack {
+  position: absolute;
+  bottom: 4px;
+  height: calc(100% - 4px);
+  min-width: 6px;
+  padding: 0;
+  margin: 0;
+  background: none;
+  border: 1px solid var(--border);
+  border-bottom: 0;
+  border-radius: 3px 3px 0 0;
+  cursor: pointer;
+}
+.space-stack::before { content: ''; position: absolute; top: 0; bottom: 0; left: 50%; width: max(100%, 40px); transform: translateX(-50%); }
+.space-stack-fill { position: absolute; left: 0; right: 0; bottom: 0; background: var(--cat-duo); opacity: 0.75; border-radius: 2px 2px 0 0; pointer-events: none; }
+.space-stack:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+/* Touch: the bar block can be narrow; give a taller hit area than the drawing. */
+@media (pointer: coarse) {
+  .space-bar { height: 64px; }
+}
