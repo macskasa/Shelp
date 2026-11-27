@@ -84,11 +84,11 @@ export function openStackPanel(stackId, { onClose } = {}) {
   return dlg;
 }
 
-/** "on Takenokolor · standing – Back row · 1 box on top": the reach wraps as a whole on a phone. */
+/** "on Takenokolor · standing · Back row · 1 box on top": the reach wraps as a whole on a phone. */
 function restsLine(b) {
   const line = boxLine(b);
   return h('p', { class: 'map-rests' }, h('span', {}, line.place),
-    line.reach ? [' – ', h('span', { class: 'map-reach' }, line.reach)] : null);
+    line.reach ? [' · ', h('span', { class: 'map-reach' }, line.reach)] : null);
 }
 
 function boxItem(b) {

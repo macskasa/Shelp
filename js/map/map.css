@@ -369,6 +369,19 @@ dialog.panel.map-put { width: min(520px, calc(100vw - 24px)); max-height: min(90
 .map-preview { margin: 0 0 12px; padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--radius); }
 .map-preview p { margin: 0 0 4px; }
 .map-put-error { color: var(--danger); font-weight: 600; }
+/* only the spots that work (part-b5): the link to the blocked ones, greyed out with a reason */
+.map-put [hidden] { display: none !important; }
+.map-nothing { margin: 0 0 8px; }
+.map-link {
+  display: inline-block; min-height: 32px; margin: -6px 0 10px; padding: 4px 0; border: 0; background: none;
+  color: var(--accent); font: inherit; font-size: 0.9rem; text-decoration: underline; cursor: pointer;
+}
+.map-blocked { margin: -4px 0 12px; padding: 0; list-style: none; font-size: 0.9rem; color: var(--muted); }
+.map-blocked li { display: flex; flex-wrap: wrap; column-gap: 6px; padding: 4px 0; border-top: 1px solid var(--border); opacity: 0.8; }
+.map-blocked li:first-child { border-top: 0; }
+.map-blocked-why { font-style: italic; }
+.map-blocked-why::before { content: '· '; font-style: normal; }
+.map-way-text { display: block; min-height: 40px; padding: 8px 0; }
 
 /* ---- pick-up sheet (Phase C item 1) ------------------------------------------------------------ */
 .map-pick-where { margin: 0 0 8px; }

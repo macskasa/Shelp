@@ -100,11 +100,11 @@ test('reach: each box gets its text from one reachAll, null without it (part-b4 
   assert.ok(back.boxes.length && back.boxes.every((b) => b.reach.includes('Back row')));
 });
 
-test('boxLine: rests and flags, then the reach after a dash', () => {
+test('boxLine: rests and flags, then the reach after a dot (not an en dash: titles have those)', () => {
   assert.deepEqual(boxLine({ rests: 'on the shelf', flags: [], reach: 'Easy to reach' }),
-    { place: 'on the shelf', reach: 'Easy to reach', text: 'on the shelf – Easy to reach' });
+    { place: 'on the shelf', reach: 'Easy to reach', text: 'on the shelf · Easy to reach' });
   assert.deepEqual(boxLine({ rests: 'on Alpha', flags: ['standing', 'long side out'], reach: 'Back row · 2 boxes on top' }),
-    { place: 'on Alpha · standing · long side out', reach: 'Back row · 2 boxes on top', text: 'on Alpha · standing · long side out – Back row · 2 boxes on top' });
+    { place: 'on Alpha · standing · long side out', reach: 'Back row · 2 boxes on top', text: 'on Alpha · standing · long side out · Back row · 2 boxes on top' });
   assert.deepEqual(boxLine({ rests: 'across Alpha and Beta', flags: [], reach: null }),
     { place: 'across Alpha and Beta', reach: null, text: 'across Alpha and Beta' });
   assert.equal(boxLine({ rests: 'on the shelf' }).text, 'on the shelf');
