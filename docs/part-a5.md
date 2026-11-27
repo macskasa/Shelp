@@ -2,7 +2,7 @@
 
 Story B2: "I can link games into a family (Azul, 7 Wonders, Mars, Root, Tokaido…). The map can highlight a family, and the rule checker warns when its members end up far apart." You build the families in the game panel, a quick way to link many at once, the rule, and families in `suggestSpots`. The map highlight (Bruce) and a catalog filter (Peter) come later, on top of yours.
 
-**Start** from Tony's core PR with the `family` field: branch from `main` once it is merged (check that `store.getFamilies` exists), or from its branch `tony/families-space` while it is still open. Either way your PR goes into `main`. **One PR** for the whole brief.
+**Start** from Tony's core PR with the `family` field: branch from `main` once it is merged (check that `store.getFamilies` exists), or from its branch `ccr-96632897-bcu0g0` while it is still open. Either way your PR goes into `main`. **One PR** for the whole brief.
 
 ## What you get ready made (core)
 

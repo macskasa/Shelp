@@ -2,7 +2,7 @@
 
 Story D3: "Each unit shows how much width and height is left. I can see at once where a new box could go." Tony's core works out the numbers (`js/core/space.js`). You build the **Free space** screen in a new folder, **`js/space/`** (yours, with `tests/space*.test.mjs`). Bruce may show the same numbers on the map later.
 
-**Start** from Tony's core PR: branch from `main` once it is merged (check that `js/core/space.js` exists), or from its branch `tony/families-space` while it is still open. Either way your PR goes into `main`. **One PR** for the whole brief.
+**Start** from Tony's core PR: branch from `main` once it is merged (check that `js/core/space.js` exists), or from its branch `ccr-96632897-bcu0g0` while it is still open. Either way your PR goes into `main`. **One PR** for the whole brief.
 
 ## What you get ready made (core)
 

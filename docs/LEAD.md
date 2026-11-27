@@ -17,7 +17,7 @@ Tony is the lead and code reviewer.
 ## Where things stand (2026-11-27)
 
 - **Merged:** everything up to #72: Phase C has Pick up, Turn, Move through the put panel, placing mode and the board strip. README "Releases and stories" is current.
-- **Tony's core PR** (`tony/families-space`): the `family` field (schema, store: `getFamilies`, `renameFamily`, the seed with `family: null`), `js/core/space.js` with `tests/core-space.test.mjs`, the `js/space/` placeholder wired in `app.js`, and the briefs `docs/part-a5.md` and `docs/part-c4.md`. It merges first: Stephen's and Peter's branches start from it.
+- **Tony's core PR** (`ccr-96632897-bcu0g0`): the `family` field (schema, store: `getFamilies`, `renameFamily`, the seed with `family: null`), `js/core/space.js` with `tests/core-space.test.mjs`, the `js/space/` placeholder wired in `app.js`, and the briefs `docs/part-a5.md` and `docs/part-c4.md`. It merges first: Stephen's and Peter's branches start from it.
 - **Threads running** (each sends Tony one line when its PR is green):
   - **Bruce**, `bruce/stacks`: `docs/part-b3.md` item 5 (stacks; split `js/map/view.js`). Also asked to key family warnings by `w.family` in `newProblems` (`js/map/spots.js`). Item 6 (drag and drop) waits until Adam has tried moving games on his phone.
   - **Stephen**, `stephen/families`: `docs/part-a5.md` (B2).
