@@ -7,7 +7,7 @@ const swatch = (cls, style, text) => h('span', { class: `map-sw ${cls}`, style, 
 export function legend() {
   const item = (sw, label) => h('li', {}, sw, h('span', {}, label));
   const [first, second] = CATEGORIES;
-  return h('ul', { class: 'map-legend', 'aria-label': 'Legend' },
+  return h('ul', { class: 'map-legend', id: 'map-legend', 'aria-label': 'Legend' },
     [...CATEGORIES, OTHER].map((c) => item(swatch('map-sw-cat', `--c: var(${c.cssVar})`), c.label)),
     item(swatch('map-sw-striped', `--c1: var(${first.cssVar}); --c2: var(${second.cssVar})`), 'Striped = several'),
     item(swatch('map-sw-easy'), 'Easy to reach'),

@@ -243,17 +243,47 @@ dialog.panel.map-sheet {
 .map-field { display: flex; flex-direction: column; gap: 4px; margin: 0 0 12px; }
 .map-field input { width: 100%; }
 
-/* ---- legend ----------------------------------------------------------------------------------- */
+/* ---- legend (issue #65: it never pushes the page into scrolling) ------------------------------
+   Desktop: a column beside the drawing, as tall as the frame (it scrolls inside if it must).
+   Below 1024 px: a card over the drawing, opened with the "i" tool. */
+.map-body { position: relative; }
 .map-legend {
   list-style: none;
   display: flex;
-  flex-wrap: wrap;
-  gap: 6px 16px;
-  margin: 12px 0 0;
-  padding: 0;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 10px 12px;
   font-size: 0.85rem;
   color: var(--muted);
 }
+@media (min-width: 1024px) {
+  .map-body { display: grid; grid-template-columns: minmax(0, 1fr) 190px; gap: var(--gap); align-items: start; }
+  /* contain: size – the legend takes the frame's height and never adds its own */
+  .map-legend { align-self: stretch; contain: size; overflow: auto; padding: 4px 0; }
+  .map-key-btn { display: none; }
+}
+@media (max-width: 1023px) {
+  .map-legend {
+    position: absolute;
+    z-index: 2;
+    right: 8px;
+    bottom: 56px;
+    max-width: calc(100% - 16px);
+    max-height: calc(100% - 64px);
+    overflow: auto;
+    background: var(--surface);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: 0 2px 8px rgb(0 0 0 / 0.2);
+  }
+  .map-view:not(.map-key-open) .map-legend { display: none; }
+  /* landscape: two columns, so the card fits a short frame */
+  @media (min-width: 600px) { .map-legend { display: grid; grid-template-columns: auto auto; gap: 6px 16px; } }
+}
+.map-key-btn { font-family: Georgia, serif; font-style: italic; font-weight: 700; font-size: 1.1rem; }
+.map-key-open .map-key-btn { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
 .map-legend li { display: flex; align-items: center; gap: 6px; }
 .map-sw {
   display: inline-flex;
