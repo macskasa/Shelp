@@ -20,7 +20,7 @@ Tony is the lead and code reviewer.
   - **Bruce** (`docs/part-b3.md`): items 1 and 4 (pick up + turn chooser), then 3 and 2 (placing mode + the board strip), 5 (stacks), 6 (drag and drop, after Adam has tried 4–6 on his phone).
   - **Stephen** (`docs/part-a4.md`): brief done, and the flaky timing test is fixed (#60).
   - **Peter** (`docs/part-c3.md`): brief done.
-- **Open issues:** #48 only.
+- **Open issues:** #48 (later) and #62 (the "Stored inside" picker needs a search that also matches BGG names: Stephen, `js/game/fields.js` `insideSection`). README "Releases and stories" says what's built and what isn't; keep it current after each merge.
 - **Tony next:**
   - convert `data/seed.json` to schema 2. Two developer tests read the seed's raw v1 shape: Peter's `tests/catalog-filter.test.mjs` (line 58, `rows[0][0]`) and Stephen's `tests/io-backup.test.mjs` (lines 56–59 and 128, a `schema: 1` file made from `seed.plan`). Have them read the plan through the store first, or put the exact change in the PR body for them to push to Tony's branch. Keep a schema 1 fixture for the upgrade tests in `tests/plan2.test.mjs` and `tests/store.test.mjs`;
   - review the PRs as they come.
