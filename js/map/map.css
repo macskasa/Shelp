@@ -239,6 +239,7 @@ dialog.panel.map-sheet {
   color: var(--muted);
 }
 .map-rests { grid-column: 1; margin: 0; font-size: 0.85rem; color: var(--muted); }
+.map-reach { white-space: nowrap; }
 .map-family-chip {
   min-height: 40px; padding: 0 12px; border-radius: 999px; font-size: 0.8rem;
   border-color: var(--accent); color: var(--text);

@@ -19,17 +19,29 @@ export function restsOn(on, getTitle) {
 }
 
 /**
+ * The muted line under a box title (part-b4 item 4): what it rests on and its flags, then its reach.
+ * Two parts so the reach can wrap as a whole on a phone; text joins them for a screen reader.
+ * @returns {{ place: string, reach: string | null, text: string }}
+ *   place "on Takenokolor · standing", reach "Back row · 2 boxes on top", text "on Takenokolor · standing – Back row · 2 boxes on top"
+ */
+export function boxLine({ rests, flags = [], reach = null }) {
+  const place = [rests, ...flags].join(' · ');
+  return { place, reach: reach || null, text: reach ? `${place} – ${reach}` : place };
+}
+
+/**
  * Everything the panel lists for one v2 stack.
  * @param stack    store.getStack2(id)
  * @param layout   layoutStack2(stack, getGame) from js/core/geometry.js
  * @param getGame  id → game
+ * @param reach    optional reachAll(plan, getGame) from js/rules/ (Map gameId → { text }), once per render
  * @returns {{ id, shelf, size, count, tags: string[], notes: string[],
  *   rows: [{ label: 'Front row' | 'Back row' | null,
- *            boxes: [{ gameId, title, family, categories, size, rests, flags: string[] }] }] }}
+ *            boxes: [{ gameId, title, family, categories, size, rests, flags: string[], reach: string | null }] }] }}
  * Boxes run top to bottom by height (y, where the box sits; same height: left to right, so
  * standing card games read like the shelf), front row first. family: its family's name or null. flags: "standing" / "on its side" when not flat, and "long side out".
  */
-export function stackDetails(stack, layout, getGame) {
+export function stackDetails(stack, layout, getGame, reach = null) {
   const title = (id) => getGame(id)?.title ?? id;
   const tags = [];
   if (layout.rows > 1) tags.push('2 deep');
@@ -48,6 +60,7 @@ export function stackDetails(stack, layout, getGame) {
         return {
           gameId: b.gameId, title: title(b.gameId), family: game?.family ?? null, categories: game?.categories ?? [],
           size: formatDims(game?.dims ?? null), rests: restsOn(b.on, title), flags,
+          reach: reach?.get(b.gameId)?.text ?? null,
         };
       });
     rows.push({ label: layout.rows > 1 ? (r === 0 ? 'Front row' : 'Back row') : null, boxes });

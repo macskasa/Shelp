@@ -11,14 +11,12 @@
 // The board strip (item 2) and Renumber (item 5) sit in the row-switch line.
 // #/map?family=<name> (showFamily, part-b4 item 1) marks every member and dims the rest
 // (view-family.js); Back, Esc and the × leave it, an unknown family toasts and goes to #/map.
-// Input (hover, tap, keys) is in view-input.js.
+// Input (hover, tap, keys) is in view-input.js, the caption and what it highlights in view-caption.js.
 import { h, loadCss, toast } from '../core/dom.js';
 import { on } from '../core/bus.js';
 import * as store from '../core/store.js';
-import { ZONES } from '../core/shelves.js';
 import { go } from '../core/contracts.js';
-import { describeLocation2 } from '../core/format.js';
-import { buildScene, findInScene, stackArea } from './scene.js';
+import { buildScene, stackArea } from './scene.js';
 import { drawScene } from './draw.js';
 import { legend } from './legend.js';
 import { frameHeight } from './fit.js';
@@ -33,7 +31,8 @@ import { textMeasurer } from './measure.js';
 import { wireInput, ZOOM_STEP } from './view-input.js';
 import { createPlacing } from './view-placing.js';
 import { askRenumber } from './stack-confirm.js';
-import { lookupFamily, viewForFamily, familyShown } from './view-family.js';
+import { lookupFamily, viewForFamily } from './view-family.js';
+import { createCaption } from './view-caption.js';
 
 loadCss(new URL('./map.css', import.meta.url));
 
@@ -43,6 +42,7 @@ const NEW = '+new'; // `selected` while the "New stack here" sheet is open (no s
 /** Mount the map into el. Returns { update(params), destroy() }. */
 export function mountMap(el, params) {
   const caption = h('div', { class: 'map-caption', role: 'status', hidden: true });
+  const captions = createCaption(caption);
   const stage = h('div', { class: 'map-stage' });
   const tip = h('div', { class: 'map-tip', hidden: true, 'aria-hidden': 'true' });
   const tool = (label, text, onclick) => h('button', { type: 'button', class: 'btn map-tool', 'aria-label': label, title: label, onclick }, text);
@@ -150,49 +150,14 @@ export function mountMap(el, params) {
 
   const stackRect = (stackId) => stackArea(scene, stackId);
 
-  function setCaption(title, text, link = null) {
-    showCaption(h('p', {}, title ? h('strong', {}, title) : null, title ? ' – ' : null, text, link ? [' ', link] : null));
-  }
-
-  function showCaption(...content) {
-    caption.replaceChildren(
-      h('div', { class: 'map-caption-text' }, content),
-      h('button', { class: 'btn map-caption-close', 'aria-label': 'Clear the highlight', onclick: () => go('map') }, '×'),
-    );
-    caption.hidden = false;
-  }
-
   /** Show the highlight and caption for the current route params. reveal: pan to it. */
   function applyParams({ reveal = false } = {}) {
-    caption.hidden = true;
     root.classList.toggle('map-placing-on', !!placing.gameId);
     placing.showBar();
-    let target = null;
-    let family = null;
-    if (placing.gameId) {
-      // placing mode: the bar replaces the caption; only the stack being placed on is marked
-    } else if (current.game) {
-      const loc = store.locate2(current.game);
-      // a box stored inside another box: show the host box
-      const shownId = loc?.kind === 'inside' ? loc.hostId : current.game;
-      const found = findInScene(scene, shownId);
-      if (found) target = { stackId: found.stack.id, gameId: found.box ? shownId : null };
-      // the cupboard screen lists the cupboard and the board
-      const link = loc?.kind === 'cupboard' || loc?.kind === 'board' ? h('a', { href: '#/cupboard' }, 'Open the cupboard list') : null;
-      setCaption(store.getGame(current.game)?.title ?? null, describeLocation2(loc, titleOf), link);
-    } else if (current.stack) {
-      const st = scene.stacks.find((x) => x.id === current.stack);
-      if (st) {
-        target = { stackId: st.id, gameId: null };
-        setCaption(`Stack ${st.id}`, ZONES[st.zone].label);
-      } else {
-        setCaption(null, `There is no stack ${current.stack} in this plan.`);
-      }
-    } else if (current.family) {
-      const fam = lookupFamily(current.family);
-      family = fam ? familyShown(fam, scene, view) : null;
-      if (family) showCaption(...family.content);
-    }
+    // placing mode: the bar replaces the caption; only the stack being placed on is marked
+    const shown = placing.gameId ? captions.hide() : captions.forParams(current, scene, view);
+    const { family } = shown;
+    let { target } = shown;
     drawing.markFamily(family?.focus ?? null);
     board.mark(family?.focus.boardIds ?? []);
     // while a stack's panel is open, that stack is the one marked
