@@ -5,7 +5,7 @@ import { readFileSync } from 'node:fs';
 import * as store from '../js/core/store.js';
 import {
   DEFAULT_STATE, stateFromParams, stateToParams, activeFilterCount, makeEntry, matches, sortEntries,
-  shortLocation, locationKind, countLabel, sortTitle, knownFamily, familyOptions, shownFamily, NO_FAMILY,
+  shortLocation, locationKind, countLabel, sortTitle, knownFamily, familyOptions, shownFamily, NO_FAMILY, catalogHash,
 } from '../js/catalog/filter.js';
 
 const seed = JSON.parse(readFileSync(new URL('../data/seed.json', import.meta.url), 'utf8'));
@@ -256,4 +256,12 @@ test('search finds a game by its family name', () => {
   assert.ok(matches(e, { ...DEFAULT_STATE, q: 'mars' }));
   assert.ok(matches(e, { ...DEFAULT_STATE, q: 'terraforming' }));
   assert.ok(!matches(makeEntry({ ...game, family: null }, null, titleOf), { ...DEFAULT_STATE, q: 'terraforming' }));
+});
+
+test('a family that fell back to Any is not in the URL hash', () => {
+  const fams = [{ name: 'Azul', ids: ['a'] }];
+  const state = knownFamily({ ...DEFAULT_STATE, family: 'Gone', q: 'x' }, fams);
+  assert.equal(catalogHash(state), '#/catalog?q=x');
+  assert.equal(catalogHash(knownFamily({ ...DEFAULT_STATE, family: 'Azul' }, fams)), '#/catalog?family=Azul');
+  assert.equal(catalogHash(DEFAULT_STATE), '#/catalog');
 });

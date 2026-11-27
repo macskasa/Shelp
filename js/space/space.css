@@ -51,3 +51,13 @@
 @media (pointer: coarse) {
   .space-bar { height: 64px; }
 }
+
+/* The room on top: a faint band from the top down; the part a box would rest on is a little stronger. */
+.space-bar-slot { position: absolute; top: 0; background: color-mix(in srgb, var(--accent) 10%, transparent); border-radius: 3px; pointer-events: none; }
+.space-bar-rest { position: absolute; top: 0; bottom: 0; background: color-mix(in srgb, var(--accent) 24%, transparent); border-radius: 3px; }
+.space-more { margin: -4px 0 8px; }
+.space-more-toggle { min-height: 40px; padding: 0 2px; font: inherit; font-size: 0.85rem; color: var(--accent); background: none; border: 0; cursor: pointer; }
+.space-more-toggle::after { content: ' ▾'; }
+.space-more-toggle[aria-expanded="true"]::after { content: ' ▴'; }
+.space-more-list { margin: 0; padding-left: 1.1em; font-size: 0.85rem; color: var(--muted); }
+.space-more-list li { margin-bottom: 2px; }
