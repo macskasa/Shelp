@@ -1,3 +1,15 @@
 // Part C – Free space at a glance (story D3). Owner: Peter.
-// Placeholder by Tony so app.js can import this part; it has no screen yet. Replace it completely (docs/part-c4.md).
-export const screens = [];
+//   logic.js   texts, totals and bar fractions without DOM (tested)
+//   view.js    the Free space screen
+import { mountSpace } from './view.js';
+
+export const screens = [
+  {
+    id: 'space',
+    title: 'Free space',
+    order: 15,
+    mount(el) {
+      return mountSpace(el);
+    },
+  },
+];

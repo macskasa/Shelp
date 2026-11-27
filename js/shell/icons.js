@@ -21,6 +21,14 @@ const SHAPES = {
     ['circle', { cx: 9, cy: 15, r: 1, fill: 'currentColor' }],
     ['circle', { cx: 15, cy: 15, r: 1, fill: 'currentColor' }],
   ],
+  // a shelf with a gap: two boxes and an empty dashed slot (Free space)
+  space: [
+    ['path', { d: 'M3 20h18' }],
+    ['rect', { x: 4, y: 11, width: 5, height: 9 }],
+    ['rect', { x: 15, y: 8, width: 5, height: 12 }],
+    ['path', { d: 'M11.5 20v-4M11.5 13v-1', 'stroke-dasharray': '2 2' }],
+    ['path', { d: 'M4 5h16' }],
+  ],
   // a cupboard with two doors
   cupboard: [
     ['rect', { x: 4, y: 3, width: 16, height: 18, rx: 2 }],
