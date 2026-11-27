@@ -1,14 +1,15 @@
 // Part B – Shelf map. Owner: Bruce. Stories C1–C3, C5, C6.
-//   model.js   box and stack geometry (C1)
-//   scene.js   where everything goes in the drawing, in cm (C2)
-//   labels.js  which titles fit at the current zoom
-//   draw.js    the SVG
-//   view.js    the Shelves screen: fit, highlight, hover, tap / keyboard → stack details
-//   details.js what the stack details panel lists (C3)
-//   stack-panel.js  the stack details panel and "move to cupboard"
-import { h } from '../core/dom.js';
-import * as store from '../core/store.js';
+//   model.js        box and stack geometry (C1) – footprint() / layoutStack() are a contract
+//   scene.js        where everything goes in the drawing, in cm (C2)
+//   labels.js       which titles fit at the current zoom
+//   draw.js         the SVG
+//   viewport.js     zoom and pan maths; pan-zoom.js reads the pointers
+//   view.js         the Shelves screen: zoom, highlight, hover, tap / keyboard → stack details
+//   details.js      what the stack details panel lists (C3); stack-panel.js shows it
+//   cupboard.js     what the cupboard screen lists, placement preview (C6); cupboard-view.js shows it
+//   ui.js           category chips and warning lists
 import { mountMap } from './view.js';
+import { mountCupboard } from './cupboard-view.js';
 
 let mapView = null;
 
@@ -32,12 +33,8 @@ export const screens = [
     id: 'cupboard',
     title: 'Cupboard',
     order: 30,
-    // PLACEHOLDER by Tony until story C6.
     mount(el) {
-      el.append(h('div', { class: 'card placeholder' }, h('p', { class: 'muted' }, 'Bruce builds the cupboard list here (story C6).')));
-      for (const c of store.getPlan().cupboard) {
-        el.append(h('p', {}, h('strong', {}, store.getGame(c.game)?.title), ` – ${c.reason}`));
-      }
+      return mountCupboard(el);
     },
   },
 ];

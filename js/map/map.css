@@ -230,3 +230,50 @@ dialog.panel.map-sheet {
 .map-sw-bracket { width: 4px; margin-inline: 7px; background: var(--bracket); border-radius: 0; }
 .map-sw-missing { border: 1px dashed var(--text); color: var(--muted); }
 .map-sw-text { width: auto; color: var(--muted); }
+
+/* ---- rule warnings (stack details, placement preview) ----------------------------------------- */
+.map-warnings { list-style: none; margin: 4px 0 8px; padding: 0; }
+.map-warnings li {
+  display: flex;
+  gap: 8px;
+  padding: 6px 10px;
+  margin-bottom: 4px;
+  border-left: 3px solid var(--danger);
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--danger) 9%, var(--surface));
+  font-size: 0.9rem;
+}
+.map-warn-icon { color: var(--danger); flex: none; }
+.map-already { color: var(--muted); font-style: italic; }
+.map-ok { margin: 4px 0 8px; color: var(--accent); font-size: 0.9rem; }
+
+/* ---- cupboard screen (C6) ---------------------------------------------------------------------- */
+.map-cup h2 { margin-top: 8px; }
+.map-cup h2 + .map-cup-hint { margin-top: -4px; }
+.map-cup-hint { font-size: 0.85rem; }
+.map-cuplist { list-style: none; margin: 0 0 20px; padding: 0; }
+.map-cupitem {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 2px 12px;
+  padding: 8px 0;
+  border-top: 1px solid var(--border);
+}
+.map-cupitem > .map-boxitem-title, .map-cupitem > .map-boxitem-meta, .map-cup-reason { grid-column: 1; }
+.map-cup-reason { margin: 2px 0 0; font-size: 0.85rem; color: var(--muted); font-style: italic; }
+.map-cup-put, .map-cup-measure { grid-column: 2; grid-row: 1 / span 3; }
+.map-cup-put { min-height: 40px; white-space: nowrap; }
+.map-cup-measure { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; font-size: 0.85rem; color: var(--danger); }
+.map-cup-measure .btn { min-height: 40px; padding: 6px 12px; }
+@media (min-width: 1024px) {
+  .map-cuplist { max-width: 820px; }
+}
+
+/* ---- "Put on a stack…" panel ------------------------------------------------------------------- */
+dialog.panel.map-put { width: min(520px, calc(100vw - 24px)); max-height: min(90dvh, 760px); overflow: auto; }
+.map-put select { width: 100%; min-height: 40px; }
+.map-field[hidden] { display: none; }
+.map-preview:empty { display: none; }
+.map-preview { margin: 0 0 12px; padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--radius); }
+.map-preview p { margin: 0 0 4px; }
