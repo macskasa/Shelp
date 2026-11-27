@@ -56,7 +56,7 @@ Also in this PR: backups can now carry **saved versions** (CONTEXT section 4). W
   - `text` is short: "Bottom shelf · stack B3 · on Takenokolor · flat", "Narrow shelf · new stack at 70 cm".
   - `warnings` are the new ones.
 - **How to try a spot:** work on your own `structuredClone(plan)` with `detach` and `insertOn` from `js/core/plan2.js`. That's the one place outside the store allowed to call them, because thousands of `store.preview` calls would be too slow. Never touch store data. Check only what a spot can change: `checkStack2` on the target stack, plus overlaps with its neighbours on that shelf.
-- **Speed:** under 200 ms in Node for any game on the seed plan (add a test with a time limit), so it's quick on the phone.
+- **Speed:** quick on the phone. The test (#60) takes each game's best of 3 runs in Node on the seed plan: the median game under 200 ms, the slowest under 400 ms (CI runners are slow and run the test files in parallel).
 
 ## 5. Delete a game (issue #50)
 

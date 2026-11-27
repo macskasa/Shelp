@@ -5,7 +5,7 @@ import { readFileSync } from 'node:fs';
 import * as store from '../js/core/store.js';
 import { on } from '../js/core/bus.js';
 import { validateData } from '../js/core/schema.js';
-import { describeLocation, formatDims, formatRange } from '../js/core/format.js';
+import { describeLocation2, formatDims, formatRange } from '../js/core/format.js';
 import { ZONES, bracketLimit, isEasy } from '../js/core/shelves.js';
 
 const seed = JSON.parse(readFileSync(new URL('../data/seed.json', import.meta.url), 'utf8'));
@@ -34,68 +34,73 @@ test('seed data is valid and complete', () => {
 
 test('every game in the seed is placed exactly once', async () => {
   await fresh();
-  const unplaced = store.getGames().filter((g) => store.locate(g.id).kind === 'unplaced');
-  assert.deepEqual(unplaced.map((g) => g.title), []);
+  const onBoard = store.getGames().filter((g) => store.locate2(g.id).kind === 'board');
+  assert.deepEqual(onBoard.map((g) => g.title), []);
+  assert.deepEqual(store.getBoard(), []);
 });
 
 test('every stack in the seed sits in a known zone', () => {
   for (const st of seed.plan.stacks) assert.ok(ZONES[st.zone], st.id);
 });
 
-test('locate: stack, side by side, standing, inside, cupboard', async () => {
+test('locate2: stack, side by side, standing, inside, cupboard', async () => {
   await fresh();
-  const deluxe = store.locate(id('Tokaido: Deluxe Edition'));
+  const deluxe = store.locate2(id('Tokaido: Deluxe Edition'));
   assert.equal(deluxe.stackId, 'M4');
-  assert.equal(deluxe.index, 0);
+  assert.deepEqual(deluxe.on, []); // at the bottom
   assert.deepEqual(deluxe.above, [id('Ark Nova')]);
 
-  const kontroll = store.locate(id('Kontroll'));
+  const kontroll = store.locate2(id('Kontroll'));
   assert.equal(kontroll.stackId, 'B3');
-  assert.equal(kontroll.side, 1);
+  assert.deepEqual(kontroll.on, store.locate2(id('Compile: Main 2')).on, 'side by side with Compile');
   assert.deepEqual(kontroll.above, []);
   assert.equal(kontroll.below.length, 3);
 
-  const klask = store.locate(id('KLASK'));
-  assert.equal(klask.orientation, 'standing');
+  const klask = store.locate2(id('KLASK'));
+  assert.equal(klask.up, 'm'); // standing on its side
   assert.equal(klask.stackId, 'T9');
 
-  const boxZero = store.locate(id('Lairs: Box Zero'));
+  const boxZero = store.locate2(id('Lairs: Box Zero'));
   assert.equal(boxZero.kind, 'inside');
   assert.equal(boxZero.hostId, id('Lairs'));
   assert.equal(boxZero.host.stackId, 'B4');
 
-  assert.equal(store.locate(id('Scythe')).kind, 'cupboard');
-  assert.equal(store.locate('nope'), null);
+  assert.equal(store.locate2(id('Scythe')).kind, 'cupboard');
+  assert.equal(store.locate2('nope'), null);
 });
 
 test('reads are frozen', async () => {
   await fresh();
   assert.throws(() => { store.getGames()[0].title = 'x'; }, TypeError);
-  assert.throws(() => { store.getPlan().stacks.push({}); }, TypeError);
+  assert.throws(() => { store.getPlan2().stacks.push({}); }, TypeError);
 });
 
-test('moveToCupboard and placeOnStack emit one change each and save', async () => {
+test('moveToCupboard and placeBox emit one change each and save', async () => {
   const storage = await fresh();
   const events = [];
   const off = on('store:changed', (d) => events.push(d));
   const ark = id('Ark Nova');
+  const deluxe = id('Tokaido: Deluxe Edition');
   store.moveToCupboard(ark, 'testing');
-  assert.deepEqual(store.locate(ark), { kind: 'cupboard', reason: 'testing' });
-  store.placeOnStack(ark, 'M4');
-  assert.equal(store.locate(ark).stackId, 'M4');
-  assert.equal(store.locate(ark).index, 1);
+  assert.deepEqual(store.locate2(ark), { kind: 'cupboard', reason: 'testing' });
+  store.placeBox(ark, { stackId: 'M4', on: [deluxe], rot: true });
+  assert.equal(store.locate2(ark).stackId, 'M4');
+  assert.deepEqual(store.locate2(ark).on, [deluxe]);
   off();
   assert.equal(events.length, 2);
   assert.equal(events[0].plan, true);
   assert.ok(JSON.parse(storage.getItem(store.STORAGE_KEY)).plan);
 });
 
-test('taking one box out of a side-by-side pair leaves a normal item', async () => {
+test('taking one box out of a side-by-side pair leaves the other where it was', async () => {
   await fresh();
+  const compile = id('Compile: Main 2');
+  const before = store.locate2(compile);
   store.moveToCupboard(id('Kontroll'));
-  const top = store.getStack('B3').rows[0].at(-1);
-  assert.equal(top.side, undefined);
-  assert.equal(top.game, id('Compile: Main 2'));
+  const b3 = store.getStack2('B3').boxes;
+  assert.equal(b3.length, 4);
+  assert.ok(!b3.some((b) => b.game === id('Kontroll')));
+  assert.deepEqual(store.locate2(compile), before);
 });
 
 test('setInside refuses nesting', async () => {
@@ -103,14 +108,14 @@ test('setInside refuses nesting', async () => {
   assert.throws(() => store.setInside(id('Fluxx'), id('Lairs: Box Zero')), /itself inside/);
   assert.throws(() => store.setInside(id('Lairs'), id('Fesztáv')), /take them out first/);
   store.setInside(id('Zombie Fluxx'), id('Fluxx'));
-  assert.equal(store.locate(id('Zombie Fluxx')).hostId, id('Fluxx'));
+  assert.equal(store.locate2(id('Zombie Fluxx')).hostId, id('Fluxx'));
 });
 
 test('games without a box size never go on a shelf', async () => {
   await fresh();
   const boxZero = id('Lairs: Box Zero'); // dims: null, stored inside Lairs
-  assert.throws(() => store.placeOnStack(boxZero, 'B4'), /box size/);
-  assert.equal(store.locate(boxZero).kind, 'inside');
+  assert.throws(() => store.placeBox(boxZero, { stackId: 'B4' }), /box size/);
+  assert.equal(store.locate2(boxZero).kind, 'inside');
   // its size may stay empty while it is inside a box or in the cupboard
   store.moveToCupboard(boxZero, 'test');
   store.updateGame(boxZero, { notes: 'still no size' });
@@ -160,9 +165,9 @@ test('addGame and removeGame', async () => {
   await fresh();
   const nid = store.addGame({ title: 'Test Game', dims: [3, 10, 10] });
   assert.equal(nid, 'g205');
-  assert.equal(store.locate(nid).kind, 'unplaced');
+  assert.equal(store.locate2(nid).kind, 'board');
   store.removeGame(id('Lairs'));
-  assert.equal(store.locate(id('Lairs: Box Zero')).kind, 'cupboard');
+  assert.equal(store.locate2(id('Lairs: Box Zero')).kind, 'cupboard');
 });
 
 test('export → import round trip, and plan-only import', async () => {
@@ -171,11 +176,11 @@ test('export → import round trip, and plan-only import', async () => {
   const backup = store.exportData();
   await fresh();
   assert.equal(store.importData(backup), 'all');
-  assert.equal(store.locate(id('Azul')).kind, 'cupboard');
+  assert.equal(store.locate2(id('Azul')).kind, 'cupboard');
 
   const planOnly = { app: 'shelp', schema: 1, plan: structuredClone(seed.plan) };
   assert.equal(store.importData(planOnly), 'plan');
-  assert.equal(store.locate(id('Azul')).stackId, 'B2');
+  assert.equal(store.locate2(id('Azul')).stackId, 'B2');
 
   const bad = { app: 'shelp', schema: 1, plan: { ...structuredClone(seed.plan), cupboard: [{ game: 'g999', reason: '' }] } };
   assert.ok(store.validate(bad).some((p) => p.includes('g999')));
@@ -186,7 +191,7 @@ test('saved data is used on the next start; broken data falls back to the seed',
   const storage = await fresh();
   store.moveToCupboard(id('Azul'), 'kept');
   await store.init({ seed, storage });
-  assert.equal(store.locate(id('Azul')).reason, 'kept');
+  assert.equal(store.locate2(id('Azul')).reason, 'kept');
 
   const broken = memoryStorage({ [store.STORAGE_KEY]: '{"app":"shelp","schema":1,"games":"no"}' });
   await store.init({ seed, storage: broken });
@@ -201,8 +206,8 @@ test('format helpers', async () => {
   assert.equal(formatDims(null), 'size missing');
   assert.equal(formatRange({ min: 2, max: 2 }), '2');
   assert.equal(formatRange({ min: 30, max: 60 }, 'min'), '30–60 min');
-  assert.equal(describeLocation(store.locate(id('Tokaido: Deluxe Edition')), title), 'Middle shelf · stack M4 · at the bottom · 1 box on top');
-  assert.match(describeLocation(store.locate(id('Lairs: Box Zero')), title), /^Inside the Lairs box \(Bottom shelf · stack B4/);
+  assert.equal(describeLocation2(store.locate2(id('Tokaido: Deluxe Edition')), title), 'Middle shelf · stack M4 · on the shelf · 1 box on top');
+  assert.match(describeLocation2(store.locate2(id('Lairs: Box Zero')), title), /^Inside the Lairs box \(Bottom shelf · stack B4/);
 });
 
 test('shelf helpers', () => {

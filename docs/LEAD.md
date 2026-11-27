@@ -13,19 +13,19 @@ Tony is the lead and code reviewer.
   - Bruce: Part B, the map (Opus).
   - Peter: Part C, catalog, search, frame and offline (Sonnet).
 
-## Where things stand (2026-11-27, afternoon)
+## Where things stand (2026-11-27, evening)
 
-- **MVP, Phase A, Phase B:** all merged. #40 was the last Phase B PR; nothing in the app calls v1 any more.
-- **Phase C, moving by hand** (Adam's top priority). Merged: core (#39), Stephen's bracket rule, `suggestSpots` and Move button (#37, #38, #42), Peter's saved versions and compare (#41, #43), the issue follow-ups in the briefs (#52). Next per developer:
-  - **Bruce** (`docs/part-b3.md`): push the one test line from #51 to `tony/topper-centre`, then item 7 scrolling pans on desktop (#49), item 8 the back row (#47), item 9 his v1 leftovers, then pick-up, placing mode, stacks, drag and drop.
-  - **Stephen** (`docs/part-a4.md`): item 5 Delete game (#50), then item 6 his v1 leftovers.
-  - **Peter** (`docs/part-c3.md`): item 4 pizza in the catalog (#46), with item 5 his v1 leftovers.
-- **Open:** draft #51 (topper fix for #45) waits for Bruce's test line. Issues open: #45–#50 (each has a comment with the next step).
+- **MVP, Phase A, Phase B:** all merged, and the v1 code is gone from every part (#54, #57, #59) and from the core (Tony's v1 PR).
+- **Phase C, moving by hand** (Adam's top priority). Merged: core (#39), Stephen's bracket rule, `suggestSpots`, Move and Delete game (#37, #38, #42, #55), Peter's saved versions, compare and pizza in the catalog (#41, #43, #54), Bruce's wheel pan and back row (#56, #58), the topper fix (#51). Next per developer:
+  - **Bruce** (`docs/part-b3.md`): items 1 and 4 (pick up + turn chooser), then 3 and 2 (placing mode + the board strip), 5 (stacks), 6 (drag and drop, after Adam has tried 4–6 on his phone).
+  - **Stephen** (`docs/part-a4.md`): brief done, and the flaky timing test is fixed (#60).
+  - **Peter** (`docs/part-c3.md`): brief done.
+- **Open issues:** #48 only.
 - **Tony next:**
-  - once the developers' v1 PRs are merged: remove the store's v1 compatibility (`getPlan`, `getStack`, `locate`, `placeOnStack`, `toV1Plan`, `describeLocation`), move `tests/store.test.mjs` and `tests/plan2.test.mjs` to v2, convert `data/seed.json` to schema 2 (`grep -rn` first);
+  - convert `data/seed.json` to schema 2. Two developer tests read the seed's raw v1 shape: Peter's `tests/catalog-filter.test.mjs` (line 58, `rows[0][0]`) and Stephen's `tests/io-backup.test.mjs` (lines 56–59 and 128, a `schema: 1` file made from `seed.plan`). Have them read the plan through the store first, or put the exact change in the PR body for them to push to Tony's branch. Keep a schema 1 fixture for the upgrade tests in `tests/plan2.test.mjs` and `tests/store.test.mjs`;
   - review the PRs as they come.
-- **Later:** B2 game families (Stephen; Tony adds the schema field first), D7 moving checklist (on top of Peter's compare), issue #48 (fewer boxes on top counts as easier to reach: Stephen's rules and `suggestSpots`).
-- **Possible move to a Claude Code project:** Adam may run the team as a project in the Code section (one coordinator conversation, one thread per task). The opening messages are in `docs/kickoff.md`. The roles, ownership, briefs and review steps stay the same; only the relaying changes.
+- **Later:** B2 game families (Stephen; Tony adds the schema field first), D7 moving checklist (on top of Peter's compare), issue #48 (fewer boxes on top counts as easier to reach: Stephen's rules and `suggestSpots`), the next briefs for Stephen and Peter.
+- **How the team runs:** a Claude Code project since 2026-11-27. The project conversation is Tony. Each piece of developer work is a thread (a new session from `create_session`, one PR each, Opus for Bruce, Sonnet for Stephen and Peter) whose prompt names the brief item, the branch (`outcome_branch`) and asks for a one-line `send_message` to Tony when the PR is green. Tony verifies on GitHub, reviews, and tells Adam one line. The opening messages are in `docs/kickoff.md`.
 
 ## Adam's decisions (don't reopen)
 
@@ -63,10 +63,12 @@ Tony is the lead and code reviewer.
 - **Undo after a move:** a modal panel makes the header Undo unreachable on the phone. So moving actions close the panels and show a toast with an Undo button (Phase C rule).
 - **Don't edit a file a developer owns,** even to fix a conflict. Give them the exact code instead.
 - **A core change can break a developer's test** (#51: the topper fix broke one assertion in `tests/map-scene.test.mjs`). Run the full suite before opening the PR. Put the exact test change in the PR body and ask the developer to push it to your branch, so both land together.
+- **Two docs PRs both append to CONTEXT's Changes list,** so the second one conflicts (#51). Merge `main` into the branch and keep both entries; never force-push.
+- **Wall-clock limits in tests flake on CI:** `node --test` runs the files in parallel on a small shared runner (#58's first run: 215 ms against a 200 ms limit). Ask for best-of-N and headroom, not a bare limit.
 
 ## Environment notes
 
-- **GitHub:** REST only (`gh api`); GraphQL is blocked. That means:
+- **GitHub:** REST only; GraphQL is blocked. In a project session, `gh api` works for reads (PRs, check runs, issues, job logs) and the GitHub MCP tools post reviews (`pull_request_review_write`, event `COMMENT`). That means:
   - Tony can't take a PR out of draft (Adam taps "Ready for review");
   - Tony can't delete branches (the proxy refuses).
 - **Push:** `git -c push.negotiate=true push -u origin <branch>`.
