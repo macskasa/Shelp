@@ -53,3 +53,39 @@ export function describeLocation(loc, getTitle = (id) => id) {
       return 'Not placed yet';
   }
 }
+
+const POSE = { m: 'on its side', l: 'standing' };
+
+/**
+ * Human text for a v2 location from store.locate2(). getTitle(id) turns ids into titles.
+ * Examples:
+ *   "Bottom shelf · stack B3 · on Legacy of Yu · 2 boxes on top"
+ *   "Bottom shelf · stack B5 · back row · on the shelf · nothing on top"
+ *   "Under the stairs – card games · stack L1 · standing on the shelf · nothing on top"
+ *   "Middle shelf · stack M2 · across Kerge futam and Acélmágnás · on top"
+ *   "On the board"
+ */
+export function describeLocation2(loc, getTitle = (id) => id) {
+  if (!loc) return 'Unknown game';
+  switch (loc.kind) {
+    case 'stack': {
+      const parts = [ZONES[loc.zone]?.label ?? loc.zone, `stack ${loc.stackId}`];
+      if (loc.rows > 1) parts.push(loc.row === 0 ? 'front row' : 'back row');
+      const pose = POSE[loc.up] ? `${POSE[loc.up]} ` : '';
+      if (!loc.on.length) parts.push(`${pose}on the shelf`);
+      else if (loc.on.length === 1) parts.push(`${pose}on ${getTitle(loc.on[0])}`);
+      else parts.push(`${pose}across ${getTitle(loc.on[0])} and ${getTitle(loc.on[1])}`);
+      const n = loc.above.length;
+      parts.push(n ? `${n} box${n > 1 ? 'es' : ''} on top` : 'nothing on top');
+      return parts.join(' · ');
+    }
+    case 'inside':
+      return `Inside the ${getTitle(loc.hostId)} box (${describeLocation2(loc.host, getTitle)})`;
+    case 'cupboard':
+      return loc.reason ? `Cupboard – ${loc.reason}` : 'Cupboard';
+    case 'board':
+      return 'On the board';
+    default:
+      return 'Unknown place';
+  }
+}
