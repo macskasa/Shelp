@@ -301,3 +301,21 @@ test('preview: try a change without keeping it', async () => {
   assert.match(bad.error.message, /pizza game/);
   assert.equal(bad.plan, null);
 });
+
+test('a topper is centred on the box it stands on, not on the whole stack (issue #45)', () => {
+  const games = new Map([
+    ['wide', { id: 'wide', dims: [7, 25.5, 30] }], // 30 along × 25.5 … flat: w 30
+    ['narrow', { id: 'narrow', dims: [4.8, 20.5, 20.5] }],
+    ['right', { id: 'right', dims: [4.8, 9.5, 9.5] }],
+  ]);
+  const get = (id) => games.get(id);
+  const one = layoutStack2({ id: 'X', zone: 'middle', x: 0, topper: { label: 'Bonsai', w: 18, h: 20 }, boxes: [
+    { game: 'wide', on: [], x: 0 }, { game: 'narrow', on: ['wide'], x: 0 },
+  ] }, get);
+  assert.equal(one.topper.x, (20.5 - 18) / 2); // over "narrow", not (30 - 18) / 2
+  // two boxes side by side at the top: centred over both
+  const two = layoutStack2({ id: 'Y', zone: 'middle', x: 0, topper: { label: 'Bonsai', w: 18, h: 20 }, boxes: [
+    { game: 'wide', on: [], x: 0 }, { game: 'narrow', on: ['wide'], x: 0 }, { game: 'right', on: ['wide'], x: 20.5 },
+  ] }, get);
+  assert.equal(two.topper.x, (30 - 18) / 2);
+});

@@ -32,7 +32,7 @@ const round = (n) => Math.round(n * 100) / 100;
  * @param getGame  id → game (a game without dims gets 0 × 0 × 0: such games are never on a stack)
  * @returns {{ w, d, h, pileH, rows,
  *   boxes: [{ gameId, row, x, y, z, w, d, h, up, rot, on }]   y = bottom of the box, z = front edge
- *   topper: null | { label, x, y, w, h } }}
+ *   topper: null | { label, x, y, w, h } }}   topper x: centred on the box(es) at the top of the pile
  */
 export function layoutStack2(stack, getGame) {
   const byId = new Map(stack.boxes.map((b) => [b.game, b]));
@@ -64,6 +64,10 @@ export function layoutStack2(stack, getGame) {
   const w = Math.max(0, ...boxes.map((b) => b.x + b.w));
   const pileH = Math.max(0, ...boxes.map((b) => b.y + b.h));
   const t = stack.topper;
+  // The topper is centred on what it stands on: the box (or the boxes side by side) at the top of the pile.
+  const tops = boxes.filter((b) => b.y + b.h >= pileH - 0.01);
+  const topLo = tops.length ? Math.min(...tops.map((b) => b.x)) : 0;
+  const topHi = tops.length ? Math.max(...tops.map((b) => b.x + b.w)) : w;
   return {
     w: round(w),
     d: round(rowDepth[0] + (rowsUsed === 2 ? rowDepth[1] : 0)),
@@ -71,6 +75,6 @@ export function layoutStack2(stack, getGame) {
     pileH: round(pileH),
     rows: rowsUsed,
     boxes,
-    topper: t ? { label: t.label, x: round((w - t.w) / 2), y: round(pileH), w: t.w, h: t.h } : null,
+    topper: t ? { label: t.label, x: round(topLo + (topHi - topLo - t.w) / 2), y: round(pileH), w: t.w, h: t.h } : null,
   };
 }
