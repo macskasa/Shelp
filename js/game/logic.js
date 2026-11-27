@@ -165,3 +165,18 @@ export function parseGameForm(form) {
     },
   };
 }
+
+/**
+ * Switch the pizza flag ("may only lie flat") through the store. The store refuses to switch it on for a game
+ * that stands or lies on its side on a shelf; its message is passed on as it is.
+ * Returns { ok: true } or { ok: false, message, pizza } where pizza is what is really stored.
+ * `store` is js/core/store.js (anything with updateGame and getGame).
+ */
+export function setPizza(store, id, on) {
+  try {
+    store.updateGame(id, { pizza: !!on });
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, message: err.message, pizza: store.getGame(id)?.pizza === true };
+  }
+}

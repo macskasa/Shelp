@@ -124,3 +124,7 @@ dialog.game-panel[open] { display: flex; flex-direction: column; }
 .game-radio, .game-check { display: flex; align-items: center; gap: 10px; min-height: 44px; }
 .game-radio input, .game-check input { width: 22px; height: 22px; min-height: 0; flex: none; }
 .game-hint .btn { min-height: 40px; margin-left: 4px; }
+
+/* Pizza switch */
+.game-switch { display: flex; align-items: center; gap: 10px; min-height: 44px; font-weight: 600; cursor: pointer; }
+.game-body .game-switch input { width: 24px; min-width: 24px; height: 24px; min-height: 24px; flex: none; margin: 0; accent-color: var(--accent); }
