@@ -14,8 +14,8 @@ const memoryStorage = () => {
   return { getItem: (k) => (m.has(k) ? m.get(k) : null), setItem: (k, v) => m.set(k, String(v)), removeItem: (k) => m.delete(k) };
 };
 const fresh = () => store.init({ seed, storage: memoryStorage() });
-const catalog = () => catalogRows(store.getGames(), store.locate);
-const plan = () => planRows(store.getGames(), store.getPlan());
+const catalog = () => catalogRows(store.getGames(), store.locate2);
+const plan = () => planRows(store.getGames(), store.getPlan2());
 const col = (header, name) => header.indexOf(name);
 const find = (rows, title, c = 0) => rows.find((r) => r[c] === title);
 
@@ -126,12 +126,16 @@ test('plan: spot, level, row / pile and notes', async () => {
   assert.ok(t1.some((p) => p.startsWith('Front row')) && t1.some((p) => p.startsWith('Back row')));
   assert.ok(t1.every((p) => p.includes('long side out')));
 
-  // a single standing box says so; standing stacks count from the left
-  assert.equal(first('T9')[4], 'Standing');
-  assert.equal(first('S1')[4], 'Standing');
+  // boxes that stand say so (on its side / standing); standing boxes on the floor count from the left, row by row
+  assert.equal(first('T9')[4], 'on its side'); // KLASK
+  assert.equal(first('S1')[4], 'standing'); // Ice Cool
   const l1 = inStack('L1');
-  assert.deepEqual(l1.filter((r) => r[4] === 'Front row').map((r) => r[3]), Array.from({ length: l1.filter((r) => r[4] === 'Front row').length }, (_, i) => i + 1));
-  assert.ok(l1.every((r) => !r[4].includes('Standing')));
+  const frontRow = l1.filter((r) => r[4].startsWith('Front row'));
+  const backRow = l1.filter((r) => r[4].startsWith('Back row'));
+  assert.deepEqual(frontRow.map((r) => r[3]), frontRow.map((_, i) => i + 1));
+  assert.deepEqual(backRow.map((r) => r[3]), backRow.map((_, i) => i + 1));
+  assert.equal(frontRow.length + backRow.length, 18);
+  assert.ok(l1.every((r) => /standing|on its side/.test(r[4])));
 
   // categories in a fixed order joined with " + "
   assert.equal(find(body, 'So Clover!', 5)[7], 'Party + Co-op');
@@ -150,7 +154,7 @@ test('plan: games stored inside a box come right after their host', async () => 
   assert.equal(body.filter((r) => r[4] === 'inside the base box').length, 7);
 });
 
-test('plan: the cupboard has its reason, and games that are not placed come last', async () => {
+test('plan: the cupboard has its reason, and games on the board come last', async () => {
   await fresh();
   const cupboard = find(plan(), 'Twilight Struggle (Deluxe Edition)', 5);
   assert.deepEqual([cupboard[0], cupboard[1], cupboard[2], cupboard[8]], ['Cupboard', 'Cupboard', '', "No room left – and it's a 5-hour game"]);
@@ -159,8 +163,8 @@ test('plan: the cupboard has its reason, and games that are not placed come last
   const rows = plan();
   assert.equal(rows.length - 1, 205);
   const last = rows.at(-1);
-  assert.deepEqual([last[0], last[5]], ['Not placed', 'Fantasy Fluxx']);
-  assert.equal(store.locate(id).kind, 'unplaced');
+  assert.deepEqual([last[0], last[5]], ['Board', 'Fantasy Fluxx']);
+  assert.equal(store.locate2(id).kind, 'board');
 });
 
 test('plan: a game taken out of its box moves to the cupboard rows', async () => {
@@ -179,4 +183,94 @@ test('both files survive a round trip through the CSV parser', async () => {
     assert.equal(parsed.length, rows.length);
     assert.deepEqual(parsed, rows.map((r) => r.map((c) => String(c ?? ''))));
   }
+});
+
+// ---------------------------------------------------------------- schema 2: trees, bridges, the board
+
+/** Hand-made games and plan, so the shapes are exactly what the test says. */
+function world() {
+  const ids = 'abcdefghij'.split('');
+  const games = ids.map((id) => ({ id, title: id.toUpperCase(), dims: [7, 30, 37], categories: [], pizza: false }));
+  const box = (game, o = {}) => ({ game, row: 0, x: 0, up: 's', rot: false, on: [], ...o });
+  return { games, box };
+}
+
+test('plan: level is the longest path down the tree; a bridge sits above its higher support', () => {
+  const { games, box } = world();
+  const stack = {
+    id: 'X', zone: 'bottom', x: 0,
+    boxes: [
+      box('a'), box('b', { x: 30 }), // on the shelf: level 1
+      box('c', { on: ['a'] }), // 2
+      box('d', { x: 15, on: ['a', 'b'] }), // bridge on two level-1 boxes: 2
+      box('e', { on: ['c'] }), // 3
+      box('f', { x: 15, on: ['c', 'b'] }), // bridge on a level-2 and a level-1 box: 3
+      box('g', { x: 20, on: ['e', 'b'] }), // bridge on a level-3 and a level-1 box: 4
+    ],
+  };
+  const rows = planRows(games, { stacks: [stack], cupboard: [], inside: {}, board: [] }).slice(1).filter((r) => r[2]);
+  const level = (t) => rows.find((r) => r[5] === t)[3];
+  assert.deepEqual(['A', 'B', 'C', 'D', 'E', 'F', 'G'].map(level), [1, 1, 2, 2, 3, 3, 4]);
+  // rows come bottom to top, left to right
+  assert.deepEqual(rows.map((r) => r[5]), ['A', 'B', 'C', 'D', 'E', 'F', 'G']);
+});
+
+test('plan: Row / pile says standing, on its side, long side out, across a and b, front and back row', () => {
+  const { games, box } = world();
+  const stack = {
+    id: 'X', zone: 'bottom', x: 0,
+    boxes: [
+      box('a'), box('b', { x: 30 }),
+      box('c', { x: 15, on: ['a', 'b'] }),
+      box('d', { rot: true, on: ['a'] }),
+      box('e', { x: 60, up: 'l' }),
+      box('f', { x: 70, up: 'm' }),
+      box('g', { row: 1 }),
+    ],
+  };
+  const rows = planRows(games, { stacks: [stack], cupboard: [], inside: {}, board: [] }).slice(1).filter((r) => r[2]);
+  const pile = (t) => rows.find((r) => r[5] === t)[4];
+  assert.equal(pile('A'), 'Front row');
+  assert.equal(pile('C'), 'Front row, across A and B');
+  assert.equal(pile('D'), 'Front row, long side out');
+  assert.equal(pile('E'), 'Front row, standing');
+  assert.equal(pile('F'), 'Front row, on its side');
+  assert.equal(pile('G'), 'Back row');
+  // a bridge and the boxes on its sides are not "side by side"; two boxes on the same box are
+  const two = { id: 'Y', zone: 'middle', x: 0, boxes: [box('a'), box('b', { on: ['a'] }), box('c', { x: 10, on: ['a'] })] };
+  const r2 = planRows(games, { stacks: [two], cupboard: [], inside: {}, board: [] }).slice(1).filter((r) => r[2]);
+  assert.deepEqual(r2.map((r) => r[4]), ['', 'side by side', 'side by side']);
+});
+
+test('plan: standing boxes on the floor are numbered from the left, row by row, whatever their order', () => {
+  const { games, box } = world();
+  const stack = {
+    id: 'X', zone: 'under-cards', x: 0,
+    boxes: [box('c', { x: 20, up: 'l' }), box('a', { x: 0, up: 'l' }), box('b', { x: 10, up: 'l' }), box('d', { row: 1, x: 5, up: 'l' }), box('e', { row: 1, x: 0, up: 'l' })],
+  };
+  const rows = planRows(games, { stacks: [stack], cupboard: [], inside: {}, board: [] }).slice(1).filter((r) => r[2]);
+  assert.deepEqual(rows.map((r) => [r[5], r[3]]), [['A', 1], ['B', 2], ['C', 3], ['E', 1], ['D', 2]]);
+});
+
+test('plan: a flat box on standing boxes is level 2 and the standing ones keep their position', () => {
+  const { games, box } = world();
+  const stack = { id: 'X', zone: 'under-tall', x: 0, boxes: [box('a', { up: 'l' }), box('b', { x: 10, up: 'l' }), box('c', { x: 0, on: ['a'] })] };
+  const rows = planRows(games, { stacks: [stack], cupboard: [], inside: {}, board: [] }).slice(1).filter((r) => r[2]);
+  assert.deepEqual(rows.map((r) => [r[5], r[3]]), [['A', 1], ['B', 2], ['C', 2]]);
+});
+
+test('plan: the board comes last (moved games in order, then games with no place); inside games follow their host', () => {
+  const { games, box } = world();
+  const plan = {
+    stacks: [{ id: 'X', zone: 'bottom', x: 0, boxes: [box('a')] }],
+    cupboard: [{ game: 'b', reason: 'No room' }],
+    inside: { c: 'd' }, // c is inside d, and d is on the board
+    board: [{ game: 'e' }, { game: 'd' }],
+  };
+  const rows = planRows(games.slice(0, 6), plan).slice(1);
+  assert.deepEqual(rows.map((r) => [r[0], r[5]]), [
+    ['Bottom shelf', 'A'], ['Cupboard', 'B'], ['Board', 'E'], ['Board', 'D'], ['Board', 'C'], ['Board', 'F'],
+  ]);
+  assert.equal(rows[4][4], 'inside the base box');
+  assert.equal(rows.length, 6, 'every game once');
 });
