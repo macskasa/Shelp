@@ -36,6 +36,7 @@ export function registerServiceWorker() {
   });
 
   sw.register(SW_URL, { scope: SCOPE }).then((reg) => {
+    if (!reg) return; // blocked registration (some test setups)
     if (reg.waiting && sw.controller) offerUpdate(0); // a new version was installed earlier and is waiting
     reg.addEventListener('updatefound', () => {
       const worker = reg.installing;

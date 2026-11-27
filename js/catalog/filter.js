@@ -109,9 +109,14 @@ export function matches(entry, state) {
 
 const collator = new Intl.Collator('hu', { sensitivity: 'base', numeric: true });
 
+/** The title as it sorts: a leading "A ", "Az " or "The " is ignored, so "A jelszó" sorts under J. */
+export function sortTitle(title) {
+  return title.replace(/^(?:az|a|the)\s+(?=\S)/i, '');
+}
+
 // A key is a string or a list of numbers; null = unknown (always sorted last, whatever the direction).
 const KEYS = {
-  title: (e) => e.game.title,
+  title: (e) => sortTitle(e.game.title),
   players: (e) => (e.game.players ? [e.game.players.min, e.game.players.max] : null),
   time: (e) => (e.game.time ? [e.game.time.max, e.game.time.min] : null),
   where: (e) => e.where,
@@ -123,7 +128,9 @@ function compareKeys(a, b) {
   return 0;
 }
 
-/** Sorted copy. Ties are broken by title (always A→Z). */
+const byTitle = (x, y) => collator.compare(sortTitle(x.game.title), sortTitle(y.game.title));
+
+/** Sorted copy. Ties are broken by title (always A→Z). Titles sort without a leading A / Az / The. */
 export function sortEntries(entries, sort = 'title', dir = 'asc') {
   const key = KEYS[sort] ?? KEYS.title;
   const sign = dir === 'desc' ? -1 : 1;
@@ -131,10 +138,10 @@ export function sortEntries(entries, sort = 'title', dir = 'asc') {
     const a = key(x);
     const b = key(y);
     if (a == null || b == null) {
-      if (a == null && b == null) return collator.compare(x.game.title, y.game.title);
+      if (a == null && b == null) return byTitle(x, y);
       return a == null ? 1 : -1;
     }
-    return sign * compareKeys(a, b) || collator.compare(x.game.title, y.game.title);
+    return sign * compareKeys(a, b) || byTitle(x, y);
   });
 }
 
