@@ -2,9 +2,9 @@
 import { h, loadCss, showPanel, toast } from '../core/dom.js';
 import { on } from '../core/bus.js';
 import * as store from '../core/store.js';
-import { openGame, showOnMap } from '../core/contracts.js';
+import { openGame, pickUp, showOnMap } from '../core/contracts.js';
 import { describeLocation2, formatRange } from '../core/format.js';
-import { bggPage, bggSearch } from './logic.js';
+import { bggPage, bggSearch, moveBlockedReason } from './logic.js';
 import { categorySection, extLink, insideSection, notesSection, pizzaSection, sizeSection, titleSection } from './fields.js';
 
 let uniq = 0;
@@ -30,6 +30,9 @@ export function openPanel(id) {
   const bgg = h('p', { class: 'game-bgg' });
   const facts = h('dl', { class: 'game-facts' });
   const where = h('p', { class: 'game-where' });
+  const moveHintId = `game-move-hint-${uniq}`;
+  const moveHint = h('p', { id: moveHintId, class: 'game-hint', role: 'status' });
+  const moveBtn = h('button', { type: 'button', class: 'btn game-move', onclick: () => pickUp(id) }, 'Move');
   const nameSection = titleSection(id, save);
   const sections = [nameSection, sizeSection(id, save), categorySection(id, save), pizzaSection(id), insideSection(id, openGame), notesSection(id, save)];
 
@@ -39,7 +42,10 @@ export function openPanel(id) {
     h('div', { class: 'game-body' },
       nameSection.el, bgg, facts,
       h('section', { class: 'game-sec' }, h('h3', {}, 'Where is it?'), where,
-        h('button', { type: 'button', class: 'btn btn-primary', onclick: () => showOnMap(id) }, 'Show on map')),
+        h('div', { class: 'game-actions' },
+          h('button', { type: 'button', class: 'btn btn-primary', onclick: () => showOnMap(id) }, 'Show on map'),
+          moveBtn),
+        moveHint),
       ...sections.slice(1).map((s) => s.el)));
 
   function refresh() {
@@ -55,6 +61,11 @@ export function openPanel(id) {
       ...row('Players', formatRange(g.players)),
       ...row('Play time', formatRange(g.time, 'min')),
       ...row('Age', g.age));
+    const blocked = moveBlockedReason(g);
+    moveBtn.disabled = !!blocked;
+    if (blocked) moveBtn.setAttribute('aria-describedby', moveHintId);
+    else moveBtn.removeAttribute('aria-describedby');
+    moveHint.textContent = blocked ?? '';
     where.textContent = describeLocation2(store.locate2(id), (gid) => store.getGame(gid)?.title ?? gid);
     for (const s of sections) s.refresh(g);
   }

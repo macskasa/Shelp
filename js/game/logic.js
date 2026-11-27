@@ -186,3 +186,7 @@ export function setPizza(store, id, on) {
  * changes (the game was turned flat, moved or taken off the shelf, or an Undo put it back).
  */
 export const pizzaStamp = (loc) => (loc?.kind === 'stack' ? `stack|${loc.stackId}|${loc.up}` : (loc?.kind ?? 'none'));
+
+/** Why a game cannot be moved by hand (null = it can): a game without a box size can never be on a shelf. */
+export const moveBlockedReason = (game) => (game?.dims ? null : 'Add a box size first');
+

@@ -6,7 +6,7 @@ import * as store from '../js/core/store.js';
 import { describeLocation2 } from '../js/core/format.js';
 import {
   findByBggId, parseBggId, parseGameForm, parseRange, cleanTitle, parseDecimal, parseDims, dimsToInputs, sameDims, textOrNull, sizeSources, toggleCategory,
-  gamesInside, hostChoices, takenOutReason, bggPage, bggVersions, bggSearch, setPizza, pizzaStamp,
+  gamesInside, hostChoices, takenOutReason, bggPage, bggVersions, bggSearch, setPizza, pizzaStamp, moveBlockedReason,
 } from '../js/game/logic.js';
 
 const seed = JSON.parse(readFileSync(new URL('../data/seed.json', import.meta.url), 'utf8'));
@@ -245,3 +245,15 @@ test('pizzaStamp: changes when the game is turned, moved or undone, not when oth
   assert.equal(pizzaStamp(store.locate2(klask.id)), 'board');
   assert.equal(pizzaStamp(null), 'none');
 });
+
+test('moveBlockedReason: a game without a box size cannot be moved by hand', async () => {
+  await store.init({ seed, storage: memoryStorage() });
+  assert.equal(moveBlockedReason(byTitle('Lairs')), null);
+  const noSize = byTitle('Lairs: Box Zero');
+  assert.equal(noSize.dims, null);
+  assert.equal(moveBlockedReason(noSize), 'Add a box size first');
+  store.updateGame(noSize.id, { dims: [2, 10, 20] });
+  assert.equal(moveBlockedReason(store.getGame(noSize.id)), null, 'enabled as soon as the size is saved');
+  assert.equal(moveBlockedReason(undefined), 'Add a box size first');
+});
+
