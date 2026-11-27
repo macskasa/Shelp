@@ -27,7 +27,12 @@ Tony is the lead and code reviewer.
   - remove the v1 compatibility (`getPlan`, `getStack`, `locate`, `placeOnStack`, `describeLocation`, `toV1Plan`, and Stephen's v1 `checkStack` / `checkPlan`) once nothing uses it (`grep -rn` first);
   - convert `data/seed.json` to schema 2;
   - delete `js/map/model.js` if Bruce hasn't.
-- **Later:** B2 game families (Stephen; Tony adds the schema field first), D7 moving checklist (on top of Peter's compare).
+- **Tony next:**
+  - once #40 is merged, nothing in the app uses v1: remove it (see "After Bruce's Phase B");
+  - #51, the topper fix (issue #45), waits for Bruce's one-line test change;
+  - issue #44 (blinking cursor in Firefox) waits for Adam to check caret browsing (F7).
+- **Adam's issues → briefs:** #49 and #47 → Bruce (`part-b3.md` items 7 and 8, first); #46 → Peter (`part-c3.md` item 4); #50 → Stephen (`part-a4.md` item 5).
+- **Later:** B2 game families (Stephen; Tony adds the schema field first), D7 moving checklist (on top of Peter's compare), issue #48 (fewer boxes on top counts as easier to reach: Stephen's rules and `suggestSpots`).
 
 ## Adam's decisions (don't reopen)
 

@@ -7,6 +7,7 @@ Phase C is about moving games by hand (Bruce builds the moving screens). Before 
 **PRs:**
 1. Items 1 and 2
 2. Item 3
+3. Item 4 (issue #46)
 
 ## 1. Move from "Where's my game?"
 
@@ -38,6 +39,12 @@ A **Move** button on each card, next to "Show on map" and "Details". It calls `p
   - Locations come from `locations2(plan)` in `js/core/plan2.js`. It's a pure read that works on any plan, which is why it's allowed here.
   - Your `shortLocation` gives the short names.
 - This list is the base of the later D7 "moving checklist", so keep it a plain data function.
+
+## 4. Pizza in the catalog (issue #46)
+
+- Each catalog row shows whether the game is a pizza game: a small mark, to save space. Give it a text alternative ("pizza") so it isn't an icon or a colour alone.
+- A **Pizza** filter next to the others: any / pizza / not pizza. Keep it in the URL like the other filters, so Back keeps it.
+- Read the flag from the game (`pizza: true | false`). Stephen's game panel already changes it.
 
 ## What you get ready made (Tony's core PR)
 
