@@ -190,3 +190,16 @@ export const pizzaStamp = (loc) => (loc?.kind === 'stack' ? `stack|${loc.stackId
 /** Why a game cannot be moved by hand (null = it can): a game without a box size can never be on a shelf. */
 export const moveBlockedReason = (game) => (game?.dims ? null : 'Add a box size first');
 
+
+// ---------------------------------------------------------------- deleting a game (#50)
+
+/**
+ * What the "Delete game" confirmation says. `above` is how many boxes rest on this one (they settle down),
+ * `inside` the titles of the boxes stored inside it (they go to the cupboard).
+ */
+export function deleteText(title, above = 0, inside = []) {
+  const parts = [`${title} is removed from the app and from the shelf plan.`];
+  if (above > 0) parts.push(`${above} ${above === 1 ? 'box' : 'boxes'} on top of it settle${above === 1 ? 's' : ''} down.`);
+  if (inside.length) parts.push(`${inside.join(', ')}, stored inside it, ${inside.length === 1 ? 'goes' : 'go'} to the cupboard.`);
+  return parts.join(' ');
+}

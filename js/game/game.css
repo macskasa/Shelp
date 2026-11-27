@@ -133,3 +133,6 @@ dialog.game-panel[open] { display: flex; flex-direction: column; }
 .game-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .game-actions .btn { min-height: 44px; }
 
+
+.game-danger { margin-top: 8px; padding-top: 12px; border-top: 1px solid var(--border, currentColor); }
+.game-danger .btn { min-height: 44px; }
