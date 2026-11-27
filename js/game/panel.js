@@ -1,10 +1,11 @@
 // The game details panel: openGame(id). Owner: Stephen (Part A). Stories A3, A5, B1.
-import { h, loadCss, showPanel, toast } from '../core/dom.js';
+import { closePanels, h, loadCss, showPanel, toast } from '../core/dom.js';
 import { on } from '../core/bus.js';
 import * as store from '../core/store.js';
 import { openGame, pickUp, showOnMap } from '../core/contracts.js';
 import { describeLocation2, formatRange } from '../core/format.js';
-import { bggPage, bggSearch, moveBlockedReason } from './logic.js';
+import { confirmPanel } from '../io/confirm.js';
+import { bggPage, bggSearch, deleteText, gamesInside, moveBlockedReason } from './logic.js';
 import { categorySection, extLink, insideSection, notesSection, pizzaSection, sizeSection, titleSection } from './fields.js';
 
 let uniq = 0;
@@ -33,6 +34,22 @@ export function openPanel(id) {
   const moveHintId = `game-move-hint-${uniq}`;
   const moveHint = h('p', { id: moveHintId, class: 'game-hint', role: 'status' });
   const moveBtn = h('button', { type: 'button', class: 'btn game-move', onclick: () => pickUp(id) }, 'Move');
+  async function deleteGame() {
+    const g = store.getGame(id);
+    const above = store.locate2(id)?.above?.length ?? 0;
+    const inside = gamesInside(store.getPlan2(), id, store.getGames()).map((x) => store.getGame(x)?.title ?? x);
+    const ok = await confirmPanel({
+      title: `Delete ${g.title}?`, lines: [deleteText(g.title, above, inside)], confirmLabel: 'Delete', danger: true,
+    });
+    if (!ok || !store.getGame(id)) return;
+    try {
+      store.removeGame(id);
+    } catch (err) {
+      toast(err.message, { error: true });
+      return;
+    }
+    closePanels(() => toast(`Deleted ${g.title}`, { action: { label: 'Undo', run: store.undo } }));
+  }
   const nameSection = titleSection(id, save);
   const sections = [nameSection, sizeSection(id, save), categorySection(id, save), pizzaSection(id), insideSection(id, openGame), notesSection(id, save)];
 
@@ -46,7 +63,9 @@ export function openPanel(id) {
           h('button', { type: 'button', class: 'btn btn-primary', onclick: () => showOnMap(id) }, 'Show on map'),
           moveBtn),
         moveHint),
-      ...sections.slice(1).map((s) => s.el)));
+      ...sections.slice(1).map((s) => s.el),
+      h('section', { class: 'game-sec game-danger' },
+        h('button', { type: 'button', class: 'btn btn-danger', onclick: deleteGame }, 'Delete game…'))));
 
   function refresh() {
     const g = store.getGame(id);
@@ -76,7 +95,8 @@ export function openPanel(id) {
   dlg.addEventListener('focusout', () => setTimeout(() => { if (dlg.isConnected) refresh(); }, 0));
   dlg.addEventListener('close', () => {
     off();
-    for (const s of sections) s.flush?.(); // Esc or Back while typing must not lose the edit
+    if (store.getGame(id)) for (const s of sections) s.flush?.(); // (a deleted game has nothing to save)
+    // Esc or Back while typing must not lose the edit
     if (opener?.isConnected) opener.focus?.();
   }, { once: true });
   showPanel(dlg);

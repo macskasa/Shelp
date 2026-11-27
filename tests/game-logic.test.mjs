@@ -257,3 +257,12 @@ test('moveBlockedReason: a game without a box size cannot be moved by hand', asy
   assert.equal(moveBlockedReason(undefined), 'Add a box size first');
 });
 
+
+test('deleteText says what settles down and what goes to the cupboard', async () => {
+  const { deleteText } = await import('../js/game/logic.js');
+  assert.equal(deleteText('Ark Nova'), 'Ark Nova is removed from the app and from the shelf plan.');
+  assert.equal(deleteText('Ark Nova', 2, ['Lairs: Box Zero']),
+    'Ark Nova is removed from the app and from the shelf plan. 2 boxes on top of it settle down. Lairs: Box Zero, stored inside it, goes to the cupboard.');
+  assert.match(deleteText('A', 1), /1 box on top of it settles down\./);
+  assert.match(deleteText('A', 0, ['B', 'C']), /B, C, stored inside it, go to the cupboard\./);
+});
