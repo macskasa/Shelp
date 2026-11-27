@@ -10,9 +10,8 @@
 //    one undo step, and everything is rolled back if the function throws.
 //
 // Data is stored in plan format v2 (schema 2: boxes with positions, games on games, bridges,
-// the board, the pizza flag; see js/core/plan2.js and docs/CONTEXT.md). During the move to v2
-// (Phase B) the old reads still work: getPlan(), getStack() and locate() return the v1 shape.
-// New code uses getPlan2(), getStack2(), locate2() and the v2 writes.
+// the board, the pizza flag; see js/core/plan2.js and docs/CONTEXT.md). Schema 1 files (old
+// backups, plan files from chat) are upgraded on load and import.
 //
 // Saved versions (D6) are named copies of games + plan, kept under their own key and in full
 // backups. Saving, renaming and deleting them are not undo steps; switching to one is.
@@ -23,7 +22,7 @@ import {
 import { ZONES } from './shelves.js';
 import {
   detach as detach2, findBox, insertOn, insertUnder, locations2, nextStackId, renumber,
-  toV1Plan, turnBox as turn2,
+  turnBox as turn2,
 } from './plan2.js';
 
 export const STORAGE_KEY = 'shelp:data:v1'; // the key name stays; the data inside is schema 2
@@ -36,8 +35,6 @@ const HISTORY = 30;
 let data = null; // private, mutable, schema 2: { app, schema, games: [], plan: {}, meta: {} }
 let snap = null; // frozen copy handed out to readers
 let byId = new Map();
-let view1 = null; // the plan in the v1 shape (compatibility)
-let where1 = new Map();
 let where2 = new Map();
 let board = []; // ids on the board, in order: moved there explicitly, then games with no place at all
 let seedCache = null;
@@ -158,26 +155,6 @@ export function locate2(id) {
  */
 export function getBoard() {
   return board;
-}
-
-/** v1 (compatibility until Phase B is done): the plan in the old shape { name, stacks, cupboard, inside }. Frozen. */
-export function getPlan() {
-  return view1;
-}
-
-/** v1 (compatibility): one stack in the old shape. Frozen. */
-export function getStack(id) {
-  return view1.stacks.find((s) => s.id === id);
-}
-
-/**
- * v1 (compatibility): where is a game, in the old shape. Games on the board are 'unplaced'.
- *  { kind: 'stack', stackId, zone, orientation, rows, row, index, side, above, below }
- *  { kind: 'inside', hostId, host }  { kind: 'cupboard', reason }  { kind: 'unplaced' }  null
- */
-export function locate(id) {
-  if (!byId.has(id)) return null;
-  return where1.get(id) ?? { kind: 'unplaced' };
 }
 
 /** Everything as one plain (mutable) object – this is the backup file format (schema 2). */
@@ -458,41 +435,6 @@ function storeVersions(next) {
   emit('store:changed', { games: [], plan: false, versions: true });
 }
 
-// ---------------------------------------------------------------- writes: v1 compatibility
-
-/**
- * v1 (compatibility): put a game on a stack, in the old terms.
- * row: 0 = front, 1 = back. index: position in the row, bottom → top (flat) or left → right
- * (standing); default = on top / at the right end. Prefer placeBox() in new code.
- */
-export function placeOnStack(id, stackId, { row = 0, index } = {}) {
-  const game = data.games[indexOf(id)];
-  if (!game.dims) throw new Error(`Add the box size of ${game.title} first – a game without a size cannot go on a shelf.`);
-  const st = data.plan.stacks.find((s) => s.id === stackId);
-  if (!st) throw new Error(`There is no stack ${stackId}`);
-  const before = toV1Plan({ ...data.plan, stacks: [st] }).stacks[0];
-  if (!before.rows[row]) throw new Error(`Stack ${stackId} has no ${row === 0 ? 'front' : 'back'} row`);
-  const zone = ZONES[st.zone];
-  const longest = Math.max(...game.dims);
-  if (before.orientation === 'standing') {
-    const up = longest > zone.usable ? 'm' : 'l';
-    mustPlaceable(id, up);
-    detach2(data.plan, id, rawGame);
-    insertOn(data.plan, rawGame, id, { stackId, row, on: [], index, up, rot: false });
-  } else {
-    detach2(data.plan, id, rawGame);
-    const v1 = toV1Plan({ ...data.plan, stacks: [st] }).stacks[0];
-    const items = v1.rows[row] ?? [];
-    const ids = (it) => (it.side ? it.side.map((x) => x.game) : [it.game]);
-    const at = index == null ? items.length : Math.max(0, Math.min(index, items.length));
-    const rot = longest > zone.depth;
-    if (!items.length) insertOn(data.plan, rawGame, id, { stackId, row, on: [], up: 's', rot });
-    else if (at === items.length) insertOn(data.plan, rawGame, id, { stackId, row, on: ids(items[at - 1]).slice(0, 2), up: 's', rot });
-    else insertUnder(data.plan, rawGame, id, ids(items[at]), { up: 's', rot });
-  }
-  changed({ games: [id], plan: true });
-}
-
 /** Replace the whole plan (e.g. a plan made in chat), v1 or v2 shape. Games stay as they are. */
 export function replacePlan(plan) {
   const v2 = Array.isArray(plan?.board) || (plan?.stacks ?? []).some((s) => Array.isArray(s?.boxes));
@@ -691,42 +633,11 @@ function rebuild() {
   copy.games.sort((a, b) => collator.compare(a.title, b.title));
   snap = deepFreeze(copy);
   byId = new Map(snap.games.map((g) => [g.id, g]));
-  view1 = deepFreeze(toV1Plan(snap.plan));
-  where1 = whereV1(view1);
   where2 = locations2(snap.plan);
   const explicit = snap.plan.board.map((b) => b.game);
   const placeless = snap.games.filter((g) => !where2.has(g.id)).map((g) => g.id);
   board = Object.freeze([...explicit, ...placeless]);
   for (const id of placeless) where2.set(id, Object.freeze({ kind: 'board', index: board.indexOf(id) }));
-}
-
-/** v1 locations from the v1 view (unchanged from schema 1). */
-function whereV1(plan) {
-  const where = new Map();
-  for (const st of plan.stacks) {
-    st.rows.forEach((row, r) => {
-      const flat = row.flatMap((item) => (item.side ? item.side.map((x) => x.game) : [item.game]));
-      let pos = 0;
-      row.forEach((item, i) => {
-        const ids = item.side ? item.side.map((x) => x.game) : [item.game];
-        ids.forEach((g, k) => {
-          const isFlat = st.orientation === 'flat';
-          where.set(g, Object.freeze({
-            kind: 'stack', stackId: st.id, zone: st.zone, orientation: st.orientation,
-            rows: st.rows.length, row: r, index: i, side: item.side ? k : null,
-            above: Object.freeze(isFlat ? flat.slice(pos + ids.length) : []),
-            below: Object.freeze(isFlat ? flat.slice(0, pos) : []),
-          }));
-        });
-        pos += ids.length;
-      });
-    });
-  }
-  for (const c of plan.cupboard) where.set(c.game, Object.freeze({ kind: 'cupboard', reason: c.reason ?? '' }));
-  for (const [exp, host] of Object.entries(plan.inside)) {
-    where.set(exp, Object.freeze({ kind: 'inside', hostId: host, host: where.get(host) ?? { kind: 'unplaced' } }));
-  }
-  return where;
 }
 
 function deepFreeze(o) {

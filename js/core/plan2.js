@@ -1,4 +1,4 @@
-// Plan format v2 (schema 2): upgrade from v1, the v1 view, locations, and the edit operations.
+// Plan format v2 (schema 2): upgrade from v1, locations, and the edit operations.
 // Pure functions on plain objects, no DOM. The store (store.js) is the only caller that changes
 // data; everyone else uses the store. Owner: Tony (lead).
 //
@@ -87,50 +87,6 @@ export function placedIds(plan) {
   for (const k of Object.keys(plan.inside ?? {})) ids.add(k);
   for (const b of plan.board ?? []) ids.add(b.game);
   return ids;
-}
-
-// ---------------------------------------------------------------- the v1 view (compatibility)
-
-/**
- * The v2 plan in the v1 shape, for code that has not moved to v2 yet (Phase B).
- * Exact for every plan the v1 operations can make. Boxes the v1 shape cannot express (several piles
- * on one floor, trees) are still listed, so every game keeps a v1 location.
- */
-export function toV1Plan(plan) {
-  const stacks = plan.stacks.map((st) => {
-    const rowsN = st.boxes.some((b) => b.row === 1) ? 2 : 1;
-    const rows = [];
-    let standing = false;
-    for (let r = 0; r < rowsN; r++) {
-      const rb = st.boxes.filter((b) => (b.row ?? 0) === r);
-      const floor = rb.filter((b) => !b.on.length).sort(byX);
-      if (floor.length && rb.every((b) => !b.on.length) && floor.every((b) => b.up !== 's')) {
-        standing = true;
-        rows.push(floor.map((b) => ({ game: b.game })));
-        continue;
-      }
-      const items = [];
-      const used = new Set();
-      const add = (level) => {
-        level.forEach((b) => used.add(b.game));
-        if (level.length === 1) items.push(level[0].rot ? { game: level[0].game, rot: true } : { game: level[0].game });
-        else items.push({ side: level.map((b) => (b.rot ? { game: b.game, rot: true } : { game: b.game })) });
-      };
-      let level = floor;
-      while (level.length) {
-        add(level);
-        const ids = level.map((b) => b.game);
-        level = rb.filter((b) => !used.has(b.game) && b.on.length && b.on.every((s) => ids.includes(s))).sort(byX);
-      }
-      for (const b of rb) if (!used.has(b.game)) add([b]); // shapes v1 cannot express
-      rows.push(items);
-    }
-    const out = { id: st.id, zone: st.zone, x: st.x, orientation: standing ? 'standing' : 'flat', rows };
-    if (st.topper) out.topper = { ...st.topper };
-    if (st.notes) out.notes = [...st.notes];
-    return out;
-  });
-  return { name: plan.name, stacks, cupboard: plan.cupboard.map((c) => ({ ...c })), inside: { ...plan.inside } };
 }
 
 // ---------------------------------------------------------------- locations (v2)

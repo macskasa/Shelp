@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import * as store from '../js/core/store.js';
 import { boxSize, layoutStack2 } from '../js/core/geometry.js';
-import { migrateDataV1, toV1Plan } from '../js/core/plan2.js';
+import { migrateDataV1 } from '../js/core/plan2.js';
 import { checkData, knownFrom } from '../js/core/schema.js';
 import { describeLocation2 } from '../js/core/format.js';
 
@@ -56,10 +56,15 @@ test('boxSize: up and rot', () => {
   assert.deepEqual(boxSize([30, 7, 37], 'm', true), { w: 37, d: 7, h: 30 }); // dims in any order
 });
 
-test('upgrade: v1 → v2 → v1 gives back the seed plan exactly', () => {
+test('upgrade: v1 → v2 keeps every stack, every game in its stack and row, the cupboard and the boxes inside', () => {
   const up = migrateDataV1(structuredClone(seed));
   assert.equal(up.schema, 2);
-  assert.deepEqual(toV1Plan(up.plan), seed.plan);
+  const v1Games = (st) => st.rows.flatMap((row, r) => row.flatMap((it) => (it.side ?? [it]).map((x) => `${x.game}@${r}`))).sort();
+  const v2Games = (st) => st.boxes.map((b) => `${b.game}@${b.row ?? 0}`).sort();
+  assert.deepEqual(up.plan.stacks.map((s) => [s.id, s.zone, s.x]), seed.plan.stacks.map((s) => [s.id, s.zone, s.x]));
+  seed.plan.stacks.forEach((st, i) => assert.deepEqual(v2Games(up.plan.stacks[i]), v1Games(st), st.id));
+  assert.deepEqual(up.plan.cupboard, seed.plan.cupboard);
+  assert.deepEqual(up.plan.inside, seed.plan.inside);
   assert.deepEqual(up.plan.board, []);
 });
 
@@ -110,7 +115,6 @@ test('a new game has no place, so it is on the board', async () => {
   const g = store.addGame({ title: 'New one', dims: [3, 10, 10] });
   assert.equal(store.locate2(g).kind, 'board');
   assert.deepEqual(store.getBoard(), [g]);
-  assert.equal(store.locate(g).kind, 'unplaced'); // v1 view
   assert.equal(store.getGame(g).pizza, true);
 });
 
@@ -123,7 +127,6 @@ test('moveToBoard from the middle of a pile: the boxes above settle down', async
   assert.deepEqual(store.locate2(id('Takenokolor')).on, [id("Let's Go! To Japan")]);
   assert.equal(store.locate2(yu).kind, 'board');
   assert.deepEqual(store.getBoard(), [yu]);
-  assert.equal(store.locate(yu).kind, 'unplaced');
 });
 
 test('placeBox on the floor of a book row: the neighbours move over', async () => {
@@ -167,7 +170,8 @@ test('placeUnder: slide a box under a pile', async () => {
   store.placeUnder(ice, [id('7 Csoda')], { up: 's', rot: true });
   assert.deepEqual(store.locate2(id('7 Csoda')).on, [ice]);
   assert.deepEqual(store.locate2(ice).on, []);
-  assert.equal(store.locate(ice).index, 0); // v1 view: at the bottom of B1
+  assert.equal(store.locate2(ice).stackId, 'B1');
+  assert.deepEqual(store.locate2(ice).below, []); // at the bottom of B1
 });
 
 test('the store refuses: no size, pizza not flat, bad supports', async () => {
@@ -272,16 +276,6 @@ test('files: v2 backup round trip, v1 backup upgrade, v2 plan replace', async ()
   assert.equal(store.locate2(id('Chess')).kind, 'board');
   assert.equal(store.undo(), true);
   assert.equal(store.locate2(id('Chess')).stackId, 'N5');
-});
-
-test('v1 compatibility: placeOnStack at the bottom slides the box under the pile', async () => {
-  await fresh();
-  const tm = id('T.I.M.E Stories: Lumen Fidei');
-  store.placeOnStack(tm, 'M3', { index: 0 });
-  assert.equal(store.locate(tm).index, 0);
-  assert.deepEqual(store.locate2(id('SETI – Kutatás a földön kívüli élet után')).on, [tm]);
-  store.placeOnStack(tm, 'M3'); // on top
-  assert.deepEqual(store.locate2(tm).on, [id('Tokaido Duo')]);
 });
 
 test('preview: try a change without keeping it', async () => {

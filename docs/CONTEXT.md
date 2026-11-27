@@ -185,27 +185,18 @@ null   // unknown id
 - A backup carries them only when there are any. Importing a full backup **with** `versions` replaces them; any other import, and "Reset to the original data", leaves them alone.
 - One broken version makes a backup invalid.
 
-### The v1 shape, during Phase B only
-
-Until every part has moved to schema 2, the old reads still work. They are computed from the v2 data:
-- `getPlan()` / `getStack()`: stacks with `orientation` and `rows` of items, as before.
-- `locate()`: `index`, `side`, `above`; games on the board are `'unplaced'`.
-- `placeOnStack()`.
-
-**New code uses only the v2 functions.** Tony removes the v1 shape when Phase B is done.
-
 ## 5. What you get ready made (`js/core/`, owner Tony)
 
 | Module | What it gives you |
 |---|---|
-| `store.js` | `init()`. **Reads (v2):** `getGames()` (sorted by title), `getGame(id)`, `getPlan2()`, `getStack2(id)`, `locate2(id)`, `getBoard()`, `getMeta()`, `exportData()`, `validate(obj)`, `canUndo()`, `canRedo()`. **Writes:** `updateGame(id, patch)`, `addGame(fields) → id`, `removeGame(id)`, `moveToBoard(id)`, `moveToCupboard(id, reason)`, `setInside(id, hostId)`, `placeBox(id, { stackId, row, on, index, up, rot })`, `placeUnder(id, targetIds, { up, rot })`, `turnBox(id, { up, rot })`, `createStack(zone, { x }) → id`, `moveStack(id, x)`, `removeStack(id)` (games go to the board), `renumberStacks() → { old: new }`, `undo()`, `redo()`, `preview(fn) → { plan, games, error }` (try writes without keeping them), `replacePlan(plan)`, `importData(obj) → 'all' \| 'plan'`, `resetToSeed()`, `setMeta(key, value)`, `batch(fn)`. **Saved versions:** `listVersions()` (newest first, `{ id, name, savedAt, games, stacks }` with counts), `getVersion(id)`, `saveVersion(name) → id` (1–60 characters, at most `MAX_VERSIONS` = 10), `restoreVersion(id)` (one undo step), `renameVersion(id, name)`, `deleteVersion(id)`. Saving, renaming and deleting fire `store:changed` with `versions: true`, aren't undo steps, and are refused inside `preview` / `batch`. Every write except `setMeta` and those three is one undo step (a `batch` is one step, up to 30 kept). Writes throw an `Error` with a readable message (and `err.problems`, a list, when there are several). **v1 (Phase B only):** `getPlan()`, `getStack(id)`, `locate(id)`, `placeOnStack(id, stackId, { row, index })`. |
+| `store.js` | `init()`. **Reads (v2):** `getGames()` (sorted by title), `getGame(id)`, `getPlan2()`, `getStack2(id)`, `locate2(id)`, `getBoard()`, `getMeta()`, `exportData()`, `validate(obj)`, `canUndo()`, `canRedo()`. **Writes:** `updateGame(id, patch)`, `addGame(fields) → id`, `removeGame(id)`, `moveToBoard(id)`, `moveToCupboard(id, reason)`, `setInside(id, hostId)`, `placeBox(id, { stackId, row, on, index, up, rot })`, `placeUnder(id, targetIds, { up, rot })`, `turnBox(id, { up, rot })`, `createStack(zone, { x }) → id`, `moveStack(id, x)`, `removeStack(id)` (games go to the board), `renumberStacks() → { old: new }`, `undo()`, `redo()`, `preview(fn) → { plan, games, error }` (try writes without keeping them), `replacePlan(plan)`, `importData(obj) → 'all' \| 'plan'`, `resetToSeed()`, `setMeta(key, value)`, `batch(fn)`. **Saved versions:** `listVersions()` (newest first, `{ id, name, savedAt, games, stacks }` with counts), `getVersion(id)`, `saveVersion(name) → id` (1–60 characters, at most `MAX_VERSIONS` = 10), `restoreVersion(id)` (one undo step), `renameVersion(id, name)`, `deleteVersion(id)`. Saving, renaming and deleting fire `store:changed` with `versions: true`, aren't undo steps, and are refused inside `preview` / `batch`. Every write except `setMeta` and those three is one undo step (a `batch` is one step, up to 30 kept). Writes throw an `Error` with a readable message (and `err.problems`, a list, when there are several). |
 | `geometry.js` | `boxSize(dims, up, rot) → { w, d, h }`, `layoutStack2(stack, getGame) → { w, d, h, pileH, rows, boxes, topper }`. The geometry of schema 2, shared by everyone. |
 | `plan2.js` | The upgrade from schema 1, the v1 view and the edit operations behind the store. **Don't call it directly**; use the store. Two exceptions: `locations2(plan)` is a pure read that works on any plan (Peter's compare), and Stephen's `js/rules/suggest.js` may run `detach` / `insertOn` on its **own copy** of a plan. Never on store data. |
 | `bus.js` | `on(type, fn) → unsubscribe`, `emit(type, detail)`. Events: `store:changed` `{ games: id[] \| null, plan: bool }` (null = everything changed), `store:error` `{ message }` (app.js shows it), `route:changed` `{ id, params }`. |
 | `contracts.js` | `openGame(id)`, `showOnMap(gameId)`, `showStack(stackId)`, `pickUp(gameId)` (placing mode, `#/map?pick=<id>`), `go(screen, params)`, `provide(name, fn)`. |
 | `shelves.js` | `ZONES`, `GROUPS`, `BRACKET`, `STACK_TOLERANCE`, `bracketLimit(zone, depth)`, `isEasy(zoneId, x, w)`. |
 | `categories.js` | `CATEGORIES` (id, label, cssVar), `OTHER`, `CATEGORY_IDS`, `category(id)`, `colorsFor(game)` → list of CSS colours in fixed order. |
-| `format.js` | `formatDims(dims)` → "30.5 × 22.6 × 5.1 cm", `formatRange(r, unit)` → "2–4", `describeLocation2(loc, getTitle)` → "Bottom shelf · stack B3 · on Takenokolor · nothing on top" / "On the board". (`describeLocation` is the v1 version, Phase B only.) |
+| `format.js` | `formatDims(dims)` → "30.5 × 22.6 × 5.1 cm", `formatRange(r, unit)` → "2–4", `describeLocation2(loc, getTitle)` → "Bottom shelf · stack B3 · on Takenokolor · nothing on top" / "On the board". |
 | `dom.js` | `h(tag, props, ...children)` for HTML, `s(tag, attrs, ...children)` for SVG, `clear(el)`, `loadCss(url)`, `toast(text, { error, ms, action })`: with `action: { label, run }` it gets a button and stays 6 s, one at a time (e.g. Undo after a move; close the panels first, a modal makes it untappable), `showPanel(dialog)`: opens a `<dialog>` as a modal that the Android back gesture closes; `closePanels(done)`: closes all of them (`go()` already does this, so navigating from a panel needs no extra code). |
 | `schema.js` | `checkData(obj, known) → { problems, data }` (schema 1 or 2, upgraded to 2), `validateData`, `validateGame`, `validatePlan2`, `knownFrom(games)`. The store already uses these. |
 | `css/base.css` | Colours and basics: `--cat-party`, `--cat-coop`, `--cat-popular`, `--cat-duo`, `--cat-other`, `--accent`, `--danger` (block problems), `--warn` (amber, warnings), `--bracket`, `--easy-zone`, … plus `.btn`, `.btn-primary`, `.card`, `.chip`, `dialog.panel`, `.toast`. Light and dark mode. Layout tokens: `--header-h`, and `--tabbar-h` (bottom tab bar height without the safe area: 56px below 1024 px, 0 on desktop). `.app-main` and `.toast` already keep clear of the tab bar. Anything you fix to the bottom of the screen must sit at `calc(var(--tabbar-h) + env(safe-area-inset-bottom))`. |
@@ -236,9 +227,9 @@ Load your stylesheet once in your module: `loadCss(new URL('./map.css', import.m
 | anyone → game panel (A) | `openGame(id)` | fallback panel in `contracts.js` until Stephen calls `provide('openGame', …)` |
 | catalog/search (C) → map (B) | `showOnMap(id)` → `#/map?game=id` | placeholder map already highlights the stack |
 | game panel (A) → map (B) | `showOnMap(id)` | – |
-| BGG import / add a game (A) → board (B) | new games have no place, so they are on the board (`getBoard()`); v1 `locate()` calls them `'unplaced'` | in use |
-| geometry (core) → everyone | schema 2 geometry is `js/core/geometry.js` (`boxSize`, `layoutStack2`). In Phase B the rule checker, the CSV export and the map move to it. `js/map/model.js` (`footprint`, `layoutStack`, v1) stays stable until nobody imports it. | Phase B |
-| map / stack details (B) → rule checker (A) | Bruce calls the rule checker from `js/rules/` for warnings and previews. In Phase B Stephen adds v2 versions with `severity: 'block' \| 'warn'`. | in use; v2 in Phase B |
+| BGG import / add a game (A) → board (B) | new games have no place, so they are on the board (`getBoard()`) | in use |
+| geometry (core) → everyone | `js/core/geometry.js` (`boxSize`, `layoutStack2`): the rule checker, the CSV export and the map all use it | in use |
+| map / stack details (B) → rule checker (A) | Bruce calls `checkStack2` / `checkPlan2` from `js/rules/` for warnings and previews, with `severity: 'block' \| 'warn'` | in use |
 | everyone → offline (C) | Peter's service worker caches every same-origin file at runtime, so nobody maintains a file list | – |
 
 ## 7. Who owns what
@@ -293,7 +284,6 @@ The placeholder screens in your folders were written by Tony only to test the wi
 - **Long side out / rot**: the box is turned so its long side runs along the shelf.
 - **Standing**: boxes stand on edge like books.
 - **Inside**: an expansion stored in its base game's box; it takes no shelf space.
-- **Unplaced** (v1 word): a game on the board.
 
 ## Changes
 
@@ -311,3 +301,4 @@ The placeholder screens in your folders were written by Tony only to test the wi
 - 2026-11-27 – **Adam's issues in the briefs:** Bruce `part-b3.md` items 7 (scrolling pans on desktop, #49) and 8 (the back row, #47), done first; Peter `part-c3.md` item 4 (pizza in the catalog, #46); Stephen `part-a4.md` item 5 (delete a game, #50). #48 is parked under Later in LEAD.md.
 - 2026-11-27 – **v1 leftovers:** nothing in the app uses v1 since #40. Each developer removes their own v1 code and tests (Stephen `part-a4.md` item 6, Bruce `part-b3.md` item 9, Peter `part-c3.md` item 5); then Tony removes the store's v1 functions and converts the seed to schema 2. `docs/kickoff.md` now also has opening messages for a Claude Code project.
 - 2026-11-27 – **Topper centring (issue #45):** `layoutStack2` centres a topper on the box (or the boxes side by side) at the top of the pile, not on the whole stack. The Bonsai in M3 now sits over Tokaido Duo. The matching assertion in `tests/map-scene.test.mjs` (Bruce) lands in the same PR.
+- 2026-11-27 – **v1 removed from the core:** every part is on schema 2 (#57, #59, and Peter's #54), so the store no longer has `getPlan`, `getStack`, `locate` or `placeOnStack`, `format.js` no longer has `describeLocation`, and `plan2.js` no longer has `toV1Plan`. Use `getPlan2`, `getStack2`, `locate2`, the v2 writes and `describeLocation2`. Schema 1 **files** (old backups, plan files from chat, today's seed) are still accepted and upgraded. Section 4's v1 notes and the glossary's "Unplaced" are gone.
