@@ -4,7 +4,7 @@ import { on } from '../core/bus.js';
 import * as store from '../core/store.js';
 import { showStack } from '../core/contracts.js';
 import { freeSpace } from '../core/space.js';
-import { barModel, cardTitle, floorText, groupUnits, roomText, summaryText } from './logic.js';
+import { barModel, cardTitle, floorText, groupUnits, moreRoom, moreRoomLabel, roomText, summaryText } from './logic.js';
 
 loadCss(new URL('./space.css', import.meta.url));
 
@@ -15,6 +15,16 @@ function bar(unit) {
   const el = h('div', { class: 'space-bar', role: 'group', 'aria-label': `${unit.label}, to scale` });
   el.append(h('div', { class: 'space-bar-floor', style: `width:${pct(m.shelf)}` }));
   if (m.shelf < 1) el.append(h('div', { class: 'space-bar-overhang', style: `left:${pct(m.shelf)}` }));
+  for (const sl of m.slots) {
+    const band = h('div', {
+      class: 'space-bar-slot', 'aria-hidden': 'true',
+      style: `left:${pct(sl.left)};width:${pct(sl.width)};height:calc((100% - 4px) * ${sl.height.toFixed(4)})`,
+    });
+    if (sl.restWidth > 0) {
+      band.append(h('div', { class: 'space-bar-rest', style: `left:${pct((sl.restLeft - sl.left) / sl.width)};width:${pct(sl.restWidth / sl.width)}` }));
+    }
+    el.append(band);
+  }
   for (const g of m.gaps) {
     el.append(h('div', { class: 'space-bar-gap', style: `left:${pct(g.left)};width:${pct(g.width)}`, 'aria-hidden': 'true' }));
   }
@@ -27,15 +37,31 @@ function bar(unit) {
   return el;
 }
 
+const nameOf = (id) => store.getGame(id)?.title ?? id;
+
+function more(unit) {
+  const lines = moreRoom(unit, nameOf);
+  if (!lines.length) return null;
+  const list = h('ul', { class: 'space-more-list', hidden: true }, lines.map((t) => h('li', {}, t)));
+  const btn = h('button', { type: 'button', class: 'space-more-toggle', 'aria-expanded': 'false' }, moreRoomLabel(unit, nameOf));
+  btn.addEventListener('click', () => {
+    const open = list.hidden;
+    list.hidden = !open;
+    btn.setAttribute('aria-expanded', String(open));
+  });
+  return h('div', { class: 'space-more' }, btn, list);
+}
+
 function card(unit) {
   const floor = floorText(unit);
-  const room = roomText(unit);
+  const room = roomText(unit, nameOf);
   return h('article', { class: 'space-card' },
     h('h3', { class: 'space-card-title' }, cardTitle(unit), h('span', { class: 'space-card-len' }, `${unit.length} cm`)),
     h('p', { class: 'space-floor' },
       h('strong', { class: floor.main === 'Full' ? 'space-full' : '' }, floor.main),
       floor.extra ? h('span', { class: 'space-extra' }, ` · ${floor.extra}`) : null),
-    h('p', { class: 'space-room' }, room || ' '),
+    h('p', { class: 'space-room' }, room || ' '),
+    more(unit),
     bar(unit));
 }
 

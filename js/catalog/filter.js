@@ -103,6 +103,13 @@ export function stateToParams(state) {
   return p;
 }
 
+/** The hash for a state: "#/catalog" or "#/catalog?family=Azul&q=x" (commas stay readable). */
+export function catalogHash(state) {
+  const q = new URLSearchParams(Object.entries(stateToParams(state)).map(([k, v]) => [k, String(v)]))
+    .toString().replace(/%2C/g, ',');
+  return `#/catalog${q ? `?${q}` : ''}`;
+}
+
 /** How many filters are switched on (the sort and the search text do not count: the search field is always visible). */
 export function activeFilterCount(state) {
   return (state.cats.length ? 1 : 0) + (state.players != null) + (state.time != null)
