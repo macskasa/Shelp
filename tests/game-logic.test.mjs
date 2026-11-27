@@ -6,7 +6,7 @@ import * as store from '../js/core/store.js';
 import { describeLocation2 } from '../js/core/format.js';
 import {
   findByBggId, parseBggId, parseGameForm, parseRange, cleanTitle, parseDecimal, parseDims, dimsToInputs, sameDims, textOrNull, sizeSources, toggleCategory,
-  gamesInside, hostChoices, takenOutReason, bggPage, bggVersions, bggSearch, setPizza, pizzaStamp, moveBlockedReason,
+  gamesInside, hostChoices, foldText, matchHosts, likelyHosts, hostResults, takenOutReason, bggPage, bggVersions, bggSearch, setPizza, pizzaStamp, moveBlockedReason,
 } from '../js/game/logic.js';
 
 const seed = JSON.parse(readFileSync(new URL('../data/seed.json', import.meta.url), 'utf8'));
@@ -265,4 +265,64 @@ test('deleteText says what settles down and what goes to the cupboard', async ()
     'Ark Nova is removed from the app and from the shelf plan. 2 boxes on top of it settle down. Lairs: Box Zero, stored inside it, goes to the cupboard.');
   assert.match(deleteText('A', 1), /1 box on top of it settles down\./);
   assert.match(deleteText('A', 0, ['B', 'C']), /B, C, stored inside it, go to the cupboard\./);
+});
+
+// ---------------------------------------------------------------- "Stored inside" search
+
+const gm = (title, bggName, type = 'base') => ({ id: title, title, bggName, type });
+
+test('foldText ignores case, accents and punctuation', () => {
+  assert.equal(foldText('A Mars terraformálása'), 'a mars terraformalasa');
+  assert.equal(foldText('  Ark   Nova: Marine-Worlds '), 'ark nova marine worlds');
+  assert.equal(foldText(null), '');
+});
+
+test('matchHosts finds a game by title or BGG name, in any case, with or without accents', () => {
+  const mars = gm('A Mars terraformálása', 'Terraforming Mars');
+  const hosts = [gm('Ark Nova', 'Ark Nova'), mars, gm('Marsupilami', null)];
+  for (const q of ['terraforming', 'MARS', 'terraformalasa', 'terraformálása', 'mars terra', 'a mars']) {
+    assert.ok(matchHosts(hosts, q).includes(mars), q);
+  }
+  assert.deepEqual(matchHosts(hosts, 'zzz'), []);
+  assert.deepEqual(matchHosts(hosts, '  '), []);
+  assert.deepEqual(matchHosts(hosts, 'ark nova').map((g) => g.title), ['Ark Nova']);
+});
+
+test('matchHosts puts title starts first, then BGG starts, then words, then contains', () => {
+  const hosts = [gm('Xcatan', null), gm('Telepesek', 'Catan'), gm('Az új Catan', null), gm('Catan Junior', null)];
+  assert.deepEqual(matchHosts(hosts, 'catan').map((g) => g.title), ['Catan Junior', 'Telepesek', 'Az új Catan', 'Xcatan']);
+});
+
+test('likelyHosts: for an expansion, base games whose BGG name starts its BGG name', () => {
+  const mars = gm('A Mars terraformálása', 'Terraforming Mars');
+  const ares = gm('Ares', 'Terraforming Mars: Ares Expedition');
+  const hosts = [mars, ares, gm('Terra', 'Terra'), gm('Prelude', 'Terraforming Mars: Prelude', 'expansion'), gm('Terraforming Marsh', 'Terraforming Marsh')];
+  const prelude = hosts[3];
+  assert.deepEqual(likelyHosts(prelude, hosts).map((g) => g.title), ['A Mars terraformálása']);
+  assert.deepEqual(likelyHosts(gm('x', 'Terraforming Mars: Ares Expedition: Crisis', 'expansion'), hosts).map((g) => g.title), ['Ares', 'A Mars terraformálása']);
+  assert.deepEqual(likelyHosts(mars, hosts), []); // a base game gets no suggestions
+  assert.deepEqual(likelyHosts(gm('x', null, 'expansion'), hosts), []);
+});
+
+test('hostResults: suggestions for an empty search, a limit and a count of the rest', () => {
+  const hosts = Array.from({ length: 12 }, (_, i) => gm(`Box ${String(i).padStart(2, '0')}`, null));
+  const r = hostResults(gm('x', null), hosts, 'box');
+  assert.equal(r.results.length, 8);
+  assert.equal(r.more, 4);
+  assert.equal(r.likely, false);
+  assert.deepEqual(hostResults(gm('x', null), hosts, ''), { results: [], more: 0, likely: false });
+  const e = gm('Prelude', 'Box 03: Prelude', 'expansion');
+  const s = hostResults(e, [{ ...hosts[3], bggName: 'Box 03' }, ...hosts], '');
+  assert.equal(s.likely, true);
+  assert.equal(s.results.length, 1);
+});
+
+test('hostResults on the seed: Terraforming Mars is found by BGG name, title and folded title', async () => {
+  await store.init({ seed, storage: memoryStorage() });
+  const prelude = store.getGames().find((g) => g.bggName === 'Terraforming Mars: Prelude');
+  if (!prelude) return;
+  const { hosts } = hostChoices(prelude.id, store.getGames(), store.getPlan2());
+  const base = store.getGames().find((g) => g.bggName === 'Terraforming Mars' && g.type === 'base');
+  for (const q of ['terraforming', 'mars', 'terraformalasa']) assert.ok(hostResults(prelude, hosts, q).results.some((g) => g.id === base.id), q);
+  assert.ok(hostResults(prelude, hosts, '').results.some((g) => g.id === base.id));
 });
