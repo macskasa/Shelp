@@ -14,34 +14,38 @@
 //     gaps: [{ x, w }],  the empty stretches, x along the zone, cut at the unit's edges, left to right
 //     stacks: [{ id, x, w, h, room, slot }],   stacks with boxes that reach into the unit, left to right;
 //                        room = height left above the stack (usable height − stack height, topper included, ≥ 0);
-//                        slot = the stack's highest slot (below), or null
-//     slots: [Slot],     room on top of the stacks whose top surface lies in this unit, most height first
-//     room: Slot | null, the slot with the most height (null: none)
+//                        slot = the stack's highest 'top' slot (below), or null
+//     slots: [Slot],     room on top of the stacks (kind 'top') whose surface lies (mostly) in this unit, most height first
+//     standing: [Slot],  standing spaces (kind 'standing') in this unit, most height first
+//     room: Slot | null, slots[0]: the room on top with the most height (null: none)
 //   }
-//   Slot = { stackId, y, h, x, w, rest: { x, w }, on: [gameId] }   room on top of a stack
-//     y      the height of the stack's top surface: its highest box (a topper is not a surface; boxes side by
-//            side within 0.5 cm of the top count too); h = usable height − y
+//   Slot = { kind, stackId, stackIds, y, h, x, w, rest: { x, w }, tilt, on: [gameId] }
+//     kind   'top': on top of a stack; 'standing': a ledge lower down, beside something taller, e.g. the open
+//            edge of Anachrony next to KLASK: narrow and tall, where a box can stand (#88)
+//     y      the height of the surface (a topper is not a surface); h = usable height − y
 //     x, w   the AIR at that height: from the nearest taller thing on the left to the one on the right
-//            (a box, a topper, a bracket on the middle and bottom shelves, or the shelf's end). It can reach
-//            over lower neighbours, e.g. above M2 from M1's narrower top box to the bracket at 60 cm.
-//     rest   the part of the surface that is open from above: what a box there rests on. A box wider than
-//            rest.w + 2 cm sticks out more than 1 cm (the stacking warning). on: the boxes of that surface
-//            (two side by side at the same height, within 0.5 cm, count as one surface: a bridge).
+//            (a box or topper more than TILT higher, a bracket on the middle and bottom shelves, or the shelf's
+//            end). It can reach over lower neighbours, e.g. above M2 from M1's narrower top box to the bracket.
+//     rest   the open part of the surface: what a box there rests on. A box wider than rest.w + 2 cm sticks
+//            out more than 1 cm (the stacking warning). on: the boxes of that surface.
+//     tilt   surfaces within TILT (0.5 cm, as for a bridge) side by side count as one, also across two stacks
+//            (stackIds), so a box may rest across them a little tilted (#89); tilt is the height difference,
+//            y the higher one. stackId: the stack with the most of the surface.
 //
 // Front view only: what the shelf floor and the heights show from the front. Room behind a shallow stack,
 // depth, and the other rules for resting on a box are left out: this is "at a glance", the rule checker
 // decides. A stack across a joint counts in both units. Empty stacks (no boxes) take no room. Stretches
 // narrower than MIN_GAP are left out (stacks start 0.2 cm from a joint). Slots need MIN_REST cm to rest on
-// and MIN_ROOM cm of height. A bracket stops a slot's air even where a low box could pass under it. Ledges
-// lower down a pile (the open edge of a wider box under a narrower one) are not slots.
+// and MIN_ROOM cm of height. A bracket stops a slot's air even where a low box could pass under it.
 import { BRACKET, ZONES, bracketLimit } from './shelves.js';
 import { layoutStack2 } from './geometry.js';
 
 export const MIN_GAP = 1; // cm
-export const MIN_REST = 3; // cm: a narrower open strip of a box top isn't a place to rest a box
+export const MIN_REST = 2; // cm: a narrower open strip of a box top isn't a place to rest a box (thin boxes stand)
 export const MIN_ROOM = 1; // cm of height above a surface
 const EPS = 1e-6;
-const LEVEL = 0.5; // two surfaces this close in height count as one (a bridge may rest on both)
+export const TILT = 0.5; // cm: surfaces this close in height count as one, as for a bridge (#89)
+const TOUCH = 0.5; // cm: strips this close side by side make one surface
 
 const SIDES = ['left', 'middle', 'right'];
 const r1 = (n) => Math.round(n * 10) / 10;
@@ -92,31 +96,45 @@ function subtract(a, b, cut) {
 export function zoneSlots(zone, pieces) {
   const brackets = zone.brackets.map((j) => ({ x0: j - BRACKET.width / 2, x1: j + BRACKET.width / 2, top: bracketLimit(zone, zone.depth) }));
   const end = zone.length + zone.overhang;
-  const above = (t) => [...pieces.filter((p) => p.top > t + EPS), ...brackets];
-  // open strips of each stack's top boxes, then the strips at (about) one height merged into surfaces
+  // a wall at height t: anything more than TILT cm higher (a box up to TILT higher is level enough to rest across)
+  const walls = (t) => [...pieces.filter((p) => p.top > t + TILT + EPS), ...brackets];
   const topOf = new Map();
   for (const p of pieces) if (p.gameId) topOf.set(p.stackId, Math.max(topOf.get(p.stackId) ?? 0, p.top));
+  // the open strips of every box top
   const strips = [];
   for (const p of pieces) {
-    if (!p.gameId || p.top < topOf.get(p.stackId) - LEVEL - EPS || zone.usable - p.top < MIN_ROOM) continue;
-    for (const s of subtract(p.x0, p.x1, above(p.top))) strips.push({ stackId: p.stackId, y: p.top, ...s, on: [p.gameId] });
+    if (!p.gameId || zone.usable - p.top < MIN_ROOM) continue;
+    for (const s of subtract(p.x0, p.x1, walls(p.top))) strips.push({ stackId: p.stackId, y: p.top, ...s, on: [p.gameId] });
   }
-  strips.sort((m, n) => m.stackId.localeCompare(n.stackId) || n.y - m.y || m.a - n.a);
+  // strips that touch (or overlap, front and back row) and lie within TILT of each other make one surface,
+  // also across two stacks side by side
+  strips.sort((m, n) => m.a - n.a || n.y - m.y);
   const surfaces = [];
-  for (const s of strips) {
-    const prev = surfaces.find((q) => q.stackId === s.stackId && Math.abs(q.y - s.y) <= LEVEL && Math.abs(q.b - s.a) <= 0.01);
-    if (prev) Object.assign(prev, { b: s.b, y: Math.max(prev.y, s.y), on: [...prev.on, ...s.on] });
-    else surfaces.push({ ...s });
+  for (const st of strips) {
+    const across = (x) => brackets.some((br) => br.x0 < Math.max(x.b, st.b) - EPS && br.x1 > Math.min(x.a, st.a) + EPS
+      && !(br.x1 <= x.a + EPS && br.x1 <= st.a + EPS) && !(br.x0 >= x.b - EPS && br.x0 >= st.b - EPS));
+    const q = surfaces.find((x) => st.a <= x.b + TOUCH + EPS && st.b >= x.a - TOUCH - EPS
+      && Math.max(x.hi, st.y) - Math.min(x.lo, st.y) <= TILT + EPS && !across(x)); // never across a bracket
+    if (q) {
+      Object.assign(q, { a: Math.min(q.a, st.a), b: Math.max(q.b, st.b), lo: Math.min(q.lo, st.y), hi: Math.max(q.hi, st.y) });
+      q.on.push(...st.on.filter((id) => !q.on.includes(id)));
+      q.share.set(st.stackId, (q.share.get(st.stackId) ?? 0) + st.b - st.a);
+    } else {
+      surfaces.push({ a: st.a, b: st.b, lo: st.y, hi: st.y, on: [...st.on], share: new Map([[st.stackId, st.b - st.a]]) });
+    }
   }
   const out = [];
   for (const s of surfaces) {
-    if (s.b - s.a < MIN_REST - EPS) continue;
-    const walls = above(s.y);
-    const left = Math.max(0, ...walls.filter((w) => w.x1 <= s.a + EPS).map((w) => w.x1));
-    const right = Math.min(end, ...walls.filter((w) => w.x0 >= s.b - EPS).map((w) => w.x0));
+    if (s.b - s.a < MIN_REST - EPS || zone.usable - s.hi < MIN_ROOM) continue;
+    const ws = walls(s.hi);
+    const left = Math.max(0, ...ws.filter((w) => w.x1 <= s.a + EPS).map((w) => w.x1));
+    const right = Math.min(end, ...ws.filter((w) => w.x0 >= s.b - EPS).map((w) => w.x0));
+    const stackIds = [...s.share.keys()];
+    const stackId = [...s.share].sort((m, n) => n[1] - m[1])[0][0];
     out.push({
-      stackId: s.stackId, y: r1(s.y), h: r1(zone.usable - s.y), x: r1(left), w: r1(right - left),
-      rest: { x: r1(s.a), w: r1(s.b - s.a) }, on: s.on,
+      kind: stackIds.some((id) => s.hi >= topOf.get(id) - TILT - EPS) ? 'top' : 'standing',
+      stackId, stackIds, y: r1(s.hi), h: r1(zone.usable - s.hi), x: r1(left), w: r1(right - left),
+      rest: { x: r1(s.a), w: r1(s.b - s.a) }, tilt: r1(s.hi - s.lo), on: s.on,
     });
   }
   return out.sort((m, n) => n.h - m.h || m.x - n.x);
@@ -149,9 +167,9 @@ export function freeSpace(plan, getGame) {
       .sort((a, b) => a.x0 - b.x0)
       .map((s) => ({
         id: s.id, x: r1(s.x0), w: r1(s.x1 - s.x0), h: r1(s.h), room: r1(Math.max(0, u.height - s.h)),
-        slot: (slotsOf.get(u.zone) ?? []).filter((q) => q.stackId === s.id).sort((m, n) => n.y - m.y)[0] ?? null,
+        slot: (slotsOf.get(u.zone) ?? []).filter((q) => q.kind === 'top' && q.stackIds.includes(s.id)).sort((m, n) => n.y - m.y)[0] ?? null,
       }));
-    const slots = (slotsOf.get(u.zone) ?? []).filter((q) => {
+    const here = (slotsOf.get(u.zone) ?? []).filter((q) => {
       const mid = q.rest.x + q.rest.w / 2;
       return mid >= u.x0 - EPS && mid < u.end + EPS && (mid < u.end - EPS || u.end === ZONES[u.zone].length + ZONES[u.zone].overhang);
     });
@@ -161,8 +179,9 @@ export function freeSpace(plan, getGame) {
       widest: gaps.reduce((m, g) => Math.max(m, g.w), 0),
       gaps,
       stacks,
-      slots,
-      room: slots[0] ?? null,
+      slots: here.filter((q) => q.kind === 'top'),
+      standing: here.filter((q) => q.kind === 'standing'),
+      room: here.find((q) => q.kind === 'top') ?? null,
     };
   });
 }
