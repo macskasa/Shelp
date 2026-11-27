@@ -1,0 +1,29 @@
+/* "New version – Reload" banner (story E1). Owner: Peter (Part C). */
+.shell-update {
+  position: fixed;
+  left: 50%;
+  bottom: calc(16px + var(--tabbar-h) + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  width: max-content; /* otherwise it shrinks to half the screen (left: 50%) and the text wraps */
+  z-index: 110;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: calc(100vw - 32px);
+  padding: 6px 4px 6px 16px;
+  border-radius: var(--radius);
+  background: var(--text);
+  color: var(--bg);
+  box-shadow: 0 2px 12px rgb(0 0 0 / 0.3);
+}
+.shell-update .btn { min-height: 40px; }
+.shell-update-close {
+  width: 40px;
+  height: 40px;
+  font-size: 1.5rem;
+  line-height: 1;
+  color: inherit;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
