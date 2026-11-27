@@ -37,12 +37,12 @@ const BRACKET_HALF = 0.2; // brackets are 0.4 cm wide, centred on the joint
 const ZONE_ORDER = Object.keys(ZONES);
 
 const fmt = (n) => String(Math.round(n * 10) / 10);
-const key = (w) => (w.rule === 'family' ? `family|${w.family}` : `${w.rule}|${w.gameId}|${w.otherStackId}|${w.rule === 'bracket' ? w.message : ''}`);
-const cloneStack = (st) => ({ ...st, boxes: st.boxes.map((b) => ({ ...b, on: [...b.on] })) });
+export const key = (w) => (w.rule === 'family' ? `family|${w.family}` : `${w.rule}|${w.gameId}|${w.otherStackId}|${w.rule === 'bracket' ? w.message : ''}`);
+export const cloneStack = (st) => ({ ...st, boxes: st.boxes.map((b) => ({ ...b, on: [...b.on] })) });
 const ORIENTATION = { s: 'flat', m: 'on its side', l: 'on end' };
 
 /** The ways the game may lie: a pizza game flat (turned or not), any other game every side up. */
-function orientations(game) {
+export function orientations(game) {
   const out = [];
   const seen = new Set();
   for (const up of game.pizza ? ['s'] : ['s', 'm', 'l']) {

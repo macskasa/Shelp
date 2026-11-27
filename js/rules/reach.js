@@ -18,11 +18,11 @@ export const REACH = Object.freeze({ HARD_SPOT: 4, BACK_ROW: 2, PER_BOX: 1, MAX_
 
 /** The reach of a box from its three facts: easy zone or not, row (0 front, 1 back), boxes on top. */
 export function reachFrom({ easy, row, onTop }) {
-  const boxes = Math.min(onTop, REACH.MAX_BOXES);
+  const boxes = Math.min(onTop, REACH.MAX_BOXES); // the score counts at most 3 boxes; the text says the real count
   const parts = [];
   if (!easy) parts.push('hard spot');
   if (row === 1) parts.push('back row');
-  if (boxes) parts.push(`${boxes} ${boxes === 1 ? 'box' : 'boxes'} on top`);
+  if (onTop) parts.push(`${onTop} ${onTop === 1 ? 'box' : 'boxes'} on top`);
   const score = (easy ? 0 : REACH.HARD_SPOT) + (row === 1 ? REACH.BACK_ROW : 0) + boxes * REACH.PER_BOX;
   const words = parts.map((p) => (p === 'hard spot' ? 'Hard-to-reach spot' : p === 'back row' ? 'Back row' : p));
   return { score, parts, text: score === 0 ? 'Easy to reach' : words.join(' · ') };
