@@ -22,11 +22,11 @@ export function restsOn(on, getTitle) {
  * The muted line under a box title (part-b4 item 4): what it rests on and its flags, then its reach.
  * Two parts so the reach can wrap as a whole on a phone; text joins them for a screen reader.
  * @returns {{ place: string, reach: string | null, text: string }}
- *   place "on Takenokolor · standing", reach "Back row · 2 boxes on top", text "on Takenokolor · standing – Back row · 2 boxes on top"
+ *   place "on Takenokolor · standing", reach "Back row · 2 boxes on top", text "on Takenokolor · standing · Back row · 2 boxes on top"
  */
 export function boxLine({ rests, flags = [], reach = null }) {
   const place = [rests, ...flags].join(' · ');
-  return { place, reach: reach || null, text: reach ? `${place} – ${reach}` : place };
+  return { place, reach: reach || null, text: reach ? `${place} · ${reach}` : place };
 }
 
 /**

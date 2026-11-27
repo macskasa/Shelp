@@ -1,6 +1,7 @@
 // "New stack here", the spot sheet for empty shelf space in placing mode (part-b3 item 5).
 // Owner: Bruce (Part B). Shows where the new stack goes, which way up the game lies, the stack as
 // it would be and the new problems. Place writes one batch(createStack + placeBox) = one undo step.
+// part-b5: Which way up lists only the ways without a block at the fitted x; none: why, no Place.
 import { h, showPanel, closePanels, toast } from '../core/dom.js';
 import * as store from '../core/store.js';
 import { ZONES } from '../core/shelves.js';
@@ -9,6 +10,7 @@ import { layoutStack2 } from '../core/geometry.js';
 import { orientationChoices } from './spots.js';
 import { newStackFn, checkMove, fitNewStack } from './stacks.js';
 import { warningList } from './ui.js';
+import { newStackWays } from './working.js';
 import { stackPicture } from './stack-preview.js';
 
 const num = (n) => (Math.round(n * 10) / 10).toLocaleString('en', { maximumFractionDigits: 1 });
@@ -25,29 +27,62 @@ export function openNewStackPanel(gameId, { zone, x, up = 's', rot = false, onPl
   if (!game?.dims || !ZONES[zone]) return null;
   const orients = orientationChoices(game);
   const start = Math.max(0, orients.findIndex((o) => o.up === up && o.rot === !!rot));
-  const upSel = h('select', { name: 'up' }, orients.map((o, i) => h('option', { value: String(i), selected: i === start }, `${o.label} – ${o.size}`)));
+  const n = ++uniq;
+  const upSel = h('select', { name: 'up', 'aria-labelledby': `map-new-up-${n}` });
+  const upText = h('span', { class: 'map-way-text', hidden: true });
+  const nothing = h('p', { class: 'map-put-error map-nothing', hidden: true });
+  const upField = h('div', { class: 'map-field' }, h('span', { id: `map-new-up-${n}` }, 'Which way up'), upSel, upText);
   const preview = h('div', { class: 'map-preview', 'aria-live': 'polite' });
   const submit = h('button', { type: 'submit', class: 'btn btn-primary', disabled: true }, 'Place');
   const where = h('p', { class: 'map-new-where' });
 
-  const titleId = `map-new-title-${++uniq}`;
+  const titleId = `map-new-title-${n}`;
   const dlg = h('dialog', { class: 'panel map-put map-new', 'aria-labelledby': titleId },
     h('form', { onsubmit: (e) => { e.preventDefault(); place(); } },
       h('h2', { id: titleId }, 'New stack here'),
       h('p', {}, h('strong', {}, game.title), h('span', { class: 'muted' }, ` · ${formatDims(game.dims)}`)),
       where,
-      h('label', { class: 'map-field' }, h('span', {}, 'Which way up'), upSel),
+      upField,
+      nothing,
       preview,
       h('div', { class: 'panel-actions' },
         h('button', { type: 'button', class: 'btn', onclick: () => dlg.close() }, 'Cancel'),
         submit)));
 
-  const orient = () => orients[Number(upSel.value)] ?? orients[0];
-  const at = () => fitNewStack(store.getPlan2(), store.getGame, zone, x, orient().w);
+  let way = start;
+  let checks = [];
+  const orient = () => orients[way] ?? orients[0];
+  const atFor = (o) => fitNewStack(store.getPlan2(), store.getGame, zone, x, o.w);
+  const at = () => atFor(orient());
   const fn = () => newStackFn(store, gameId, zone, at(), orient());
 
-  function update() {
-    const c = checkMove(store, fn(), 'Place');
+  /** Each way up at its own fitted x (fitNewStack); only those without a block are offered. */
+  function fillWays(prefer = way) {
+    const r = newStackWays(orients, (o) => checkMove(store, newStackFn(store, gameId, zone, atFor(o), o), 'Place'), { prefer });
+    checks = r.checks;
+    const text = (i) => `${orients[i].label} – ${orients[i].size}`;
+    upSel.replaceChildren(...r.list.map((i) => h('option', { value: String(i) }, text(i))));
+    const none = !r.list.length;
+    nothing.hidden = !none;
+    nothing.textContent = none ? `Nothing fits here: ${r.reason}` : '';
+    upField.hidden = none;
+    upSel.hidden = r.list.length < 2;
+    upText.hidden = r.list.length !== 1;
+    submit.hidden = none;
+    if (none) {
+      way = start;
+      where.textContent = `${ZONES[zone].label} · at ${num(at())} cm`;
+      preview.replaceChildren();
+      submit.disabled = true;
+      return;
+    }
+    way = r.chosen;
+    upSel.value = String(way);
+    upText.textContent = text(way);
+    update(checks[way]);
+  }
+
+  function update(c = checkMove(store, fn(), 'Place')) {
     const parts = [];
     where.textContent = `${ZONES[zone].label} · at ${num(at())} cm${c.result ? ` · becomes stack ${c.result}` : ''}`;
     if (c.error) parts.push(h('p', { class: 'map-put-error' }, c.error.message));
@@ -65,7 +100,7 @@ export function openNewStackPanel(gameId, { zone, x, up = 's', rot = false, onPl
   }
 
   function place() {
-    if (submit.disabled) return;
+    if (submit.disabled || submit.hidden) return;
     try {
       const id = fn()();
       closePanels(() => {
@@ -77,9 +112,9 @@ export function openNewStackPanel(gameId, { zone, x, up = 's', rot = false, onPl
     }
   }
 
-  upSel.addEventListener('change', update);
+  upSel.addEventListener('change', () => { way = Number(upSel.value); update(); });
   if (onClose) dlg.addEventListener('close', () => onClose(), { once: true });
   showPanel(dlg);
-  update();
+  fillWays(start);
   return dlg;
 }
