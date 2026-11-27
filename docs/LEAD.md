@@ -16,16 +16,14 @@ Tony is the lead and code reviewer.
 
 ## Where things stand (2026-11-27)
 
-- **Merged:** everything up to #72: Phase C has Pick up, Turn, Move through the put panel, placing mode and the board strip. README "Releases and stories" is current.
-- **Tony's core PR** (`ccr-96632897-bcu0g0`): the `family` field (schema, store: `getFamilies`, `renameFamily`, the seed with `family: null`), `js/core/space.js` with `tests/core-space.test.mjs`, the `js/space/` placeholder wired in `app.js`, and the briefs `docs/part-a5.md` and `docs/part-c4.md`. It merges first: Stephen's and Peter's branches start from it.
-- **Threads running** (each sends Tony one line when its PR is green):
-  - **Bruce**, `bruce/stacks`: `docs/part-b3.md` item 5 (stacks; split `js/map/view.js`). Also asked to key family warnings by `w.family` in `newProblems` (`js/map/spots.js`). Item 6 (drag and drop) waits until Adam has tried moving games on his phone.
-  - **Stephen**, `stephen/families`: `docs/part-a5.md` (B2).
-  - **Peter**, `peter/free-space`: `docs/part-c4.md` (D3).
-- **After B2:** the map highlight of a family (Bruce, `#/map?family=<name>`) and a family filter in the catalog (Peter). Bruce may show the D3 numbers on the map after drag and drop.
+- **Merged:** everything up to #76. Phase C has Pick up, Turn, Move, placing mode, the board strip and stacks (#75). B2 game families (#73 core, #76 Stephen) and D3 free space (#73 core, #74 Peter) are in. README "Releases and stories" is current. No PRs are open and no threads are running.
+- **Bruce:** item 6 (drag and drop) waits until Adam has tried moving games on his phone (placing mode, new stacks, Move stack). Optional nit from #75: a wider tap target for an empty stack.
+- **Next, not briefed yet** (ask Adam before starting): the map highlight of a family (Bruce, `#/map?family=<name>`) and a family filter in the catalog (Peter). Bruce may show the D3 numbers on the map after drag and drop.
+- **Small follow-ups for Peter's next brief** (#74 nits): the stack fill on the Free space screen uses `--cat-duo` (use a neutral token); "up to 0 cm on top of …" should read "No room on top".
 - **Open issues:** #48 (later).
 - **Later:** D7 moving checklist (on top of Peter's compare), #48 (fewer boxes on top counts as easier to reach: Stephen's rules and `suggestSpots`).
-- **How the team runs:** a Claude Code project since 2026-11-27. The project conversation is Tony. Each piece of developer work is a thread (a new session from `create_session`, one PR each, Opus for Bruce, Sonnet for Stephen and Peter) whose prompt names the brief item, the branch (`outcome_branch`) and asks for a one-line `send_message` to Tony when the PR is green. Tony verifies on GitHub, reviews, and tells Adam one line. The opening messages are in `docs/kickoff.md`.
+- **How the team runs:** a Claude Code project since 2026-11-27. The project conversation is Tony. Each piece of developer work is a thread (a new session from `create_session`, one PR each, Opus for Bruce, Sonnet for Stephen and Peter) whose prompt names the brief item, the branch (`outcome_branch`) and asks for a one-line `send_message` to Tony when the PR is green. A thread whose work needs an unmerged core PR starts from that PR's branch (`source_revision`) and still opens its PR into `main`. Tony verifies on GitHub, reviews, and tells Adam one line. The opening messages are in `docs/kickoff.md`.
+- **Tony's branch:** each Tony session has its own branch name from the session settings (this one: `ccr-96632897-bcu0g0`). Push only there; restart it from `main` after its PR merges.
 
 ## Adam's decisions (don't reopen)
 
@@ -67,6 +65,7 @@ Tony is the lead and code reviewer.
 - **A core change can break a developer's test** (#51: the topper fix broke one assertion in `tests/map-scene.test.mjs`). Run the full suite before opening the PR. Put the exact test change in the PR body and ask the developer to push it to your branch, so both land together.
 - **Two docs PRs both append to CONTEXT's Changes list,** so the second one conflicts (#51). Merge `main` into the branch and keep both entries; never force-push.
 - **A thread can stall on a permission prompt** (Stephen's #62 thread waited on "may I start a local web server?"). Check a quiet thread with `get_session`. Browser checks don't need a server: serve the repo with Playwright's `context.route`, and put that in the thread prompt.
+- **A message that crosses a review isn't the answer to it:** Bruce's "#75 green" was sent before the review arrived and covered only the earlier note. Compare the message time with the review time, and check the commits before calling a PR ready.
 - **Wall-clock limits in tests flake on CI:** `node --test` runs the files in parallel on a small shared runner (#58's first run: 215 ms against a 200 ms limit). Ask for best-of-N and headroom, not a bare limit.
 
 ## Environment notes

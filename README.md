@@ -3,7 +3,7 @@
 **Where is each board game on the shelves?** Shelp is a personal web app for Adam's board game collection. It shows a to-scale drawing of the IKEA BOAXEL shelves with every box on it, finds any game, keeps box sizes and categories, imports the BoardGameGeek collection export, and works offline on a phone.
 
 - **Live app:** https://macskasa.github.io/Shelp/
-- **Status:** the MVP is done. Phase A (Tony) moved the data to schema 2: games on games, bridges, which side is up, pizza games, the board, and undo. Phase B moved the three parts onto it, and the old v1 code is gone. **Phase C is moving games by hand:** saved versions, compare, Delete game, placing mode and the board strip are in; new and moved stacks are next (Bruce, `docs/part-b3.md`). Game families (B2) and free space (D3) are being built. What works and what isn't built yet: [Releases and stories](#releases-and-stories).
+- **Status:** the MVP is done. Phase A (Tony) moved the data to schema 2: games on games, bridges, which side is up, pizza games, the board, and undo. Phase B moved the three parts onto it, and the old v1 code is gone. **Phase C is moving games by hand:** saved versions, compare, Delete game, placing mode, the board strip and stacks (new, moved, removed, renumbered) are in; drag and drop on desktop comes after Adam has tried moving on his phone. Game families (B2) and the Free space screen (D3) are in too. What works and what isn't built yet: [Releases and stories](#releases-and-stories).
 
 ## Contents
 
@@ -74,11 +74,11 @@ Size: S ≈ 1–2 points, M ≈ 3–5, L ≈ 8, XL ≈ 13.
 | ID | Story | Size | Owner | Status |
 |---|---|---|---|---|
 | A4 | Add games that aren't in my BGG list | S1 | Stephen | ✅ (and Delete game, #50) |
-| B2 | Game families (Azul, 7 Wonders, Mars…) | S2 | Tony (schema) · Stephen | 🚧 family editing, the rule and suggestions ([part-a5](docs/part-a5.md)); the map highlight and a catalog filter later |
-| D1 | Move a game (drag on desktop, pick a spot on phone) | L8 | Bruce | 🚧 moving works from lists and by tapping the drawing; stacks and drag and drop come next (see below) |
+| B2 | Game families (Azul, 7 Wonders, Mars…) | S2 | Tony (schema) · Stephen | 🚧 ✅ Family in the game panel, suggested families on the Data screen, the "spread out" warning, suggestions keep families together (#76); ⬜ the map highlight and a catalog filter |
+| D1 | Move a game (drag on desktop, pick a spot on phone) | L8 | Bruce | 🚧 moving works from lists and by tapping the drawing, stacks too; drag and drop comes next (see below) |
 | D2 | Rule checker (1 cm overhang rule, heights, brackets, 2 deep only in easy spots…) | M5 | Stephen | ✅ (Data screen; behind every move) |
-| D3 | Free space at a glance | S2 | Tony (logic) · Peter (screen) | 🚧 the Free space screen ([part-c4](docs/part-c4.md)) |
-| D4 | Suggest a spot for a new game | L8 | Stephen (logic) · Bruce (screen) | 🚧 placing mode shows three suggestions on existing stacks; new-stack suggestions come with Bruce's stacks |
+| D3 | Free space at a glance | S2 | Tony (logic) · Peter (screen) | ✅ the Free space screen (#74) |
+| D4 | Suggest a spot for a new game | L8 | Stephen (logic) · Bruce (screen) | ✅ placing mode shows three suggestions, on a stack or as a new stack |
 | D6 | Undo and saved versions | M5 | Tony · Peter | ✅ (undo/redo, save, restore, compare) |
 | E3 | Export to spreadsheet (CSV) | S1 | Stephen | ✅ |
 
@@ -87,7 +87,8 @@ Size: S ≈ 1–2 points, M ≈ 3–5, L ≈ 8, XL ≈ 13.
 - ✅ **Move** (in that sheet, the game panel and "Where's my game?") opens **Put on a stack…**: you choose the stack, the spot (on the shelf, on top of a box, across two boxes, or under one) and which way up. Rule problems are shown first. Every move closes the panels and shows a toast with Undo.
 - ✅ **Placing mode** (`#/map?pick=<id>`, from Move): tap a stack on the drawing, or one of three suggested spots, to open the spot sheet with the stack as it would be. Cancel, Esc and Back leave it.
 - ✅ **The board strip** on the Shelves screen: "Board (n)" and a chip per game; a chip opens the pick-up sheet.
-- ⬜ Bruce's next PRs, in order: new, moved and removed stacks, and renumbering → drag and drop on desktop (after Adam has tried moving on his phone).
+- ✅ **Stacks** (#75): tap empty shelf in placing mode for **New stack here** (it slides into the gap if the box would run into the next stack); **Move stack** and **Remove stack** in stack details; empty stacks show as a dashed outline; **Renumber** left to right.
+- ⬜ Drag and drop on desktop (Bruce), after Adam has tried moving on his phone.
 
 ### Later
 
@@ -99,9 +100,9 @@ Size: S ≈ 1–2 points, M ≈ 3–5, L ≈ 8, XL ≈ 13.
 
 ### Not built yet
 
-- **New stacks in empty space, moving and removing stacks, renumbering, drag and drop** (D1, above).
+- **Drag and drop on desktop** (D1, above).
 - **Being on top counts as easier to reach** (#48): parked for later.
-- Game families (B2) and free space at a glance (D3), in progress; the moving checklist (D7), live BGG refresh (E4).
+- A family highlighted on the map and a family filter in the catalog (B2), the moving checklist (D7), live BGG refresh (E4).
 
 The full story texts are in the "App user stories" tab of the planning workbook and, for the MVP, in the part briefs.
 
