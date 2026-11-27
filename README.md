@@ -75,7 +75,7 @@ Size: S ≈ 1–2 points, M ≈ 3–5, L ≈ 8, XL ≈ 13.
 |---|---|---|---|---|
 | A4 | Add games that aren't in my BGG list | S1 | Stephen | ✅ (and Delete game, #50) |
 | B2 | Game families (Azul, 7 Wonders, Mars…) | S2 | Tony (schema) · Stephen | ⬜ |
-| D1 | Move a game (drag on desktop, pick a spot on phone) | L8 | Bruce | 🚧 see below |
+| D1 | Move a game (drag on desktop, pick a spot on phone) | L8 | Bruce | 🚧 moving works from lists; tapping the drawing comes next (see below) |
 | D2 | Rule checker (1 cm overhang rule, heights, brackets, 2 deep only in easy spots…) | M5 | Stephen | ✅ (Data screen; behind every move) |
 | D3 | Free space at a glance | S2 | – | ⬜ not scheduled |
 | D4 | Suggest a spot for a new game | L8 | Stephen (logic) · Bruce (screen) | 🚧 the logic is done; it shows in placing mode, which isn't built yet |
@@ -83,11 +83,9 @@ Size: S ≈ 1–2 points, M ≈ 3–5, L ≈ 8, XL ≈ 13.
 | E3 | Export to spreadsheet (CSV) | S1 | Stephen | ✅ |
 
 **D1 today:**
-- ✅ In stack details, each box has **To cupboard** and **To the board**.
-- ✅ On the Cupboard screen, **Put on a stack…** places a game from the board or the cupboard. You choose the stack, the spot (on the shelf, on top of a box, across two boxes, or under one) and which way up. Rule problems are shown first, and Undo works.
-- So moving a box from one stack to another works today in two steps: **To the board**, then **Put on a stack…**.
-- ⬜ The **Move** buttons (game panel, "Where's my game?") open the Shelves screen and stop there: placing mode isn't built yet.
-- ⬜ Bruce's next PRs, in order: pick up a box + the turn chooser → placing mode + the board strip (with suggested spots) → new, moved and removed stacks → drag and drop on desktop.
+- ✅ **Pick up** (in stack details and on the Cupboard screen) opens a sheet: **Move**, **Turn** (only the orientations allowed, drawn to scale), **To the board**, **To the cupboard…** and **Put inside a box…** (the game panel). It says first what happens to the boxes on top.
+- ✅ **Move** (in that sheet, the game panel and "Where's my game?") opens **Put on a stack…**: you choose the stack, the spot (on the shelf, on top of a box, across two boxes, or under one) and which way up. Rule problems are shown first. Every move closes the panels and shows a toast with Undo.
+- ⬜ Bruce's next PRs, in order: placing mode (tap a stack or an empty spot on the drawing) + the board strip (with suggested spots) → new, moved and removed stacks → drag and drop on desktop.
 
 ### Later
 
@@ -99,7 +97,7 @@ Size: S ≈ 1–2 points, M ≈ 3–5, L ≈ 8, XL ≈ 13.
 
 ### Not built yet
 
-- **Placing a box on the map** (D1, above). Until then the **Move** buttons do nothing useful.
+- **Placing a box by tapping the drawing** (D1, above). Until then, Move opens the Put on a stack… panel.
 - **Finding the box to store a game in** (#62): the "Stored inside" picker is a plain list of all ~200 box titles, by the title on the box. So Terraforming Mars is listed as "A Mars terraformálása". A search that also matches BGG names isn't built yet.
 - **Being on top counts as easier to reach** (#48): parked for later.
 - Game families (B2), free space at a glance (D3), the moving checklist (D7), live BGG refresh (E4).
