@@ -128,11 +128,30 @@ export function closePanels(done = () => {}) {
   }
 }
 
-/** Short message at the bottom of the screen: toast('Saved'), toast(err.message, { error: true }) */
-export function toast(text, { error = false, ms = 3500 } = {}) {
-  const el = h('div', { class: `toast${error ? ' toast-error' : ''}`, role: 'status' }, text);
+/**
+ * Short message at the bottom of the screen: toast('Saved'), toast(err.message, { error: true }).
+ * With an action it gets a button and stays longer (6 s), e.g. after a move:
+ *   toast('Ark Nova → stack B3', { action: { label: 'Undo', run: store.undo } })
+ * Only one toast with an action is shown at a time: a new one replaces the old one.
+ * A modal panel makes everything behind it inert, so close the panels first (closePanels) when
+ * the button must be tappable. Returns the toast element.
+ */
+export function toast(text, { error = false, ms, action = null } = {}) {
+  if (action) for (const old of document.querySelectorAll('.toast-action')) old.remove();
+  const click = () => {
+    el.remove();
+    try {
+      action.run();
+    } catch (err) {
+      toast(err.message, { error: true });
+    }
+  };
+  const el = h('div', { class: `toast${error ? ' toast-error' : ''}${action ? ' toast-action' : ''}`, role: 'status' },
+    h('span', {}, text),
+    action ? h('button', { type: 'button', class: 'toast-btn', onclick: click }, action.label) : null);
   document.body.append(el);
-  setTimeout(() => el.remove(), ms);
+  setTimeout(() => el.remove(), ms ?? (action ? 6000 : 3500));
+  return el;
 }
 
 const loaded = new Set();

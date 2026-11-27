@@ -11,6 +11,7 @@
   --accent: #1d9e75;
   --accent-text: #ffffff;
   --danger: #c0392b;
+  --warn: #9a5b00; /* amber: rule warnings (block problems use --danger) */
   --focus: #378add;
 
   /* category colours (story B1) – used by the map, the catalog and the game panel */
@@ -47,6 +48,7 @@
     --border: #44443f;
     --shelf-line: #8a897f;
     --bracket: #b4b2a9;
+    --warn: #f0a830;
   }
 }
 
@@ -171,6 +173,20 @@ dialog.panel dd { margin: 0; }
   color: var(--bg);
 }
 .toast-error { background: var(--danger); color: #fff; }
+.toast-action { display: flex; align-items: center; gap: 8px; padding: 4px 4px 4px 16px; }
+.toast-btn {
+  min-height: 40px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: var(--radius);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.toast-btn:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
 
 .chip {
   display: inline-block;

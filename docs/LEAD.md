@@ -22,12 +22,7 @@ Tony is the lead and code reviewer.
   - `docs/part-b3.md` (Bruce): pick up, the turn chooser, placing mode (`#/map?pick=<id>`), the board strip, stacks, then drag and drop.
   - `docs/part-a4.md` (Stephen): bracket rule per box, Move in the game panel, D4 `suggestSpots()`.
   - `docs/part-c3.md` (Peter): Move in "Where's my game?", D6 saved versions in `js/versions/`, compare.
-- **Tony next: the core PR** (Peter and Bruce wait for it, Stephen only for his item 3):
-  - `toast(text, { action: { label, run } })` in `dom.js`;
-  - the `pickUp(id)` contract → `go('map', { pick: id })`;
-  - saved versions in the store: `listVersions`, `getVersion`, `saveVersion` (at most 10), `restoreVersion` (one undo step), `renameVersion`, `deleteVersion`. They live under their own localStorage key, aren't undo steps, and fire `store:changed` with `versions: true`;
-  - an optional `versions` in full backups (schema check, `exportData`, `importData`; a plan-only import leaves them);
-  - CONTEXT sections 4 and 5, plus a Changes entry.
+- **Core for Phase C:** done in the core PR (`toast` action, `pickUp`, saved versions in the store and backups, `--warn`). Peter and Bruce can start their Phase C briefs once it's merged (Bruce after his Phase B item 3).
 - **After Bruce's Phase B, Tony:**
   - remove the v1 compatibility (`getPlan`, `getStack`, `locate`, `placeOnStack`, `describeLocation`, `toV1Plan`, and Stephen's v1 `checkStack` / `checkPlan`) once nothing uses it (`grep -rn` first);
   - convert `data/seed.json` to schema 2;

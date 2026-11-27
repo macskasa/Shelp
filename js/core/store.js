@@ -13,8 +13,13 @@
 // the board, the pizza flag; see js/core/plan2.js and docs/CONTEXT.md). During the move to v2
 // (Phase B) the old reads still work: getPlan(), getStack() and locate() return the v1 shape.
 // New code uses getPlan2(), getStack2(), locate2() and the v2 writes.
+//
+// Saved versions (D6) are named copies of games + plan, kept under their own key and in full
+// backups. Saving, renaming and deleting them are not undo steps; switching to one is.
 import { emit } from './bus.js';
-import { APP, SCHEMA, checkData, knownFrom, validateGame } from './schema.js';
+import {
+  APP, MAX_VERSIONS, SCHEMA, VERSION_NAME_MAX, checkData, checkVersions, knownFrom, validateGame,
+} from './schema.js';
 import { ZONES } from './shelves.js';
 import {
   detach as detach2, findBox, insertOn, insertUnder, locations2, nextStackId, renumber,
@@ -23,6 +28,8 @@ import {
 
 export const STORAGE_KEY = 'shelp:data:v1'; // the key name stays; the data inside is schema 2
 const BROKEN_KEY = 'shelp:data:broken';
+export const VERSIONS_KEY = 'shelp:versions:v1';
+export { MAX_VERSIONS };
 const SEED_URL = new URL('../../data/seed.json', import.meta.url);
 const HISTORY = 30;
 
@@ -42,6 +49,7 @@ let committed = null; // games + plan as of the last commit (for undo)
 let undoStack = [];
 let redoStack = [];
 let previewing = false;
+let versions = []; // saved versions, oldest first: { id, name, savedAt, games, plan } (schema 2)
 
 // ---------------------------------------------------------------- setup
 
@@ -73,9 +81,23 @@ export async function init({ seed, storage: st } = {}) {
   undoStack = [];
   redoStack = [];
   committed = structuredClone({ games: data.games, plan: data.plan });
+  versions = loadVersions();
   rebuild();
   if (!loaded || upgraded) save();
   return snap;
+}
+
+function loadVersions() {
+  const raw = storage?.getItem(VERSIONS_KEY);
+  if (!raw) return [];
+  try {
+    const { problems, versions: ok } = checkVersions(JSON.parse(raw));
+    if (problems.length) console.error('[store] some saved versions are broken and were left out', problems.slice(0, 3));
+    return ok;
+  } catch (err) {
+    console.error('[store] saved versions are broken', err);
+    return [];
+  }
 }
 
 async function loadSeed() {
@@ -160,7 +182,9 @@ export function locate(id) {
 
 /** Everything as one plain (mutable) object – this is the backup file format (schema 2). */
 export function exportData() {
-  return { app: APP, exportedAt: new Date().toISOString(), ...structuredClone(stripSnap(data)), schema: SCHEMA };
+  const out = { app: APP, exportedAt: new Date().toISOString(), ...structuredClone(stripSnap(data)), schema: SCHEMA };
+  if (versions.length) out.versions = structuredClone(versions); // only when there are any (see importData)
+  return out;
 }
 
 /** Check a backup or plan file (schema 1 or 2) before importing. Returns a list of problems (empty = OK). */
@@ -352,6 +376,88 @@ export function redo() {
   return true;
 }
 
+// ---------------------------------------------------------------- saved versions (D6)
+
+/** Saved versions, newest first: [{ id, name, savedAt, games, stacks }] (games and stacks are counts). Frozen. */
+export function listVersions() {
+  return deepFreeze([...versions].reverse().map((v) => ({
+    id: v.id, name: v.name, savedAt: v.savedAt, games: v.games.length, stacks: v.plan.stacks.length,
+  })));
+}
+
+/** One saved version with its data: { id, name, savedAt, games, plan } (schema 2), frozen. null if unknown. */
+export function getVersion(id) {
+  const v = versions.find((x) => x.id === id);
+  return v ? deepFreeze(structuredClone(v)) : null;
+}
+
+/**
+ * Save the current games and plan under a name (1–60 characters). Returns the new id ("v4").
+ * Refused when MAX_VERSIONS (10) are saved. Not an undo step; fires store:changed with versions: true.
+ */
+export function saveVersion(name) {
+  notInPreviewOrBatch('saveVersion()');
+  const clean = versionName(name);
+  if (versions.length >= MAX_VERSIONS) throw new Error(`${MAX_VERSIONS} saved versions is the most. Delete one to save another.`);
+  const id = `v${Math.max(0, ...versions.map((v) => Number(/^v(\d+)$/.exec(v.id)?.[1] ?? 0))) + 1}`;
+  const copy = structuredClone({ games: data.games, plan: data.plan });
+  storeVersions([...versions, { id, name: clean, savedAt: new Date().toISOString(), ...copy }]);
+  return id;
+}
+
+/** Switch to a saved version: its games and plan replace the current ones (metadata stays). One undo step. */
+export function restoreVersion(id) {
+  const v = mustVersion(id);
+  data.games = structuredClone(v.games);
+  data.plan = normalizePlan(structuredClone(v.plan));
+  changed({ games: null, plan: true });
+}
+
+/** Rename a saved version. Not an undo step. */
+export function renameVersion(id, name) {
+  notInPreviewOrBatch('renameVersion()');
+  const v = mustVersion(id);
+  const clean = versionName(name);
+  storeVersions(versions.map((x) => (x === v ? { ...x, name: clean } : x)));
+}
+
+/** Delete a saved version. Not an undo step. */
+export function deleteVersion(id) {
+  notInPreviewOrBatch('deleteVersion()');
+  const v = mustVersion(id);
+  storeVersions(versions.filter((x) => x !== v));
+}
+
+function versionName(name) {
+  const clean = String(name ?? '').trim().replace(/\s+/g, ' ');
+  if (!clean) throw new Error('Give the version a name');
+  if (clean.length > VERSION_NAME_MAX) throw new Error(`A version name can be at most ${VERSION_NAME_MAX} characters`);
+  return clean;
+}
+
+function mustVersion(id) {
+  const v = versions.find((x) => x.id === id);
+  if (!v) throw new Error('There is no such saved version');
+  return v;
+}
+
+// Saved versions live outside `data`, so preview() and batch() could not put them back.
+function notInPreviewOrBatch(what) {
+  if (previewing || depth > 0) throw new Error(`${what} cannot run inside preview() or batch()`);
+}
+
+function storeVersions(next) {
+  if (storage) {
+    try {
+      storage.setItem(VERSIONS_KEY, JSON.stringify(next));
+    } catch (err) {
+      throw new Error(`Could not save the versions: ${err.message}`);
+    }
+  }
+  versions = next;
+  emit('store:changed', { games: [], plan: false, versions: true });
+}
+
 // ---------------------------------------------------------------- writes: v1 compatibility
 
 /**
@@ -398,11 +504,16 @@ export function replacePlan(plan) {
 
 /**
  * Import a file (schema 1 or 2). Full file (games + plan) replaces everything; plan-only replaces the plan.
+ * Saved versions: a full file that carries "versions" replaces them; any other file leaves them alone.
  * Returns 'all' or 'plan'. Throws with the list of problems if the file is invalid.
  */
 export function importData(obj) {
   const { problems, data: ok } = checkData(structuredClone(obj), knownFrom(data.games));
   check(problems);
+  if (ok.games && ok.versions) {
+    notInPreviewOrBatch('Importing saved versions');
+    storeVersions(ok.versions); // first: if this cannot be saved, nothing has changed yet
+  }
   if (ok.games) {
     data = { app: APP, schema: SCHEMA, games: ok.games, plan: normalizePlan(ok.plan ?? emptyPlan()), meta: ok.meta ?? {} };
     changed({ games: null, plan: true });
