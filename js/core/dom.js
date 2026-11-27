@@ -77,6 +77,11 @@ function wirePanels() {
   });
 }
 
+// Wire the listeners as soon as this module loads (in a browser). It loads before the router starts,
+// so on a hash change these run FIRST: panels that were open are closed, and a panel that a screen
+// opens while handling the change (e.g. in its update()) stays open.
+if (typeof window !== 'undefined') wirePanels();
+
 /**
  * Show a <dialog> as a modal panel that the Back button closes. The dialog is removed on close.
  * Use it for every panel and sheet: showPanel(h('dialog', { class: 'panel' }, …))
