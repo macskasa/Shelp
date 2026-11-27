@@ -16,6 +16,7 @@ import { describeLocation2 } from '../core/format.js';
 import { buildScene, findInScene } from './scene.js';
 import { drawScene } from './draw.js';
 import { legend } from './legend.js';
+import { frameHeight } from './fit.js';
 import { TITLE_PX } from './labels.js';
 import { openStackPanel } from './stack-panel.js';
 import { deepStackIds, viewForLocation } from './rows.js';
@@ -26,7 +27,6 @@ import { openPutPanel } from './put-panel.js';
 loadCss(new URL('./map.css', import.meta.url));
 
 const titleOf = (id) => store.getGame(id)?.title ?? id;
-const MIN_FRAME_H = 240; // px; in landscape the frame is short and you pan up and down
 const ZOOM_STEP = 1.6;
 
 /** Mount the map into el. Returns { update(params), destroy() }. */
@@ -39,9 +39,17 @@ export function mountMap(el, params) {
     tool('Zoom out', '−', () => panZoom.zoomBy(1 / ZOOM_STEP)),
     tool('Zoom in', '+', () => panZoom.zoomBy(ZOOM_STEP)),
     tool('Fit the width', '⤢', () => panZoom.fit()));
+  const key = legend();
+  // below 1024 px the legend is a card over the drawing, opened from the tools; beside it on desktop
+  const keyBtn = h('button', {
+    type: 'button', class: 'btn map-tool map-key-btn', 'aria-label': 'Legend', title: 'Legend',
+    'aria-expanded': 'false', 'aria-controls': key.id, onclick: () => showKey(!root.classList.contains('map-key-open')),
+  }, 'i');
+  tools.prepend(keyBtn);
   const frame = h('div', { class: 'map-frame' }, stage, tools, tip);
+  const body = h('div', { class: 'map-body' }, frame, key);
   const rows = rowSwitch((v) => setView(v));
-  const root = h('section', { class: 'map-view', 'aria-label': 'Shelves' }, caption, rows.el, frame, legend());
+  const root = h('section', { class: 'map-view', 'aria-label': 'Shelves' }, caption, rows.el, body);
   el.append(root);
 
   const measure = textMeasurer(root);
@@ -90,16 +98,29 @@ export function mountMap(el, params) {
     else refitTimer = setTimeout(refit, 90);
   }
 
-  /** The frame is as tall as the drawing at full width, but never taller than the screen allows. */
+  /** Show or hide the legend card (below 1024 px; on desktop the legend is always beside the drawing). */
+  function showKey(open) {
+    root.classList.toggle('map-key-open', open);
+    keyBtn.setAttribute('aria-expanded', String(open));
+  }
+
+  /**
+   * The frame is as tall as the drawing at full width, but only as tall as the window allows, so
+   * the page itself never scrolls (issue #65): whatever sits under the frame keeps its room.
+   */
   function layoutFrame() {
     if (!scene) return;
     const width = frame.clientWidth;
     if (!width) return;
-    const natural = scene.height * (width / scene.width);
-    const top = frame.getBoundingClientRect().top + window.scrollY;
-    const bottom = parseFloat(getComputedStyle(el).paddingBottom) || 0;
-    const room = window.innerHeight - top - bottom;
-    const px = `${Math.round(Math.max(MIN_FRAME_H, Math.min(natural, room)))}px`;
+    const fr = frame.getBoundingClientRect();
+    const after = root.getBoundingClientRect().bottom - fr.bottom; // content under the frame
+    const padding = parseFloat(getComputedStyle(el).paddingBottom) || 0;
+    const px = `${frameHeight({
+      windowH: window.innerHeight,
+      top: fr.top + window.scrollY,
+      below: Math.max(0, after) + padding,
+      natural: scene.height * (width / scene.width),
+    })}px`;
     if (frame.style.height !== px) frame.style.height = px;
   }
 
@@ -242,6 +263,12 @@ export function mountMap(el, params) {
       openDetails(st.dataset.stack);
     } else return;
     e.preventDefault();
+  });
+  // Esc closes the legend card (a panel's own Esc closes the panel first: it is modal)
+  root.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape' || !root.classList.contains('map-key-open')) return;
+    showKey(false);
+    keyBtn.focus();
   });
   // A stack reached with Tab is panned into view.
   stage.addEventListener('focusin', (e) => {
