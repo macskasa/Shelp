@@ -16,6 +16,7 @@ export const SPACING = Object.freeze({
   labelAt: 0.45,
   idAt: 0.45,
   easyPad: 0.9, // the dashed "easy to reach" outline sits this far outside the zone
+  emptyW: 3,    // an empty stack is drawn as a thin outline this wide, the shelf's full height
 });
 
 const cm = (n) => Math.round(n * 100) / 100;
@@ -44,7 +45,7 @@ const bandLabel = (z) => `${z.label} · ${z.height} cm high`;
  *   zones:  [{ id, label, x, top, floor, length, height, overhang, approximate, brackets: [x] }],
  *   brackets: [{ zone, x, y, w, h }],       dark bars hanging from the shelf above
  *   easy:   [{ path, x0, x1 }],             dashed "easy to reach" outlines (SVG path data)
- *   stacks: [{ id, zone, x, w, h, top, floor, rows, deep, back: [gameId], label: { x, y },
+ *   stacks: [{ id, zone, x, w, h, top, floor, rows, deep, empty, back: [gameId], label: { x, y },
  *              boxes: [{ gameId, x, y, w, h, row, up, rot, on, vertical }],
  *              ghosts: [{ gameId, x, y, w, h }],
  *              topper: null | { label, x, y, w, h }, layout, plan }]
@@ -53,7 +54,8 @@ const bandLabel = (z) => `${z.label} · ${z.height} cm high`;
  * a box sits on the highest of its supports, bridges included). vertical: taller than wide, so its
  * title runs up the box. `boxes` holds the row the view draws: the front row, or for a 2-deep stack
  * in the back view its back row, with its front row in `ghosts` (faint outlines drawn in front).
- * `back` always lists the back-row game ids.
+ * `back` always lists the back-row game ids. An empty stack (empty: true; stacks keep their ids,
+ * part-b3 item 5) is SPACING.emptyW wide and as tall as its shelf, so it can be seen and tapped.
  */
 export function buildScene(plan, getGame, { view = 'front' } = {}) {
   const { margin, label, ids } = SPACING;
@@ -122,12 +124,16 @@ function placeStack(st, z, getGame, row) {
     ? lay.boxes.filter((b) => b.row === 0).map((b) => { const p = place(b); return { gameId: p.gameId, x: p.x, y: p.y, w: p.w, h: p.h }; })
     : [];
   const t = lay.topper;
+  const empty = !lay.boxes.length && !t;
+  const w = empty ? SPACING.emptyW : lay.w;
+  const h = empty ? z.height : lay.h;
   return {
-    id: st.id, zone: st.zone, x: cm(x), w: lay.w, h: lay.h, top: cm(z.floor - lay.h), floor: z.floor,
+    id: st.id, zone: st.zone, x: cm(x), w, h, top: cm(z.floor - h), floor: z.floor,
     rows: lay.rows,
     deep,
+    empty,
     back: lay.boxes.filter((b) => b.row > 0).map((b) => b.gameId),
-    label: { x: cm(x + lay.w / 2), y: cm(z.floor + SPACING.ids * SPACING.idAt) },
+    label: { x: cm(x + w / 2), y: cm(z.floor + SPACING.ids * SPACING.idAt) },
     boxes,
     ghosts,
     topper: t ? { label: t.label, x: cm(x + t.x), y: cm(z.floor - t.y - t.h), w: t.w, h: t.h } : null,

@@ -4,7 +4,9 @@
 //   labels.js       which titles fit at the current zoom
 //   draw.js         the SVG
 //   viewport.js     zoom and pan maths; pan-zoom.js reads the pointers
-//   view.js         the Shelves screen: zoom, highlight, hover, tap / keyboard → stack details
+//   view.js         the Shelves screen: zoom, highlight, route → stack details or placing mode;
+//                   view-input.js reads hover, taps and keys, view-placing.js runs placing mode,
+//                   measure.js measures title text
 //   details.js      what the stack details panel lists (C3); stack-panel.js shows it
 //   cupboard.js     what the cupboard screen lists, placement preview (C6); cupboard-view.js shows it
 //   ui.js           category chips and warning lists
@@ -12,6 +14,8 @@
 //                   turn-panel.js show them; put-panel.js is "Put on a stack…", the spot sheet
 //   placing.js      placing mode and the board strip without DOM (route, taps, suggestions, chips);
 //                   placing-bar.js, board-strip.js and stack-preview.js show them
+//   stacks.js       new stack x, move / remove / renumber stacks without DOM (item 5);
+//                   new-stack-panel.js, stack-move-panel.js and stack-confirm.js show them
 import { mountMap } from './view.js';
 import { mountCupboard } from './cupboard-view.js';
 
