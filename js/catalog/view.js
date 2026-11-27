@@ -90,7 +90,7 @@ export function mountCatalog(el, params) {
 
   function rebuild() {
     const title = (id) => store.getGame(id)?.title ?? id;
-    entries = store.getGames().map((g) => makeEntry(g, store.locate(g.id), title));
+    entries = store.getGames().map((g) => makeEntry(g, store.locate2(g.id), title));
     rows.clear();
     for (const e of entries) rows.set(e.game.id, buildRow(e, openGame));
   }

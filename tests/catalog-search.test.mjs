@@ -123,54 +123,84 @@ test('search stays fast: 200 games, 40 keystrokes', async () => {
   assert.ok(performance.now() - t0 < 200, 'should be a few milliseconds');
 });
 
-// ---------------------------------------------------------------- Where's my game? (C4)
+// ---------------------------------------------------------------- Where's my game? (C4, schema 2)
 
-const flat = (above = []) => ({ kind: 'stack', stackId: 'B3', zone: 'bottom', orientation: 'flat', rows: 1, row: 0, index: 1, side: null, above, below: ['g001'] });
+const stackLoc = (patch = {}) => ({
+  kind: 'stack', stackId: 'B3', zone: 'bottom', row: 0, rows: 1, x: 0, up: 's', rot: false, on: ['host'], above: [], below: ['host'], ...patch,
+});
+const NAMES = { host: 'Takenokolor', a: 'Azul', b: 'Brass', c: 'Catan', d: 'Dixit', k: 'Kontroll', lairs: 'Lairs' };
+const name = (id) => NAMES[id] ?? id;
 
-test('whereText: a flat stack says where it is and what is on top, nearest first', () => {
-  const name = (id) => ({ a: 'Azul', b: 'Brass', c: 'Catan' })[id];
-  const three = whereText(flat(['a', 'b', 'c']), name);
-  assert.equal(three.sentence, 'Bottom shelf · stack B3 · 2nd from the bottom · 3 boxes on top');
+test('whereText: a box on another box says what it rests on and names every box on top, nearest first', () => {
+  const three = whereText(stackLoc({ above: ['a', 'b', 'c'] }), name);
+  assert.equal(three.sentence, 'Bottom shelf · stack B3 · on Takenokolor · 3 boxes on top');
   assert.equal(three.onTop, 'On top, nearest first: Azul, Brass, Catan');
-  assert.equal(whereText(flat(['b']), name).onTop, 'On top: Brass');
-  const top = whereText(flat([]), name);
-  assert.equal(top.sentence, 'Bottom shelf · stack B3 · 2nd from the bottom · on top');
-  assert.equal(top.onTop, 'Nothing on top');
+  const one = whereText(stackLoc({ above: ['b'] }), name);
+  assert.equal(one.sentence, 'Bottom shelf · stack B3 · on Takenokolor · 1 box on top');
+  assert.equal(one.onTop, 'On top: Brass');
 });
 
-test('whereText: standing games, the cupboard and unplaced games have no "on top" line', () => {
-  const standing = { kind: 'stack', stackId: 'T1', zone: 'top', orientation: 'standing', rows: 1, row: 0, index: 2, side: null, above: [], below: [] };
-  assert.equal(whereText(standing).onTop, null);
-  assert.match(whereText(standing).sentence, /3rd from the left/);
+test('whereText: nothing on top, on the shelf, in the back row', () => {
+  const top = whereText(stackLoc({ on: [], below: [], row: 1, rows: 2 }), name);
+  assert.equal(top.sentence, 'Bottom shelf · stack B3 · back row · on the shelf · nothing on top');
+  assert.equal(top.onTop, null); // the sentence already says so
+});
+
+test('whereText: lying across two boxes (a bridge), and several boxes side by side on top of one', () => {
+  const bridge = whereText(stackLoc({ on: ['host', 'k'], above: [] }), name);
+  assert.equal(bridge.sentence, 'Bottom shelf · stack B3 · across Takenokolor and Kontroll · nothing on top');
+  // a tree: two boxes side by side on it, one more on top of one of them
+  const tree = whereText(stackLoc({ above: ['a', 'b', 'c', 'd'] }), name);
+  assert.equal(tree.onTop, 'On top, nearest first: Azul, Brass, Catan, Dixit');
+});
+
+test('whereText: a box on its side or on end is said so', () => {
+  assert.equal(whereText(stackLoc({ up: 'm' }), name).sentence, 'Bottom shelf · stack B3 · on its side on Takenokolor · nothing on top');
+  assert.equal(whereText(stackLoc({ up: 'l', on: [], below: [] }), name).sentence, 'Bottom shelf · stack B3 · standing on the shelf · nothing on top');
+});
+
+test('whereText: the cupboard, the board and unknown games have no "on top" line', () => {
   assert.deepEqual(whereText({ kind: 'cupboard', reason: 'rarely played' }), { sentence: 'Cupboard – rarely played', onTop: null });
-  assert.deepEqual(whereText({ kind: 'unplaced' }), { sentence: 'Not placed yet', onTop: null });
+  assert.deepEqual(whereText({ kind: 'board', index: 0 }), { sentence: 'On the board', onTop: null });
   assert.deepEqual(whereText(null), { sentence: 'Unknown game', onTop: null });
 });
 
-test('whereText: an expansion inside a box says so, and what is on top of that box', () => {
-  const name = (id) => ({ host: 'Lairs', x: 'Brass' })[id];
-  const inside = { kind: 'inside', hostId: 'host', host: flat(['x']) };
-  const t = whereText(inside, name);
-  assert.equal(t.sentence, 'Inside the Lairs box (Bottom shelf · stack B3 · 2nd from the bottom · 1 box on top)');
-  assert.equal(t.onTop, 'On top of the Lairs box: Brass');
-  assert.equal(whereText({ kind: 'inside', hostId: 'host', host: flat([]) }, name).onTop, 'Nothing on top of the Lairs box');
-  assert.equal(whereText({ kind: 'inside', hostId: 'host', host: { kind: 'cupboard', reason: '' } }, name).onTop, null);
+test('whereText: an expansion inside a box says so, and what rests on that box', () => {
+  const inside = (host) => ({ kind: 'inside', hostId: 'lairs', host });
+  const one = whereText(inside(stackLoc({ above: ['b'] })), name);
+  assert.equal(one.sentence, 'Inside the Lairs box (Bottom shelf · stack B3 · on Takenokolor · 1 box on top)');
+  assert.equal(one.onTop, 'On top of the Lairs box: Brass');
+  assert.equal(whereText(inside(stackLoc({ above: ['b', 'c'] })), name).onTop, 'On top of the Lairs box, nearest first: Brass, Catan');
+  assert.equal(whereText(inside(stackLoc()), name).onTop, null);
+  assert.equal(whereText(inside({ kind: 'cupboard', reason: '' }), name).onTop, null);
+  assert.equal(whereText(inside({ kind: 'board', index: 2 }), name).sentence, 'Inside the Lairs box (On the board)');
 });
 
-test('whereText with the real seed: every game gets a sentence, and "on top" names are real titles', async () => {
+test('whereText with the real store: a bridge, boxes on top and the board', async () => {
   await load();
-  const known = new Set(store.getGames().map((g) => g.title));
-  for (const g of store.getGames()) {
-    const loc = store.locate(g.id);
-    const { sentence, onTop } = whereText(loc, titleOf);
-    assert.ok(sentence.length > 5, g.id);
-    if (loc.kind === 'stack' && loc.orientation === 'flat' && loc.above.length) {
-      assert.ok(loc.above.every((id) => onTop.includes(titleOf(id))), g.id);
-      assert.ok(loc.above.every((id) => known.has(titleOf(id))), g.id);
-    }
-  }
+  const idOf = (title) => store.getGames().find((g) => g.title === title).id;
+  const take = idOf('Takenokolor');
+  const compile = idOf('Compile: Main 2');
+  const kontroll = idOf('Kontroll');
+  const mind = idOf('The Mind – Érezz rá!');
+  store.placeBox(mind, { stackId: 'B3', on: [compile, kontroll] });
+  const bridge = whereText(store.locate2(mind), titleOf);
+  assert.match(bridge.sentence, /across Compile: Main 2 and Kontroll · nothing on top$/);
+  assert.equal(bridge.onTop, null);
+  const under = whereText(store.locate2(compile), titleOf);
+  assert.match(under.sentence, /1 box on top$/);
+  assert.equal(under.onTop, 'On top: The Mind – Érezz rá!');
+  const odin = idOf('Odin');
+  store.placeBox(odin, { stackId: 'B3', on: [take] });
+  const loc = store.locate2(take);
+  const names = whereText(loc, titleOf).onTop;
+  assert.ok(loc.above.length >= 2 && loc.above.every((g) => names.includes(titleOf(g))), names);
+  // a new game has no place: it is on the board
+  const fresh = store.addGame({ title: 'Új játék' });
+  assert.deepEqual(whereText(store.locate2(fresh), titleOf), { sentence: 'On the board', onTop: null });
+  // every seed game gets a sentence
+  for (const g of store.getGames()) assert.ok(whereText(store.locate2(g.id), titleOf).sentence.length > 5, g.id);
   // an expansion from the seed: Lairs: Box Zero lives inside Lairs
-  const zero = store.getGames().find((g) => g.title === 'Lairs: Box Zero');
-  const t = whereText(store.locate(zero.id), titleOf);
-  assert.match(t.sentence, /^Inside the Lairs box \(/);
+  const zero = idOf('Lairs: Box Zero');
+  assert.match(whereText(store.locate2(zero), titleOf).sentence, /^Inside the Lairs box \(/);
 });

@@ -11,10 +11,11 @@ import {
 const seed = JSON.parse(readFileSync(new URL('../data/seed.json', import.meta.url), 'utf8'));
 const memory = () => { const m = new Map(); return { getItem: (k) => m.get(k) ?? null, setItem: (k, v) => m.set(k, String(v)), removeItem: (k) => m.delete(k) }; };
 
+const titleOf = (id) => store.getGame(id)?.title ?? id;
+
 async function entries() {
   await store.init({ seed, storage: memory() });
-  const title = (id) => store.getGame(id)?.title ?? id;
-  return store.getGames().map((g) => makeEntry(g, store.locate(g.id), title));
+  return store.getGames().map((g) => makeEntry(g, store.locate2(g.id), titleOf));
 }
 const filter = (all, patch) => all.filter((e) => matches(e, { ...DEFAULT_STATE, ...patch }));
 const ids = (list) => list.map((e) => e.game.id).sort();
@@ -37,6 +38,9 @@ test('state <-> URL params: round trip, defaults left out, rubbish ignored', () 
     { ...DEFAULT_STATE, cats: ['party'] },
   );
   assert.equal(stateFromParams({ players: '0' }).players, null);
+  assert.equal(stateFromParams({ where: 'board' }).where, 'board');
+  assert.equal(stateFromParams({ where: 'unplaced' }).where, 'board'); // links from before schema 2
+  assert.equal(stateFromParams({ where: 'nowhere' }).where, 'any');
   assert.equal(stateFromParams({ q: '  azul ' }).q, 'azul'); // surrounding spaces are dropped
   assert.equal(stateFromParams({ q: 'x'.repeat(500) }).q.length, 80);
   assert.equal(activeFilterCount({ ...DEFAULT_STATE, q: 'azul' }), 0); // the search field is not a filter
@@ -59,25 +63,32 @@ test('short location text', async () => {
   assert.equal(byId.get(exp).kind, 'inside');
   const cup = seed.plan.cupboard[0].game;
   assert.equal(byId.get(cup).where, 'Cupboard');
-  assert.equal(shortLocation({ kind: 'unplaced' }), 'Not placed');
-  assert.equal(shortLocation(null), 'Not placed');
-  assert.equal(locationKind(null), 'unplaced');
+  assert.equal(shortLocation({ kind: 'board', index: 0 }), 'Board');
+  assert.equal(shortLocation(null), 'Board');
+  assert.equal(locationKind({ kind: 'board', index: 0 }), 'board');
+  assert.equal(locationKind(null), 'board'); // no place at all = on the board
 });
 
 test('location filter matches the plan', async () => {
   const all = await entries();
   assert.equal(filter(all, { where: 'cupboard' }).length, seed.plan.cupboard.length);
   assert.equal(filter(all, { where: 'inside' }).length, Object.keys(seed.plan.inside).length);
-  assert.equal(filter(all, { where: 'unplaced' }).length, 0);
+  assert.equal(filter(all, { where: 'board' }).length, 0);
   assert.equal(
     filter(all, { where: 'shelf' }).length,
     seed.games.length - seed.plan.cupboard.length - Object.keys(seed.plan.inside).length,
   );
-  // a game just imported from BGG is not placed yet
+  // a game just imported from BGG has no place: it is on the board
   const id = store.addGame({ title: 'Új játék' });
-  const fresh = makeEntry(store.getGame(id), store.locate(id), () => '');
-  assert.equal(fresh.kind, 'unplaced');
-  assert.equal(fresh.where, 'Not placed');
+  const fresh = makeEntry(store.getGame(id), store.locate2(id), () => '');
+  assert.equal(fresh.kind, 'board');
+  assert.equal(fresh.where, 'Board');
+  const all2 = store.getGames().map((g) => makeEntry(g, store.locate2(g.id), titleOf));
+  assert.deepEqual(filter(all2, { where: 'board' }).map((e) => e.game.id), [id]);
+  // moving a shelf game to the board shows up too
+  store.moveToBoard(store.getPlan2().stacks[0].boxes[0].game);
+  const all3 = store.getGames().map((g) => makeEntry(g, store.locate2(g.id), titleOf));
+  assert.equal(filter(all3, { where: 'board' }).length, 2);
 });
 
 test('players filter: games that support that count; unknown players never match', async () => {

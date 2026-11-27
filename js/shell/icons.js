@@ -31,6 +31,15 @@ const SHAPES = {
     ['ellipse', { cx: 12, cy: 6, rx: 7, ry: 3 }],
     ['path', { d: 'M5 6v12c0 1.7 3.1 3 7 3s7-1.3 7-3V6M5 12c0 1.7 3.1 3 7 3s7-1.3 7-3' }],
   ],
+  // curved arrows (header Undo and Redo)
+  undo: [
+    ['path', { d: 'M9 14L4 9l5-5' }],
+    ['path', { d: 'M4 9h10.5a5.5 5.5 0 010 11H11' }],
+  ],
+  redo: [
+    ['path', { d: 'M15 14l5-5-5-5' }],
+    ['path', { d: 'M20 9H9.5a5.5 5.5 0 000 11H13' }],
+  ],
   // magnifying glass (header search, story C4)
   search: [
     ['circle', { cx: 11, cy: 11, r: 6 }],

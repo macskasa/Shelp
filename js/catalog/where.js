@@ -2,6 +2,7 @@
 // Opened from the search button in the header (js/shell/tools.js) on every screen.
 // The matching is in search.js and the wording in where-text.js; this file only draws the panel.
 import { h, loadCss, showPanel } from '../core/dom.js';
+import { on } from '../core/bus.js';
 import * as store from '../core/store.js';
 import { openGame, showOnMap } from '../core/contracts.js';
 import { rankMatches, searchKey } from './search.js';
@@ -14,7 +15,7 @@ const HINT = 'Type part of a title. Capital letters and accents don’t matter.'
 
 /** Open the panel. Returns the <dialog>. */
 export function openWhere() {
-  const items = store.getGames().map((game) => ({ game, key: searchKey(game) }));
+  let items = [];
   const title = (id) => store.getGame(id)?.title ?? id;
 
   const input = h('input', {
@@ -50,7 +51,7 @@ export function openWhere() {
   }
 
   function card(game) {
-    const { sentence, onTop } = whereText(store.locate(game.id), title);
+    const { sentence, onTop } = whereText(store.locate2(game.id), title);
     const bgg = game.bggName && game.bggName !== game.title ? game.bggName : null;
     return h('li', { class: 'where-item' },
       h('div', { class: 'where-name' }, game.title, bgg && h('span', { class: 'where-bgg' }, bgg)),
@@ -60,6 +61,12 @@ export function openWhere() {
         h('button', { class: 'btn btn-primary', type: 'button', onclick: () => showOnMap(game.id) }, 'Show on map'),
         h('button', { class: 'btn', type: 'button', onclick: () => openGame(game.id) }, 'Details')));
   }
+
+  // Follow the store (an Undo, a move, an import) while the panel is open.
+  const load = () => { items = store.getGames().map((game) => ({ game, key: searchKey(game) })); };
+  const off = on('store:changed', () => { load(); show(); });
+  dlg.addEventListener('close', off, { once: true });
+  load();
 
   // On a phone the keyboard covers the lower part of the screen: keep the panel inside what is left.
   const vv = window.visualViewport;
