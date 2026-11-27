@@ -31,7 +31,7 @@ Use `layoutStack(stack, getGame)` for a stack's `w`, `d`, `h`, and `footprint()`
 
 ### The rules
 
-1. **size-missing:** a box with `dims: null` cannot be checked. One warning per box (it is drawn as a placeholder).
+1. **size-missing:** no longer needed. A game without a size can't be on a stack (the store and the schema check refuse it, see CONTEXT section 4). If you already wrote this rule, keep it as a safety net, but never judge a placeholder box in the other rules.
 2. **stacking** (flat stacks, each row on its own): every level may be at most `STACK_TOLERANCE` (1 cm) wider **and** at most 1 cm deeper than the level under it. A side-by-side level counts as width = sum of its boxes, depth = deepest box. `gameId` = the upper box.
 3. **height:** the stack's `h` (topper included) ≤ the zone's `usable` height. **With a topper** the limit is `zone.height − 0.5`. The LEGO castle may go right up to the shelf above, because nobody pulls it out.
 4. **bracket:** for every x in `zone.brackets`, a stack whose span `[x, x + w]` overlaps `[bx − 0.2, bx + 0.2]` must have `h ≤ bracketLimit(zone, d)`.
@@ -50,7 +50,8 @@ Showing warnings on the map and in stack details is **Bruce's**. He will call yo
 ### Acceptance
 
 - `checkPlan` on the v5 seed returns `[]`.
-- One test per rule that breaks it on purpose and gets exactly that warning. For example: Ark Nova on top of Tokaido Duo (stacking), a 2-row stack moved to x = 100 on the top shelf (two-deep), a stack pushed past 208 (length), two stacks at the same x (overlap), a tall stack across the 140 joint (bracket), a game with `dims: null` (size-missing).
+- One test per rule that breaks it on purpose and gets exactly that warning. For example: Ark Nova on top of Tokaido Duo (stacking), a 2-row stack moved to x = 100 on the top shelf (two-deep), a stack pushed past 208 (length), two stacks at the same x (overlap), a tall stack across the 140 joint (bracket).
+- Good to know from Bruce: `layoutStack().h` includes the topper, `pileH` is without it, and `w` leaves the topper out. Box `x` is from the stack's left edge, `y` up from the floor, `z` front to back; add `stack.x` for the position along the shelf.
 
 ---
 
@@ -103,7 +104,7 @@ Two downloads on the Data screen, with the **same columns as the tabs in the pla
   - categories
   - `inBgg` off by default
 - If the BGG id already belongs to a game, warn ("Already in the app as …", with a link that opens it), but don't block.
-- **Save** → `store.addGame()`, close, and `openGame(newId)`. The game starts **unplaced**, so Bruce's cupboard screen lists it under "Not placed yet".
+- **Save** → `store.addGame()`, close, and `openGame(newId)`. The game starts **unplaced**, so Bruce's cupboard screen lists it under "Not placed yet". The size is optional here, but without one the game can't be put on a shelf until it is measured.
 - Reuse your panel's field helpers and parsing.
 
 **Acceptance:** Fantasy Fluxx can be added with 9.4 × 12.4 × 2.8, it appears in the catalog as "Not placed", and Back closes the form without saving.

@@ -98,3 +98,70 @@ export const bggPage = (g) => (g.bggId ? `${BGG}/boardgame/${g.bggId}` : null);
 export const bggVersions = (g) => (g.bggId ? `${BGG}/boardgame/${g.bggId}/versions` : null);
 export const bggSearch = (g) =>
   `${BGG}/geeksearch.php?action=search&objecttype=boardgame&q=${encodeURIComponent(g.bggName || g.title)}`;
+
+// ---------------------------------------------------------------- adding a game by hand (A4)
+
+const wholeNumber = (text) => {
+  const t = String(text ?? '').trim();
+  return /^\d+$/.test(t) && Number(t) > 0 ? Number(t) : NaN;
+};
+
+/** BGG id from text: '' -> { id: null }, "342942" -> { id: 342942 }, anything else -> { error }. */
+export function parseBggId(text) {
+  const t = String(text ?? '').trim();
+  if (t === '') return { id: null };
+  const id = wholeNumber(t);
+  return Number.isNaN(id) ? { error: 'The BGG id is a whole number, like 342942.' } : { id };
+}
+
+/**
+ * A range from two boxes (players, play time): both empty -> { value: null }; only the first -> a single value (2 -> 2–2);
+ * both -> { min, max }; anything else -> { error }.
+ */
+export function parseRange(minText, maxText, what) {
+  const a = String(minText ?? '').trim();
+  const b = String(maxText ?? '').trim();
+  if (a === '' && b === '') return { value: null };
+  if (a === '') return { error: `Fill in the lowest ${what} too.` };
+  const min = wholeNumber(a);
+  const max = b === '' ? min : wholeNumber(b);
+  if (Number.isNaN(min) || Number.isNaN(max)) return { error: `The ${what} must be whole numbers, like 2 and 4.` };
+  if (min > max) return { error: `The lowest ${what} cannot be more than the highest.` };
+  return { value: { min, max } };
+}
+
+/** The game that already has this BGG id, if any. */
+export const findByBggId = (games, bggId) => (bggId == null ? undefined : games.find((g) => g.bggId === bggId));
+
+/**
+ * The "Add a game" form as typed:
+ *   { title, bggId, dims: [a, b, c], players: [min, max], time: [min, max], type, categories, inBgg }
+ * -> { fields } for store.addGame, or { errors } with a message for each field that is wrong
+ * (keys: title, bggId, dims, players, time).
+ */
+export function parseGameForm(form) {
+  const errors = {};
+  const title = cleanTitle(form.title);
+  if (!title) errors.title = 'A game needs a name.';
+  const bgg = parseBggId(form.bggId);
+  if (bgg.error) errors.bggId = bgg.error;
+  const size = parseDims(form.dims);
+  if (size.error) errors.dims = size.error.replace('Not saved yet – f', 'F');
+  const players = parseRange(form.players[0], form.players[1], 'number of players');
+  if (players.error) errors.players = players.error;
+  const time = parseRange(form.time[0], form.time[1], 'play time');
+  if (time.error) errors.time = time.error;
+  if (Object.keys(errors).length) return { errors };
+  return {
+    fields: {
+      title,
+      bggId: bgg.id,
+      type: form.type === 'expansion' ? 'expansion' : 'base',
+      dims: size.dims,
+      players: players.value,
+      time: time.value,
+      categories: CATEGORY_IDS.filter((c) => form.categories.includes(c)),
+      inBgg: !!form.inBgg,
+    },
+  };
+}

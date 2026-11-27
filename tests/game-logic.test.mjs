@@ -3,8 +3,9 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import * as store from '../js/core/store.js';
+import { describeLocation } from '../js/core/format.js';
 import {
-  cleanTitle, parseDecimal, parseDims, dimsToInputs, sameDims, textOrNull, sizeSources, toggleCategory,
+  findByBggId, parseBggId, parseGameForm, parseRange, cleanTitle, parseDecimal, parseDims, dimsToInputs, sameDims, textOrNull, sizeSources, toggleCategory,
   gamesInside, hostChoices, takenOutReason, bggPage, bggVersions, bggSearch,
 } from '../js/game/logic.js';
 
@@ -128,4 +129,63 @@ test('a game can be renamed through the store, and an empty name is refused', as
   assert.equal(store.getGame(g.id).title, 'Fluxx (magyar)');
   assert.throws(() => store.updateGame(g.id, { title: '' }));
   assert.equal(store.getGame(g.id).title, 'Fluxx (magyar)');
+});
+
+// ---------------------------------------------------------------- A4: add a game
+
+test('parseBggId: empty is fine, whole numbers only', () => {
+  assert.deepEqual(parseBggId(''), { id: null });
+  assert.deepEqual(parseBggId(' 342942 '), { id: 342942 });
+  for (const bad of ['abc', '12.5', '-3', '0', '12 34']) assert.match(parseBggId(bad).error, /whole number/);
+});
+
+test('parseRange: both empty, one value, two values, and mistakes', () => {
+  assert.deepEqual(parseRange('', '', 'players'), { value: null });
+  assert.deepEqual(parseRange('2', '', 'players'), { value: { min: 2, max: 2 } });
+  assert.deepEqual(parseRange('2', '6', 'players'), { value: { min: 2, max: 6 } });
+  assert.match(parseRange('', '6', 'number of players').error, /lowest number of players too/);
+  assert.match(parseRange('6', '2', 'play time').error, /cannot be more/);
+  assert.match(parseRange('x', '2', 'play time').error, /whole numbers/);
+  assert.match(parseRange('0', '2', 'play time').error, /whole numbers/);
+});
+
+const emptyForm = () => ({ title: '', bggId: '', dims: ['', '', ''], players: ['', ''], time: ['', ''], type: 'base', categories: [], inBgg: false });
+
+test('parseGameForm: Fantasy Fluxx', () => {
+  const { fields, errors } = parseGameForm({
+    ...emptyForm(), title: ' Fantasy Fluxx ', dims: ['9,4', '12,4', '2,8'], players: ['2', '6'], time: ['10', '30'],
+    categories: ['popular', 'party'],
+  });
+  assert.equal(errors, undefined);
+  assert.deepEqual(fields, {
+    title: 'Fantasy Fluxx', bggId: null, type: 'base', dims: [2.8, 9.4, 12.4], players: { min: 2, max: 6 },
+    time: { min: 10, max: 30 }, categories: ['party', 'popular'], inBgg: false,
+  });
+});
+
+test('parseGameForm: only the title is required, and every mistake is named', () => {
+  assert.deepEqual(parseGameForm({ ...emptyForm(), title: 'X' }).fields.dims, null);
+  const { errors } = parseGameForm({ ...emptyForm(), bggId: 'abc', dims: ['1', '', ''], players: ['', '4'], time: ['9', '3'] });
+  assert.deepEqual(Object.keys(errors).sort(), ['bggId', 'dims', 'players', 'time', 'title']);
+  assert.match(errors.dims, /^Fill in all three sizes/);
+  assert.equal(parseGameForm({ ...emptyForm(), title: 'E', type: 'expansion', inBgg: true }).fields.type, 'expansion');
+});
+
+test('findByBggId finds the game that already has the id', async () => {
+  await store.init({ seed, storage: memoryStorage() });
+  assert.equal(findByBggId(store.getGames(), 404883).title, 'Lairs');
+  assert.equal(findByBggId(store.getGames(), 1), undefined);
+  assert.equal(findByBggId(store.getGames(), null), undefined);
+});
+
+test('acceptance: Fantasy Fluxx is added unplaced with its size', async () => {
+  await store.init({ seed, storage: memoryStorage() });
+  const { fields } = parseGameForm({ ...emptyForm(), title: 'Fantasy Fluxx', dims: ['9.4', '12.4', '2.8'] });
+  const newId = store.addGame(fields);
+  const game = store.getGame(newId);
+  assert.deepEqual(game.dims, [2.8, 9.4, 12.4]);
+  assert.equal(game.inBgg, false);
+  assert.deepEqual(store.locate(newId), { kind: 'unplaced' });
+  assert.equal(describeLocation(store.locate(newId)), 'Not placed yet');
+  assert.ok(store.getGames().some((g) => g.title === 'Fantasy Fluxx'));
 });

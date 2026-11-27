@@ -3,17 +3,8 @@ import { h, clear, toast } from '../core/dom.js';
 import * as store from '../core/store.js';
 import { backupFileName, describeImport, problemLines, readJson } from './backup.js';
 import { confirmPanel } from './confirm.js';
+import { download } from './download.js';
 import { when } from './time.js';
-
-/** Hand a text file to the browser as a download (works in Chrome and in the installed app). */
-function download(name, text) {
-  const url = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
-  const a = h('a', { href: url, download: name });
-  document.body.append(a);
-  a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 10000);
-}
 
 export function backupSection() {
   const fileId = 'io-restore-file';

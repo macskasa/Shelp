@@ -67,3 +67,12 @@
 /* Desktop: dropping a file on the screen */
 .io-screen { min-height: 60vh; }
 .io-screen.io-dropping { outline: 2px dashed var(--accent); outline-offset: 6px; border-radius: var(--radius); }
+
+/* Plan check */
+.io-check { display: flex; flex-direction: column; gap: 8px; }
+.io-check p { margin: 0; }
+.io-check-head { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; }
+.io-check-head .btn { margin-left: auto; min-height: 40px; }
+
+/* Export */
+.io-wrap { flex-wrap: wrap; }
