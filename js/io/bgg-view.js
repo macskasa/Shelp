@@ -5,32 +5,32 @@ import { parseBggCsv, planImport } from './bgg.js';
 import { applyImport } from './apply.js';
 import { reviewView } from './bgg-review.js';
 import { confirmPanel } from './confirm.js';
-
-const when = (iso) => (iso ? new Date(iso).toLocaleString('sv-SE').slice(0, 16) : null);
+import { when } from './time.js';
 
 export function bggSection() {
   const fileId = 'io-bgg-file';
   const lastLine = h('p', { class: 'muted' });
   const out = h('div', { class: 'io-out', 'aria-live': 'polite' });
   const input = h('input', {
-    type: 'file', id: fileId, accept: '.csv,text/csv,text/comma-separated-values', onchange: onFile,
+    type: 'file', id: fileId, accept: '.csv,text/csv,text/comma-separated-values',
+    onchange: async () => {
+      const file = input.files?.[0];
+      if (file) await loadFile(file);
+      input.value = ''; // so the same file can be picked again
+    },
   });
 
-  const showLast = () => {
+  const refresh = () => {
     const t = when(store.getMeta().lastImport);
     lastLine.textContent = t ? `Last import: ${t}` : 'No import yet.';
   };
 
-  async function onFile() {
-    const file = input.files?.[0];
-    if (!file) return;
+  async function loadFile(file) {
     try {
       const { rows, notOwned } = parseBggCsv(await file.text());
       review(file.name, rows, notOwned);
     } catch (err) {
       clear(out).append(h('p', { class: 'io-error', role: 'alert' }, err.message));
-    } finally {
-      input.value = ''; // so the same file can be picked again
     }
   }
 
@@ -72,7 +72,7 @@ export function bggSection() {
     }
 
     function done(r) {
-      showLast();
+      refresh();
       clear(out).append(h('p', { class: 'io-ok' },
         `Imported: ${r.updated} updated · ${r.added} added · ${r.kept} kept · ${r.deleted} deleted.`,
         r.added ? ' New games are not on a shelf yet.' : ''));
@@ -89,12 +89,13 @@ export function bggSection() {
     refreshNote();
   }
 
-  showLast();
-  return h('section', { class: 'card io-section' },
+  refresh();
+  const el = h('section', { class: 'card io-section' },
     h('h2', {}, 'BoardGameGeek collection'),
     h('p', { class: 'muted' }, 'On BoardGameGeek open your collection and use Export collection as CSV. Then pick that file here. You see what would change before anything is saved.'),
     lastLine,
     h('label', { class: 'io-label', for: fileId }, 'BGG collection file (.csv)'),
     input,
     out);
+  return { el, refresh, loadFile };
 }
