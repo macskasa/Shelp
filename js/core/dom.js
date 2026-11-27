@@ -50,7 +50,7 @@ export function clear(el) {
 // On Android (the main target) the back gesture must close an open panel, not leave the screen.
 // showPanel() pushes a history entry for each open panel and closes the top panel on Back.
 // Closing a panel any other way (button, Esc) removes its history entry again.
-// Navigating (go / showOnMap) while panels are open closes them all.
+// Navigating with go() / showOnMap() while panels are open closes them all first (closePanels).
 const panels = [];
 let ignorePops = 0;
 let wired = false;
@@ -98,6 +98,29 @@ export function showPanel(dlg) {
     dlg.remove();
   }, { once: true });
   return dlg;
+}
+
+/**
+ * Close every open panel and drop their history entries, then call done().
+ * The router's go() uses this, so navigating from inside a panel never leaves stray Back steps.
+ */
+export function closePanels(done = () => {}) {
+  const n = panels.length;
+  if (!n) {
+    done();
+    return;
+  }
+  for (const p of [...panels].reverse()) {
+    p.how = 'nav';
+    p.dlg.close();
+  }
+  if (history.state?.shelpPanel) {
+    ignorePops++;
+    window.addEventListener('popstate', () => done(), { once: true });
+    history.go(-n);
+  } else {
+    done();
+  }
 }
 
 /** Short message at the bottom of the screen: toast('Saved'), toast(err.message, { error: true }) */
