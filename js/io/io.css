@@ -58,3 +58,12 @@
 .io-buttons { display: flex; gap: 8px; justify-content: flex-end; }
 
 .io-confirm-list { margin: 0 0 12px; padding-left: 18px; max-height: 40vh; overflow-y: auto; }
+
+/* Backup and restore */
+.io-start { justify-content: flex-start; }
+.io-problems { margin: 6px 0 0; padding-left: 18px; font-weight: 400; overflow-wrap: anywhere; }
+.io-danger-zone { margin-top: 6px; padding-top: 12px; border-top: 1px solid var(--border); }
+
+/* Desktop: dropping a file on the screen */
+.io-screen { min-height: 60vh; }
+.io-screen.io-dropping { outline: 2px dashed var(--accent); outline-offset: 6px; border-radius: var(--radius); }
