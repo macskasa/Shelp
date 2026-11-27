@@ -106,11 +106,14 @@ test('plan: spot, level, row / pile and notes', async () => {
   const first = (stackId) => body.find((r) => r[2] === stackId);
   const inStack = (stackId) => body.filter((r) => r[2] === stackId && r[4] !== 'inside the base box');
 
-  assert.deepEqual([first('T1')[0], first('T1')[1]], ['Top shelf', 'Easy (from the stairs)']);
-  assert.equal(first('T4')[1], 'Hard');
-  assert.equal(first('M2')[1], 'Hard', 'the middle shelf is hard to reach');
-  assert.equal(first('B4')[1], 'Easy');
-  assert.equal(first('N1')[1], 'Easy');
+  // the Spot column is the reach text (reach.js)
+  assert.equal(first('T1')[0], 'Top shelf');
+  assert.match(first('T4')[1], /^Hard-to-reach spot/);
+  assert.match(first('M2')[1], /^Hard-to-reach spot/, 'the middle shelf is hard to reach');
+  assert.ok(body.every((r) => r[0] === 'Board' || r[0] === 'Cupboard' || r[1] !== ''), 'every placed game has a reach text');
+  assert.ok(body.some((r) => r[1] === 'Easy to reach'));
+  assert.ok(body.some((r) => / · \d box(es)? on top$|^\d box(es)? on top$/.test(r[1])), 'boxes on top show');
+  assert.ok(body.some((r) => /^Back row/.test(r[1])), 'the back row shows');
 
   // notes only on the first row of the stack
   assert.equal(first('T1')[9], 'Party games; 2 deep, long side out');

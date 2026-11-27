@@ -1,7 +1,8 @@
-// The Family part of the game panel (story B2): the field, suggestion chips, "Also in …" and Rename family…
+// The Family part of the game panel (story B2): the field, suggestion chips, "Also in …", Rename family… and Show on map
 // Same shape as the parts in fields.js: returns { el, refresh(game), flush() }. Owner: Stephen (Part A).
 import { h, clear, closePanels, showPanel, toast } from '../core/dom.js';
 import * as store from '../core/store.js';
+import { showFamily } from '../core/contracts.js';
 import { suggestFamilyNames, alsoIn } from './family.js';
 import { textOrNull } from './logic.js';
 
@@ -49,6 +50,8 @@ export function familySection(id, save, openOther) {
   const chips = h('div', { class: 'game-chips', role: 'group', 'aria-label': 'Suggested families' });
   const also = h('p', { class: 'game-also' });
   const rename = h('button', { type: 'button', class: 'btn game-rename', onclick: () => { const f = store.getGame(id)?.family; if (f) renamePanel(f); } }, 'Rename family…');
+  const onMap = h('button', { type: 'button', class: 'btn game-rename', onclick: () => { const f = store.getGame(id)?.family; if (f) showFamily(f); } }, 'Show family on map');
+  const actions = h('div', { class: 'game-family-actions' }, rename, onMap);
   let key = ''; // what chips and the "also in" line show now, so a refresh with the same content keeps the buttons
 
   function commit() {
@@ -59,10 +62,10 @@ export function familySection(id, save, openOther) {
   const title = (gid) => store.getGame(gid)?.title ?? gid;
   return {
     el: h('section', { class: 'game-sec' },
-      h('label', { class: 'game-label', for: inputId }, 'Family'), input, chips, also, rename),
+      h('label', { class: 'game-label', for: inputId }, 'Family'), input, chips, also, actions),
     refresh(g) {
       if (document.activeElement !== input && input.value !== (g.family ?? '')) input.value = g.family ?? '';
-      rename.hidden = !g.family;
+      actions.hidden = !g.family;
       const names = suggestFamilyNames(g, store.getGames(), store.getPlan2().inside);
       const others = alsoIn(g, store.getFamilies());
       const next = JSON.stringify([g.family, names, others.map((o) => [o, title(o)])]);
