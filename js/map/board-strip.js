@@ -7,7 +7,7 @@ import { boardChips } from './placing.js';
 
 /**
  * @param onPick(gameId)  a chip pressed
- * @returns {{ el, set(board, getGame) }}
+ * @returns {{ el, set(board, getGame), mark(ids) }}  mark: the chips of a family shown on the map (part-b4)
  */
 export function boardStrip(onPick) {
   const count = h('span', { class: 'map-board-label' });
@@ -23,6 +23,9 @@ export function boardStrip(onPick) {
         'aria-label': `${c.title}: pick up`, onclick: () => onPick(c.id),
       }, h('span', { class: 'map-board-sw', 'aria-hidden': 'true', style: stripes(c.colors) }), h('span', { class: 'map-board-title' }, c.title))));
       el.hidden = !list.length;
+    },
+    mark(ids) {
+      for (const chip of chips.children) chip.classList.toggle('is-member', ids.includes(chip.dataset.game));
     },
   };
 }

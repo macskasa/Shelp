@@ -82,7 +82,7 @@ export function createPlacing({ stage, panZoom, getScene, openOver, onLeave }) {
     /** A tap at client point (cx, cy): a stack's spot sheet, or a new stack on empty shelf. */
     tap(cx, cy) {
       const r = stage.getBoundingClientRect();
-      const hit = tapTarget(getScene(), toDrawing(panZoom.view, cx - r.left, cy - r.top));
+      const hit = tapTarget(getScene(), toDrawing(panZoom.view, cx - r.left, cy - r.top), panZoom.view.k);
       if (hit?.kind === 'stack') openSpot(hit.stackId);
       else if (hit?.kind === 'empty') newStack(hit.zone, newStackX(hit.zone, hit.x));
     },

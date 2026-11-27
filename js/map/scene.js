@@ -7,6 +7,7 @@
 import { ZONES, GROUPS, BRACKET } from '../core/shelves.js';
 import { layoutStack2 } from '../core/geometry.js';
 import { rowForView } from './rows.js';
+import { emptyRooms } from './hit.js';
 
 export const SPACING = Object.freeze({
   margin: 3,   // around the whole drawing
@@ -55,7 +56,8 @@ const bandLabel = (z) => `${z.label} · ${z.height} cm high`;
  * title runs up the box. `boxes` holds the row the view draws: the front row, or for a 2-deep stack
  * in the back view its back row, with its front row in `ghosts` (faint outlines drawn in front).
  * `back` always lists the back-row game ids. An empty stack (empty: true; stacks keep their ids,
- * part-b3 item 5) is SPACING.emptyW wide and as tall as its shelf, so it can be seen and tapped.
+ * part-b3 item 5) is SPACING.emptyW wide and as tall as its shelf, so it can be seen and tapped;
+ * its `room: { left, right }` (cm) is how far its tap target may grow (hit.js).
  */
 export function buildScene(plan, getGame, { view = 'front' } = {}) {
   const { margin, label, ids } = SPACING;
@@ -90,6 +92,10 @@ export function buildScene(plan, getGame, { view = 'front' } = {}) {
     const z = zones.get(st.zone);
     if (!z) continue; // the schema check keeps unknown zones out; never crash the drawing
     stacks.push(placeStack(st, z, getGame, rowForView(view)));
+  }
+  // an empty stack's tap target may grow into the room its neighbours leave (part-b4 item 3)
+  for (const z of zones.values()) {
+    for (const [st, room] of emptyRooms(stacks.filter((x) => x.zone === z.id), z)) st.room = room;
   }
 
   let right = 0;
@@ -203,4 +209,13 @@ export function findInScene(scene, gameId) {
     if (stack.back.includes(gameId) || stack.ghosts.some((g) => g.gameId === gameId)) return { stack, box: null };
   }
   return null;
+}
+
+/** The area of a stack in cm: its column from the top of the shelf down to its id. null: no such stack. */
+export function stackArea(scene, stackId) {
+  const st = scene.stacks.find((x) => x.id === stackId);
+  const zone = st && scene.zones.find((z) => z.id === st.zone);
+  if (!zone) return null;
+  const y = Math.min(zone.top, st.top);
+  return { x: st.x, y, w: Math.max(st.w, 2), h: st.label.y + 3 - y };
 }

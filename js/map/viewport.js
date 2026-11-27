@@ -72,6 +72,18 @@ export function reveal(v, rect, scene, fw, fh, pad = 2) {
   return clampView({ x: rect.x + rect.w / 2 - vw / 2, y: rect.y + rect.h / 2 - vh / 2, k: v.k }, scene, fw, fh);
 }
 
+/**
+ * Bring a rect (cm) into view, e.g. a family's boxes (part-b4 item 1): like reveal() while it fits at
+ * the current zoom, otherwise zoomed out just enough to fit it (with `pad` cm around), centred on it.
+ */
+export function showRect(v, rect, scene, fw, fh, pad = 2) {
+  const w = rect.w + 2 * pad;
+  const h = rect.h + 2 * pad;
+  if (w <= fw / v.k && h <= fh / v.k) return reveal(v, rect, scene, fw, fh, pad);
+  const k = Math.min(fw / w, fh / h);
+  return clampView({ x: rect.x + rect.w / 2 - fw / k / 2, y: rect.y + rect.h / 2 - fh / k / 2, k }, scene, fw, fh);
+}
+
 const r3 = (n) => Math.round(n * 1000) / 1000;
 
 /** The SVG viewBox for a view. */

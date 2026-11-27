@@ -1,7 +1,7 @@
 // Part B zoom and pan maths (story C2). Run from the repo root:  node --test
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { MAX_K, limits, clampView, fitWidth, zoomAt, panBy, pinchView, isVisible, reveal, viewBox, wheelAction } from '../js/map/viewport.js';
+import { MAX_K, limits, clampView, fitWidth, zoomAt, panBy, pinchView, isVisible, reveal, showRect, viewBox, wheelAction } from '../js/map/viewport.js';
 
 const scene = { width: 214, height: 262 };
 const near = (a, b, what, tol = 1e-6) => assert.ok(Math.abs(a - b) <= tol, `${what}: got ${a}, expected ${b}`);
@@ -104,4 +104,19 @@ test('Ctrl + wheel zooms at the pointer: a pinch in small steps, a mouse notch c
   assert.ok(wheelAction({ deltaY: 4, ctrlKey: true }, 800).zoom < 1, 'pinch out');
   near(wheelAction({ deltaY: 100, ctrlKey: true }, 800).zoom, Math.exp(-0.2), 'notch out');
   near(wheelAction({ deltaY: -3, deltaMode: 1, ctrlKey: true }, 800).zoom, Math.exp(0.2), 'line notch in');
+});
+
+test('showRect: keeps the zoom while the rect fits (like reveal), zooms out just enough when it does not', () => {
+  const v = { x: 0, y: 0, k: 8 }; // 147 × 100 cm of a 1176 × 800 frame
+  const small = { x: 150, y: 150, w: 20, h: 30 };
+  assert.deepEqual(showRect(v, small, scene, ...DESK), reveal(v, small, scene, ...DESK));
+  const seen = { x: 10, y: 10, w: 20, h: 20 };
+  assert.equal(showRect(v, seen, scene, ...DESK), v, 'already in view: unchanged');
+  const tall = { x: 20, y: 20, w: 30, h: 200 }; // two shelves far apart
+  const out = showRect(v, tall, scene, ...DESK);
+  near(out.k, 800 / 204, 'k fits the height with 2 cm around');
+  assert.ok(isVisible(out, tall, ...DESK), 'all of it in view');
+  // never below the "whole drawing" limit
+  const huge = showRect(v, { x: 0, y: 0, w: 214, h: 262 }, scene, ...DESK);
+  near(huge.k, 800 / 262, 'clamped to the whole drawing');
 });
