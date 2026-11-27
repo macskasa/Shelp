@@ -25,6 +25,8 @@ test('room line: on top of the stack with most room, (not measured) when approxi
   assert.equal(roomText({ room: null, approximate: false }), '');
   assert.equal(roomText({ room: { stackId: 'U1', h: 5 }, approximate: true }), 'up to 5 cm on top of U1 (not measured)');
   assert.equal(roomText({ room: null, approximate: true }), '(not measured)');
+  assert.equal(roomText({ room: { stackId: 'M2', h: 0 }, approximate: false }), 'No room on top');
+  assert.equal(roomText({ room: { stackId: 'M2', h: 0.04 }, approximate: true }), 'No room on top (not measured)');
 });
 
 test('summary: the total and the widest stretch', () => {

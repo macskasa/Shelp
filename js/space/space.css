@@ -45,7 +45,7 @@
   cursor: pointer;
 }
 .space-stack::before { content: ''; position: absolute; top: 0; bottom: 0; left: 50%; width: max(100%, 40px); transform: translateX(-50%); }
-.space-stack-fill { position: absolute; left: 0; right: 0; bottom: 0; background: var(--cat-duo); opacity: 0.75; border-radius: 2px 2px 0 0; pointer-events: none; }
+.space-stack-fill { position: absolute; left: 0; right: 0; bottom: 0; background: var(--muted); opacity: 0.55; border-radius: 2px 2px 0 0; pointer-events: none; }
 .space-stack:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
 /* Touch: the bar block can be narrow; give a taller hit area than the drawing. */
 @media (pointer: coarse) {

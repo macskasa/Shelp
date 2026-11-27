@@ -17,9 +17,11 @@ export function floorText(unit) {
   };
 }
 
-/** "up to 4.1 cm on top of M2", nothing (empty string) without stacks; "(not measured)" for approximate units. */
+/** "up to 4.1 cm on top of M2", "No room on top" when it rounds to 0, nothing (empty string) without stacks; "(not measured)" for approximate units. */
 export function roomText(unit) {
-  const base = unit.room ? `up to ${cm(unit.room.h)} cm on top of ${unit.room.stackId}` : '';
+  const base = !unit.room ? ''
+    : cm(unit.room.h) === '0' ? 'No room on top'
+      : `up to ${cm(unit.room.h)} cm on top of ${unit.room.stackId}`;
   if (!unit.approximate) return base;
   return base ? `${base} (not measured)` : '(not measured)';
 }
