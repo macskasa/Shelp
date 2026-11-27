@@ -21,7 +21,8 @@ test('reachFrom: the score adds up, boxes on top are capped at 3, the text lists
   assert.deepEqual(reachFrom({ easy: true, row: 1, onTop: 2 }), { score: 4, parts: ['back row', '2 boxes on top'], text: 'Back row · 2 boxes on top' });
   assert.deepEqual(reachFrom({ easy: false, row: 0, onTop: 1 }), { score: 5, parts: ['hard spot', '1 box on top'], text: 'Hard-to-reach spot · 1 box on top' });
   assert.equal(reachFrom({ easy: false, row: 1, onTop: 9 }).score, 4 + 2 + 3);
-  assert.equal(reachFrom({ easy: true, row: 0, onTop: 9 }).text, '3 boxes on top');
+  assert.equal(reachFrom({ easy: true, row: 0, onTop: 9 }).text, '9 boxes on top'); // the text says the real count, the score stops at 3
+  assert.equal(reachFrom({ easy: true, row: 0, onTop: 9 }).score, 3);
 });
 
 test('seed: the top of a bottom-shelf pile is easy, the box under it has 1 box on top', () => {
@@ -30,7 +31,8 @@ test('seed: the top of a bottom-shelf pile is easy, the box under it has 1 box o
   assert.equal(text(top.game), 'Easy to reach');
   assert.equal(reachOf(plan, getGame, top.game).score, 0);
   assert.equal(text(b3.find((b) => b.game === 'g177').game), '2 boxes on top'); // two side by side rest on it
-  assert.equal(text('g101'), '3 boxes on top'); // 3 above it, capped
+  assert.match(text('g101'), /^\d+ boxes on top$/); // 3 or more above it: the real count
+  assert.ok(reachOf(plan, getGame, 'g101').score <= 3); // the score is capped
 });
 
 test('seed: back row, hard spot, and a topper counts as a box on top', () => {

@@ -3,3 +3,4 @@
 export { checkStack2, checkPlan2, overlapsWith, familyPlacement, isSpread, familyWarning, RULES2, SEVERITY, blocking, forStack, groupWarnings, boardLine } from './check2.js';
 export { suggestSpots } from './suggest.js';
 export { reachOf, reachAll, reachFrom, reachInStack, REACH } from './reach.js';
+export { checkSpots } from './spots.js';
