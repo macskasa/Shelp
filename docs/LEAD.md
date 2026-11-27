@@ -17,12 +17,12 @@ Tony is the lead and code reviewer.
 ## Where things stand (2026-11-27)
 
 - **Merged:** everything up to #83. Phase C has Pick up, Turn, Move, placing mode, the board strip and stacks. B2 game families, D3 free space and #48 (reach, closed by #83) are done. README "Releases and stories" is current.
-- **Adam tried moving on his phone (2026-11-27):** "looks good but a bit complicated". He chose: the spot sheet lists only spots that work, with a "Show N blocked spots" link (not dimming stacks on the map, not hiding ways in Turn). Drag and drop (`docs/part-b3.md` item 6) comes after that, when Adam says so.
+- **Adam tried moving on his phone (2026-11-27):** "looks good but a bit complicated". He chose: the spot sheet lists only spots that work, with a "Show N blocked spots" link (not dimming stacks on the map, not hiding ways in Turn). Drag and drop (`docs/part-b3.md` item 6): Adam wants it ("that will be the way to do it"), right after `docs/part-b5.md`.
 - **Tony's PR** (`ccr-96632897-bcu0g0`): `slots` in `js/core/space.js` (room on top with the air's width and the surface it rests on; Adam chose to show both widths) and the briefs `docs/part-c6.md`, `docs/part-a7.md`, `docs/part-b5.md`. Peter's thread starts from it.
 - **Threads running** (each sends Tony one line when its PR is green):
   - **Peter**, `peter/room-width`: `docs/part-c6.md` (the widths on the Free space screen, the #79 nits).
   - **Stephen**, `stephen/check-spots`: `docs/part-a7.md` (`checkSpots`, reach text with the real count).
-- **Next:** Bruce's `docs/part-b5.md` once Stephen's `checkSpots` is merged.
+- **Next:** Bruce's `docs/part-b5.md` once Stephen's `checkSpots` is merged, then his drag and drop (`docs/part-b3.md` item 6) as a separate thread.
 - **Open issues:** none.
 - **Later:** D7 moving checklist (on top of Peter's compare); Bruce may show the D3 numbers on the map after drag and drop.
 - **How the team runs:** a Claude Code project since 2026-11-27. The project conversation is Tony. Each piece of developer work is a thread (a new session from `create_session`, one PR each, Opus for Bruce, Sonnet for Stephen and Peter) whose prompt names the brief item, the branch (`outcome_branch`) and asks for a one-line `send_message` to Tony when the PR is green. A thread whose work needs an unmerged core PR starts from that PR's branch (`source_revision`) and still opens its PR into `main`. Tony verifies on GitHub, reviews, and tells Adam one line. The opening messages are in `docs/kickoff.md`.
@@ -39,6 +39,8 @@ Tony is the lead and code reviewer.
 - **Stack names:** they keep their ids. A new stack gets the next free number on its shelf, and "Renumber left to right" is an explicit action.
 - **Thunder Road: Vendetta:** the BGG id in the workbook is a typo (8807105); the seed uses 342070.
 - **Lean workflow:** see CONTEXT sections 8 and 9.
+- **Moving (2026-11-27):** the spot sheet lists only spots that work, with a "Show N blocked spots" link; stacks on the map are not dimmed and Turn keeps its ways. Drag and drop on desktop is the way to move there.
+- **Free space:** the room on top shows both widths, the air and the box it rests on.
 - **B2 "far apart":** a family warns unless its boxes on shelves are on one stack, or on one shelf with no other stack between them. The board and the cupboard don't count; a box inside another counts where its host is. 0 warnings on today's plan.
 - **D3, where it shows:** Tony's core `js/core/space.js`, and Peter's Free space screen in `js/space/`. Bruce may show the numbers on the map later.
 

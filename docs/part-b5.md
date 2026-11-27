@@ -35,4 +35,4 @@ The " – " between a box's place and its reach in stack details blends with tit
 
 ## Not yours
 
-`checkSpots` (Stephen). Drag and drop (`docs/part-b3.md` item 6) comes after this, when Adam says so.
+`checkSpots` (Stephen). Drag and drop (`docs/part-b3.md` item 6) is your next PR, right after this one (Adam wants it).

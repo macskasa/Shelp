@@ -88,7 +88,7 @@ Size: S ≈ 1–2 points, M ≈ 3–5, L ≈ 8, XL ≈ 13.
 - ✅ **Placing mode** (`#/map?pick=<id>`, from Move): tap a stack on the drawing, or one of three suggested spots, to open the spot sheet with the stack as it would be. Cancel, Esc and Back leave it.
 - ✅ **The board strip** on the Shelves screen: "Board (n)" and a chip per game; a chip opens the pick-up sheet.
 - ✅ **Stacks** (#75): tap empty shelf in placing mode for **New stack here** (it slides into the gap if the box would run into the next stack); **Move stack** and **Remove stack** in stack details; empty stacks show as a dashed outline; **Renumber** left to right.
-- ⬜ Drag and drop on desktop (Bruce), after Adam has tried moving on his phone.
+- ⬜ Next (Bruce): the spot sheet lists only spots that work, then drag and drop on desktop.
 
 ### Later
 
