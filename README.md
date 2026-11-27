@@ -3,7 +3,7 @@
 **Where is each board game on the shelves?** Shelp is a personal web app for Adam's board game collection. It shows a to-scale drawing of the IKEA BOAXEL shelves with every box on it, finds any game, keeps box sizes and categories, imports the BoardGameGeek collection export, and works offline on a phone.
 
 - **Live app:** https://macskasa.github.io/Shelp/
-- **Status:** starter kit ready, MVP being built by three developers in parallel (see [Team](#team)).
+- **Status:** MVP nearly done. Part A is finished, and Stephen has started on next-release stories (D2, E3, A4).
 
 ## Contents
 
@@ -18,7 +18,7 @@
 ## Run it locally
 
 ```sh
-python3 -m http.server 8000   # in the repo root, then open http://localhost:8000
+python3 -m http.server 8000   # in the repo root, then open http://localhost:8000/?nosw
 node --test                   # run all tests (Node 20+)
 ```
 
@@ -96,7 +96,7 @@ Each developer is a separate Claude chat with this repo attached. They don't see
 |---|---|---|---|
 | **Adam** | Product owner. Merges PRs. | – | – |
 | **Tony** | Lead and code reviewer. Owns the shared core, data and docs. | – | `js/core/`, `js/app.js`, `index.html`, `css/base.css`, `data/`, `docs/` |
-| **Stephen** | Part A – data in and out: BGG import, game panel, backup and restore | [docs/part-a.md](docs/part-a.md) | `js/io/`, `js/game/` |
+| **Stephen** | Part A – data in and out: BGG import, game panel, backup and restore. Round 2: rule checker, CSV export, add a game | [docs/part-a.md](docs/part-a.md), [docs/part-a2.md](docs/part-a2.md) | `js/io/`, `js/game/`, `js/rules/` |
 | **Bruce** | Part B – shelf map: model, drawing, stack details, special placements, cupboard | [docs/part-b.md](docs/part-b.md) | `js/map/` |
 | **Peter** | Part C – catalog, search, app frame, offline | [docs/part-c.md](docs/part-c.md) | `js/catalog/`, `js/shell/`, `sw.js`, `manifest.webmanifest`, `icons/` |
 
