@@ -13,26 +13,19 @@ Tony is the lead and code reviewer.
   - Bruce: Part B, the map (Opus).
   - Peter: Part C, catalog, search, frame and offline (Sonnet).
 
-## Where things stand (2026-11-27)
+## Where things stand (2026-11-27, afternoon)
 
-- **MVP:** done (all stories A1–E2 merged).
-- **Phase A:** merged (#26). Schema 2, games on games, bridges, which side is up, pizza, the board, undo/redo, `preview()`.
-- **Phase B:** merged except Bruce's items 2–3 (stack details as a tree, the cupboard picker on v2). Stephen's and Peter's parts are done (#27–#30, #33; #31's commit came into main as #34).
-- **Phase C, moving by hand:** Adam's top priority. The briefs are written:
-  - `docs/part-b3.md` (Bruce): pick up, the turn chooser, placing mode (`#/map?pick=<id>`), the board strip, stacks, then drag and drop.
-  - `docs/part-a4.md` (Stephen): bracket rule per box, Move in the game panel, D4 `suggestSpots()`.
-  - `docs/part-c3.md` (Peter): Move in "Where's my game?", D6 saved versions in `js/versions/`, compare.
-- **Core for Phase C:** done in the core PR (`toast` action, `pickUp`, saved versions in the store and backups, `--warn`). Peter and Bruce can start their Phase C briefs once it's merged (Bruce after his Phase B item 3).
-- **After Bruce's Phase B, Tony:**
-  - remove the v1 compatibility (`getPlan`, `getStack`, `locate`, `placeOnStack`, `describeLocation`, `toV1Plan`, and Stephen's v1 `checkStack` / `checkPlan`) once nothing uses it (`grep -rn` first);
-  - convert `data/seed.json` to schema 2;
-  - delete `js/map/model.js` if Bruce hasn't.
+- **MVP, Phase A, Phase B:** all merged. #40 was the last Phase B PR; nothing in the app calls v1 any more.
+- **Phase C, moving by hand** (Adam's top priority). Merged: core (#39), Stephen's bracket rule, `suggestSpots` and Move button (#37, #38, #42), Peter's saved versions and compare (#41, #43), the issue follow-ups in the briefs (#52). Next per developer:
+  - **Bruce** (`docs/part-b3.md`): push the one test line from #51 to `tony/topper-centre`, then item 7 scrolling pans on desktop (#49), item 8 the back row (#47), item 9 his v1 leftovers, then pick-up, placing mode, stacks, drag and drop.
+  - **Stephen** (`docs/part-a4.md`): item 5 Delete game (#50), then item 6 his v1 leftovers.
+  - **Peter** (`docs/part-c3.md`): item 4 pizza in the catalog (#46), with item 5 his v1 leftovers.
+- **Open:** draft #51 (topper fix for #45) waits for Bruce's test line. Issues open: #45–#50 (each has a comment with the next step).
 - **Tony next:**
-  - once #40 is merged, nothing in the app uses v1: remove it (see "After Bruce's Phase B");
-  - #51, the topper fix (issue #45), waits for Bruce's one-line test change;
-  - issue #44 (blinking cursor in Firefox) waits for Adam to check caret browsing (F7).
-- **Adam's issues → briefs:** #49 and #47 → Bruce (`part-b3.md` items 7 and 8, first); #46 → Peter (`part-c3.md` item 4); #50 → Stephen (`part-a4.md` item 5).
+  - once the developers' v1 PRs are merged: remove the store's v1 compatibility (`getPlan`, `getStack`, `locate`, `placeOnStack`, `toV1Plan`, `describeLocation`), move `tests/store.test.mjs` and `tests/plan2.test.mjs` to v2, convert `data/seed.json` to schema 2 (`grep -rn` first);
+  - review the PRs as they come.
 - **Later:** B2 game families (Stephen; Tony adds the schema field first), D7 moving checklist (on top of Peter's compare), issue #48 (fewer boxes on top counts as easier to reach: Stephen's rules and `suggestSpots`).
+- **Possible move to a Claude Code project:** Adam may run the team as a project in the Code section (one coordinator conversation, one thread per task). The opening messages are in `docs/kickoff.md`. The roles, ownership, briefs and review steps stay the same; only the relaying changes.
 
 ## Adam's decisions (don't reopen)
 
@@ -69,6 +62,7 @@ Tony is the lead and code reviewer.
 - **Check each PR's base branch** (`.base.ref`), not only its head. A stacked PR targets the developer's other branch: #31 was merged into `stephen/rules-v2` after #27 was already in main, so it never reached main (fixed by #34). Tell the developer to retarget it to `main` once its base is merged, or open the PR yourself from their unchanged branch.
 - **Undo after a move:** a modal panel makes the header Undo unreachable on the phone. So moving actions close the panels and show a toast with an Undo button (Phase C rule).
 - **Don't edit a file a developer owns,** even to fix a conflict. Give them the exact code instead.
+- **A core change can break a developer's test** (#51: the topper fix broke one assertion in `tests/map-scene.test.mjs`). Run the full suite before opening the PR. Put the exact test change in the PR body and ask the developer to push it to your branch, so both land together.
 
 ## Environment notes
 

@@ -7,10 +7,11 @@ Phase C is Adam's top priority: he wants to rearrange the shelves in the app, bo
 **PRs, in this order:**
 1. Scrolling pans on desktop (item 7, issue #49), a small one first
 2. The back row on the Shelves screen (item 8, issue #47)
-3. Pick up a box + the turn chooser (items 1 and 4)
-4. Placing mode + the board strip (items 3 and 2)
-5. Stacks (item 5)
-6. Drag and drop on desktop (item 6), only after Adam has tried 3–5 on his phone
+3. Your v1 leftovers (item 9), small
+4. Pick up a box + the turn chooser (items 1 and 4)
+5. Placing mode + the board strip (items 3 and 2)
+6. Stacks (item 5)
+7. Drag and drop on desktop (item 6), only after Adam has tried 4–6 on his phone
 
 Also on #51 (Tony's topper fix, issue #45): push the one-line change to `tests/map-scene.test.mjs` shown in the PR to its branch `tony/topper-centre`.
 
@@ -87,6 +88,12 @@ Also on #51 (Tony's topper fix, issue #45): push the one-line change to `tests/m
 - `?game=` for a back-row game opens the back view and highlights the box. Leaving the screen goes back to the front view.
 - Placing mode (item 3) uses the same view to put a box in a back row.
 - Phone first: the switch is a two-button toggle, at least 40 px, and it doesn't cover the drawing.
+
+## 9. Remove your v1 leftovers
+
+Nothing in the app uses v1 any more. Before Tony removes the store's v1 functions, take out yours:
+- delete `js/map/model.js` and `tests/map-model.test.mjs`, and the `model.js` line in the comment at the top of `js/map/index.js`;
+- in `tests/map-scene.test.mjs`, drop the comparison with v1 (`layoutStack`, `store.getStack`); the v5 fixture test through `layoutStack2` already covers the geometry.
 
 ## Acceptance (whole phase)
 

@@ -7,6 +7,7 @@ Phase C is about moving games by hand. Bruce builds the moving screens on the ma
 2. Item 3, once Tony's core PR with the `pickUp` contract is merged
 3. Item 4
 4. Item 5 (issue #50)
+5. Item 6 (v1 leftovers), small
 
 ## 1. The bracket rule per box
 
@@ -63,6 +64,12 @@ Also in this PR: backups can now carry **saved versions** (CONTEXT section 4). W
 - Add **Delete game…** at the bottom of the game panel, as a danger button. It asks first and says what happens: "Ark Nova is removed from the app and from the shelf plan. 2 boxes on top of it settle down. Lairs: Box Zero, stored inside it, goes to the cupboard."
 - After deleting: close the panels, then show a toast with Undo, as in Phase C: `toast('Deleted Ark Nova', { action: { label: 'Undo', run: store.undo } })`.
 - Saved versions keep the game: they're snapshots.
+
+## 6. Remove your v1 leftovers
+
+Nothing in the app uses v1 any more. Before Tony removes the store's v1 functions, take out yours:
+- delete `js/rules/check.js` and `tests/rules-check.test.mjs`, and drop `checkStack`, `checkPlan` and `RULES` from `js/rules/index.js` (and its v1 comment);
+- in `tests/game-logic.test.mjs`, `tests/io-bgg.test.mjs` and `tests/io-backup.test.mjs`, use `locate2`, `getPlan2`, `getStack2` and the v2 writes instead of `locate`, `getPlan`, `getStack` and `placeOnStack`.
 
 ## What you get ready made
 
