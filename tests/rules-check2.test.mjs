@@ -158,6 +158,59 @@ test('bracket (warn): too high where the stack crosses a bracket, fine right aft
   assert.deepEqual(checkStack2(stack('C', 'bottom', 60.2, pile('b3', 3, 11)), getGame), []); // starts after the bracket
 });
 
+test('bracket: a tall pile beside a joint is fine when only a low box crosses it', () => {
+  // bottom shelf, bracket at 60. Tall pile 40 – 55 (33 cm, over the 31.5 allowed), low box 55 – 85 crosses the joint.
+  const tall = [0, 1, 2].map((i) => game(`bt${i}`, [11, 15, 37]));
+  const low = game('bt9', [7, 30, 37]);
+  const boxes = [box(tall[0]), box(tall[1], { on: [tall[0]] }), box(tall[2], { on: [tall[1]] }), box(low, { x: 15 })];
+  assert.deepEqual(checkStack2(stack('A', 'bottom', 40, boxes), getGame), []);
+});
+
+test('bracket: a high box that crosses the joint gives one warning that names it', () => {
+  const tall = [0, 1, 2].map((i) => game(`bh${i}`, [11, 15, 37]));
+  const low = game('bh9', [7, 30, 37]);
+  const boxes = [box(tall[0]), box(tall[1], { on: [tall[0]] }), box(tall[2], { on: [tall[1]] }), box(low, { x: 15 })];
+  const w = checkStack2(stack('A', 'bottom', 50, boxes), getGame); // the pile now covers 50 – 65
+  assert.deepEqual(rules(w), ['bracket']);
+  assert.equal(w[0].severity, 'warn');
+  assert.equal(w[0].gameId, 'bh2'); // only the top box of the pile is too high
+  assert.equal(w[0].message, 'Stack A crosses the bracket at 60 cm: BH2 reaches 33 cm there, but 31.5 cm is the most for its depth.');
+});
+
+test('bracket: several boxes too high are named in one warning', () => {
+  const a = game('bm0', [15, 33, 37], { pizza: false }); // on its side: 15 wide, 37 deep, 33 high
+  const b = game('bm1', [15, 34, 37], { pizza: false });
+  const w = checkStack2(stack('A', 'bottom', 45, [box(a, { up: 'm' }), box(b, { up: 'm', x: 15 })]), getGame); // 45 – 60 and 60 – 75, both touch the joint
+  assert.deepEqual(rules(w), ['bracket']);
+  assert.equal(w[0].gameId, null);
+  assert.match(w[0].message, /BM0 reaches 33 cm there.*; BM1 reaches 34 cm there/);
+});
+
+test('bracket: a back-row box counts with its back edge', () => {
+  // bottom shelf, bracket at 60. A box 33 cm high and 17 deep: alone in the front row it may be 34.7 cm high there,
+  // behind a front box (18 deep) it reaches 35 cm back, where only 31.7 cm is allowed.
+  const front = game('br0', [7, 15, 18]);
+  const tall = game('br1', [15, 17, 33], { pizza: false });
+  const alone = checkStack2(stack('A', 'bottom', 50, [box(tall, { up: 'l' })]), getGame);
+  assert.deepEqual(alone, []);
+  const behind = checkStack2(stack('B', 'bottom', 50, [box(front), box(tall, { up: 'l', row: 1 })]), getGame);
+  assert.deepEqual(rules(behind), ['bracket']);
+  assert.equal(behind[0].gameId, 'br1');
+  assert.match(behind[0].message, /BR1 reaches 33 cm there, but 31\.7 cm is the most/);
+});
+
+test('bracket: a topper that crosses a joint counts with the stack depth; one beside it does not', () => {
+  // bottom shelf, bracket at 60. 20 cm of pile and a 13 cm topper = 33 cm, 31.5 allowed for a stack 37 deep.
+  const crossing = stack('A', 'bottom', 45, pile('bp', 1, 20), { topper: { label: 'castle', w: 20, h: 13 } }); // topper 50 – 70
+  const w = checkStack2(crossing, getGame);
+  assert.deepEqual(rules(w), ['bracket']);
+  assert.equal(w[0].gameId, null);
+  assert.match(w[0].message, /the castle reaches 33 cm there, but 31\.5 cm is the most for the stack's depth/);
+  // the same stack with a narrow topper that stays right of the joint: the low pile crosses it, the topper does not
+  const beside = stack('B', 'bottom', 55, pile('bq', 1, 20), { topper: { label: 'castle', w: 10, h: 13 } }); // topper 65 – 75
+  assert.deepEqual(checkStack2(beside, getGame), []);
+});
+
 test('stacking (warn): more than 1 cm over the box below, along the shelf or in depth', () => {
   const base = game('s0', [7, 30, 37]);
   const wide = game('s1', [7, 31.5, 37]);

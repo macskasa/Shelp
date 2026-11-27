@@ -6,7 +6,7 @@ import * as store from '../js/core/store.js';
 import { describeLocation2 } from '../js/core/format.js';
 import {
   findByBggId, parseBggId, parseGameForm, parseRange, cleanTitle, parseDecimal, parseDims, dimsToInputs, sameDims, textOrNull, sizeSources, toggleCategory,
-  gamesInside, hostChoices, takenOutReason, bggPage, bggVersions, bggSearch, setPizza,
+  gamesInside, hostChoices, takenOutReason, bggPage, bggVersions, bggSearch, setPizza, pizzaStamp,
 } from '../js/game/logic.js';
 
 const seed = JSON.parse(readFileSync(new URL('../data/seed.json', import.meta.url), 'utf8'));
@@ -223,4 +223,25 @@ test('setPizza: a standing game on the board or in the cupboard may become pizza
   // …but then it cannot be stood up on a shelf again without switching pizza off
   assert.deepEqual(setPizza(store, klask.id, false), { ok: true });
   assert.equal(store.getGame(klask.id).pizza, false);
+});
+
+test('pizzaStamp: changes when the game is turned, moved or undone, not when other things change', async () => {
+  await store.init({ seed, storage: memoryStorage() });
+  const klask = byTitle('KLASK'); // stands on its side on a shelf
+  const refused = setPizza(store, klask.id, true);
+  assert.equal(refused.ok, false);
+  const before = pizzaStamp(store.locate2(klask.id));
+  assert.match(before, /^stack\|T9\|m$/);
+
+  store.updateGame(klask.id, { notes: 'a new note' }); // something else about the game
+  assert.equal(pizzaStamp(store.locate2(klask.id)), before, 'the refusal still applies');
+
+  store.turnBox(klask.id, { up: 's' }); // turned flat: switching pizza on would work now
+  assert.notEqual(pizzaStamp(store.locate2(klask.id)), before);
+  store.undo();
+  assert.equal(pizzaStamp(store.locate2(klask.id)), before, 'Undo: the same refusal applies again');
+
+  store.moveToBoard(klask.id);
+  assert.equal(pizzaStamp(store.locate2(klask.id)), 'board');
+  assert.equal(pizzaStamp(null), 'none');
 });

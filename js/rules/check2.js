@@ -96,11 +96,25 @@ export function checkStack2(stack, getGame) {
     add('height', `Stack ${stack.id} is ${fmt(layout.h)} cm tall${stack.topper ? ` with the ${stack.topper.label}` : ''}, but the ${zone.label} allows ${fmt(limit)} cm.`);
   }
 
-  // warn: where the stack crosses a bracket it must be low enough for its depth
-  const crossed = zone.brackets.filter((bx) => stack.x + SLACK < bx + BRACKET_HALF && end - SLACK > bx - BRACKET_HALF);
-  const bracketMax = bracketLimit(zone, layout.d);
-  if (crossed.length && layout.h > bracketMax + SLACK) {
-    add('bracket', `Stack ${stack.id} is ${fmt(layout.h)} cm tall where it crosses the bracket at ${crossed.map(fmt).join(' and ')} cm, but ${fmt(bracketMax)} cm is the most for a stack ${fmt(layout.d)} cm deep.`);
+  // warn: brackets, box by box. A box whose x range crosses a joint ± 0.2 cm must have its top at most
+  // bracketLimit(zone, z + d): z + d is how far back it reaches, so a back-row box counts with its back edge.
+  // A topper that crosses a bracket counts too, with the stack's depth. One warning per stack names what is too high.
+  const crossing = (from, w) => zone.brackets.filter((bx) => from + SLACK < bx + BRACKET_HALF && from + w - SLACK > bx - BRACKET_HALF);
+  const tooHigh = []; // { name, gameId, top, max, at: [bracket x] }
+  for (const b of layout.boxes) {
+    const at = crossing(stack.x + b.x, b.w);
+    const max = bracketLimit(zone, b.z + b.d);
+    if (at.length && b.y + b.h > max + SLACK) tooHigh.push({ name: title(b.gameId), gameId: b.gameId, top: b.y + b.h, max, at, own: 'its' });
+  }
+  if (layout.topper) {
+    const at = crossing(stack.x + layout.topper.x, layout.topper.w);
+    const max = bracketLimit(zone, layout.d);
+    if (at.length && layout.h > max + SLACK) tooHigh.push({ name: `the ${layout.topper.label}`, gameId: null, top: layout.h, max, at, own: 'the stack\'s' });
+  }
+  if (tooHigh.length) {
+    const where = [...new Set(tooHigh.flatMap((t) => t.at))].sort((a, c) => a - c).map(fmt).join(' and ');
+    const parts = tooHigh.map((t) => `${t.name} reaches ${fmt(t.top)} cm there, but ${fmt(t.max)} cm is the most for ${t.own} depth`);
+    add('bracket', `Stack ${stack.id} crosses the bracket at ${where} cm: ${parts.join('; ')}.`, tooHigh.length === 1 ? tooHigh[0].gameId : null);
   }
 
   // warn: the 1 cm rule. The boxes resting on one box together stay within its width + 1 cm and its depth + 1 cm.
