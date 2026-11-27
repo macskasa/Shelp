@@ -136,3 +136,14 @@ dialog.game-panel[open] { display: flex; flex-direction: column; }
 
 .game-danger { margin-top: 8px; padding-top: 12px; border-top: 1px solid var(--border, currentColor); }
 .game-danger .btn { min-height: 44px; }
+
+/* "Stored inside": search and pick */
+.game-inside-now { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.game-takeout { min-height: 40px; }
+.game-pick { display: flex; flex-direction: column; gap: 8px; }
+.game-pick[hidden] { display: none; }
+.game-pick input { width: 100%; min-height: 44px; box-sizing: border-box; }
+.game-pick .game-hint:empty { display: none; }
+.game-pick-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.game-pick-btn { width: 100%; min-height: 44px; text-align: left; display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 2px; overflow-wrap: anywhere; }
+.game-pick-bgg { font-size: 0.85rem; }
