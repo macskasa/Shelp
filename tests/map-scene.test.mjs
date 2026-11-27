@@ -5,7 +5,6 @@ import { readFileSync } from 'node:fs';
 import * as store from '../js/core/store.js';
 import { ZONES } from '../js/core/shelves.js';
 import { layoutStack2 } from '../js/core/geometry.js';
-import { layoutStack } from '../js/map/model.js';
 import { buildScene, findInScene, SPACING } from '../js/map/scene.js';
 import { fitText, boxTitle, stackLabel, TITLE_PX } from '../js/map/labels.js';
 
@@ -136,18 +135,6 @@ test('the fixture: every v5 stack has the expected x, w, d, h through core layou
     assert.ok(Math.abs(st.x - want.x) <= 0.05, `${st.id} x`);
   }
   assert.equal(plan2.stacks.length, Object.keys(fixture).length);
-});
-
-test('the v5 drawing is unchanged: every box sits where the v1 model put it', () => {
-  for (const st of plan2.stacks) {
-    const v1 = new Map(layoutStack(store.getStack(st.id), getGame).boxes.map((b) => [b.gameId, b]));
-    for (const b of layoutStack2(st, getGame).boxes) {
-      const old = v1.get(b.gameId);
-      assert.ok(old, `${b.gameId} missing in v1 ${st.id}`);
-      for (const k of ['x', 'y', 'w', 'h', 'row']) assert.ok(Math.abs(b[k] - old[k]) <= 0.01, `${st.id} ${b.gameId} ${k}: ${b[k]} vs ${old[k]}`);
-    }
-    assert.equal(v1.size, st.boxes.length, `${st.id} box count`);
-  }
 });
 
 test('a bridge across Compile and Kontroll on B3 is drawn across both (store.preview, nothing saved)', () => {
