@@ -22,7 +22,7 @@ export const screens = [
       const backup = backupSection();
       const check = checkSection();
       const showCounts = () => {
-        const p = store.getPlan();
+        const p = store.getPlan2();
         counts.textContent = `${store.getGames().length} games · plan “${p.name}” · ${p.stacks.length} stacks · ${p.cupboard.length} in the cupboard`;
       };
       showCounts();

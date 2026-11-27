@@ -1,7 +1,7 @@
 // The backup, restore and plan import section of the Data screen (story E2). Owner: Stephen (Part A).
 import { h, clear, toast } from '../core/dom.js';
 import * as store from '../core/store.js';
-import { backupFileName, describeImport, problemLines, readJson } from './backup.js';
+import { backupFileName, describeImport, problemLines, readJson, refusalText, reviewImport } from './backup.js';
 import { confirmPanel } from './confirm.js';
 import { download } from './download.js';
 import { when } from './time.js';
@@ -56,9 +56,15 @@ export function backupSection() {
       showError(`This file cannot be imported (${problems.length} problem${problems.length > 1 ? 's' : ''}). Nothing was changed.`, problems);
       return;
     }
-    const plan = store.getPlan();
-    const info = describeImport(obj, { games: store.getGames().length, stacks: plan.stacks.length, planName: plan.name });
-    const ok = await confirmPanel({ title: info.title, lines: info.lines, confirmLabel: info.confirmLabel, danger: true });
+    // the shelf rules: a plan that breaks a blocking rule is refused, warnings are shown in the confirmation
+    const review = reviewImport(obj, store.getGames());
+    if (review.blocks.length) {
+      showError(refusalText(review.blocks), review.blocks.map((w) => w.message));
+      return;
+    }
+    const plan = store.getPlan2();
+    const info = describeImport(obj, { games: store.getGames().length, stacks: plan.stacks.length, planName: plan.name }, review);
+    const ok = await confirmPanel({ title: info.title, lines: info.lines, items: info.items, confirmLabel: info.confirmLabel, danger: true });
     if (!ok) return;
     try {
       const kind = store.importData(obj);
