@@ -39,6 +39,9 @@ test('stack choices: grouped by shelf in drawing order, left to right, with the 
   const b3 = groups[2].stacks[2];
   assert.equal(b3.height, 27.7);
   assert.equal(b3.limit, 36.5);
+  assert.equal(b3.topper, null);
+  const m3 = groups[1].stacks.find((s) => s.id === 'M3');
+  assert.deepEqual([m3.height, m3.limit, m3.topper], [31.8, 37.5, 'Bonsai'], 'a topper may reach the shelf above');
   assert.equal(groups[0].stacks[0].rows, 2, 'T1 is 2 deep');
   assert.equal(groups[0].stacks.at(-1).standing, true, 'T9 KLASK stands');
 });

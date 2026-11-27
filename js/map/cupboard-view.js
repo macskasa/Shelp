@@ -64,7 +64,7 @@ export function openPutPanel(gameId) {
     h('option', { value: '', disabled: true, selected: true }, 'Choose a stack…'),
     stackChoices(store.getPlan(), store.getGame).map((g) => h('optgroup', { label: g.label },
       g.stacks.map((s) => h('option', { value: s.id },
-        `${s.id} – ${num(s.height)} of ${num(s.limit)} cm${s.rows > 1 ? ' · 2 deep' : ''}${s.standing ? ' · standing' : ''}`)))));
+        `${s.id} – ${num(s.height)} of ${num(s.limit)} cm${s.topper ? ` · with the ${s.topper}` : ''}${s.rows > 1 ? ' · 2 deep' : ''}${s.standing ? ' · standing' : ''}`)))));
   const rowSel = h('select', { name: 'row' }, h('option', { value: '0' }, 'Front row'), h('option', { value: '1' }, 'Back row'));
   const rowField = field('Row', rowSel, { hidden: true });
   const posSel = h('select', { name: 'position' });

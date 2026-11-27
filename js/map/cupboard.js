@@ -25,8 +25,9 @@ export function offShelf(games, locate) {
 
 /**
  * Every stack, grouped by shelf in drawing order, with its current height for the picker.
- * @returns [{ zone, label, stacks: [{ id, height, limit, rows, standing }] }]
- *   limit: the usable height of the shelf (how high a stack may go without a topper)
+ * @returns [{ zone, label, stacks: [{ id, height, limit, topper, rows, standing }] }]
+ *   limit: the usable height of the shelf; with a topper (castle, bonsai) the shelf's full
+ *   height, because a topper may reach up to the shelf above. topper: its label, or null.
  */
 export function stackChoices(plan, getGame) {
   const groups = [];
@@ -38,7 +39,8 @@ export function stackChoices(plan, getGame) {
       .map((st) => ({
         id: st.id,
         height: layoutStack(st, getGame).h,
-        limit: zone.usable,
+        limit: st.topper ? zone.height : zone.usable,
+        topper: st.topper?.label ?? null,
         rows: st.rows.length,
         standing: st.orientation === 'standing',
       }));
