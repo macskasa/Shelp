@@ -3,7 +3,7 @@
 **Where is each board game on the shelves?** Shelp is a personal web app for Adam's board game collection. It shows a to-scale drawing of the IKEA BOAXEL shelves with every box on it, finds any game, keeps box sizes and categories, imports the BoardGameGeek collection export, and works offline on a phone.
 
 - **Live app:** https://macskasa.github.io/Shelp/
-- **Status:** the MVP is done. Phase A (Tony) moved the data to schema 2: games on games, bridges, which side is up, pizza games, the board, and undo. Phase B moved the three parts onto it, and the old v1 code is gone. **Phase C is moving games by hand:** saved versions, compare, Move, Delete and suggest a spot are in; Bruce's moving screens are next (`docs/part-b3.md`).
+- **Status:** the MVP is done. Phase A (Tony) moved the data to schema 2: games on games, bridges, which side is up, pizza games, the board, and undo. Phase B moved the three parts onto it, and the old v1 code is gone. **Phase C is moving games by hand:** saved versions, compare and Delete game are in; placing a box on the map is next (Bruce, `docs/part-b3.md`). What works and what isn't built yet: [Releases and stories](#releases-and-stories).
 
 ## Contents
 
@@ -44,49 +44,67 @@ The data model, the shared modules and all conventions are in [docs/CONTEXT.md](
 
 ## Releases and stories
 
+Status on 2026-11-27: ✅ in the app · 🚧 partly built · ⬜ not built yet.
+
+**Bug or missing feature?** If something marked ✅ misbehaves, it's a bug: please raise an issue. If it's 🚧 or ⬜, or it's listed under [Not built yet](#not-built-yet), it's a feature that's still missing. Raise an issue anyway if you want it sooner or differently.
+
 Size: S ≈ 1–2 points, M ≈ 3–5, L ≈ 8, XL ≈ 13.
 
-### MVP (40 points)
+### MVP (40 points): all done
 
-| ID | Story | Size | Owner |
-|---|---|---|---|
-| A1 | Import my BGG collection export | M5 | Stephen |
-| A2 | Start with today's catalog and plan (seed data) | S2 | Tony ✅ |
-| A3 | Box sizes: edit, "size missing", link to BGG versions | S2 | Stephen (panel) · Peter (filter) |
-| A5 | Expansions stored inside the base box | S2 | Stephen |
-| A6 | Searchable catalog list | S3 | Peter |
-| B1 | Categories with several tags and colours | S2 | Stephen (editing) · Tony (colours ✅) |
-| C1 | Built-in shelf model | M3 | Tony (numbers ✅) · Bruce (geometry) |
-| C2 | To-scale front view | M5 | Bruce |
-| C3 | Stack details | S2 | Bruce |
-| C4 | Where's my game? | S2 | Peter |
-| C5 | Special placements and objects (castle, bonsai, KLASK, standing cards, 2 deep) | M5 | Bruce |
-| C6 | Cupboard list, move between cupboard and a stack | S2 | Bruce |
-| E1 | Works offline on my phone | M3 | Peter |
-| E2 | Backup, restore and plan import | S2 | Stephen |
+| ID | Story | Size | Owner | Status |
+|---|---|---|---|---|
+| A1 | Import my BGG collection export | M5 | Stephen | ✅ |
+| A2 | Start with today's catalog and plan (seed data) | S2 | Tony | ✅ |
+| A3 | Box sizes: edit, "size missing", link to BGG versions | S2 | Stephen (panel) · Peter (filter) | ✅ |
+| A5 | Expansions stored inside the base box | S2 | Stephen | ✅ (choosing the host box is hard: #62) |
+| A6 | Searchable catalog list | S3 | Peter | ✅ |
+| B1 | Categories with several tags and colours | S2 | Stephen (editing) · Tony (colours) | ✅ |
+| C1 | Built-in shelf model | M3 | Tony (numbers) · Bruce (geometry) | ✅ |
+| C2 | To-scale front view | M5 | Bruce | ✅ (plus the back row, #47) |
+| C3 | Stack details | S2 | Bruce | ✅ |
+| C4 | Where's my game? | S2 | Peter | ✅ |
+| C5 | Special placements and objects (castle, bonsai, KLASK, standing cards, 2 deep) | M5 | Bruce | ✅ |
+| C6 | Cupboard list, move between cupboard and a stack | S2 | Bruce | ✅ |
+| E1 | Works offline on my phone | M3 | Peter | ✅ |
+| E2 | Backup, restore and plan import | S2 | Stephen | ✅ |
 
 ### Next
 
-| ID | Story | Size |
-|---|---|---|
-| A4 | Add games that aren't in my BGG list | S1 |
-| B2 | Game families (Azul, 7 Wonders, Mars…) | S2 |
-| D1 | Move a game (drag on desktop, pick a spot on phone) | L8 |
-| D2 | Rule checker (1 cm overhang rule, heights, brackets, 2 deep only in easy spots…) | M5 |
-| D3 | Free space at a glance | S2 |
-| D4 | Suggest a spot for a new game | L8 |
-| D6 | Undo and saved versions | M5 |
-| E3 | Export to spreadsheet (CSV) | S1 |
+| ID | Story | Size | Owner | Status |
+|---|---|---|---|---|
+| A4 | Add games that aren't in my BGG list | S1 | Stephen | ✅ (and Delete game, #50) |
+| B2 | Game families (Azul, 7 Wonders, Mars…) | S2 | Tony (schema) · Stephen | ⬜ |
+| D1 | Move a game (drag on desktop, pick a spot on phone) | L8 | Bruce | 🚧 see below |
+| D2 | Rule checker (1 cm overhang rule, heights, brackets, 2 deep only in easy spots…) | M5 | Stephen | ✅ (Data screen; behind every move) |
+| D3 | Free space at a glance | S2 | – | ⬜ not scheduled |
+| D4 | Suggest a spot for a new game | L8 | Stephen (logic) · Bruce (screen) | 🚧 the logic is done; it shows in placing mode, which isn't built yet |
+| D6 | Undo and saved versions | M5 | Tony · Peter | ✅ (undo/redo, save, restore, compare) |
+| E3 | Export to spreadsheet (CSV) | S1 | Stephen | ✅ |
+
+**D1 today:**
+- ✅ In stack details, each box has **To cupboard** and **To the board**.
+- ✅ On the Cupboard screen, **Put on a stack…** places a game from the board or the cupboard. You choose the stack, the spot (on the shelf, on top of a box, across two boxes, or under one) and which way up. Rule problems are shown first, and Undo works.
+- So moving a box from one stack to another works today in two steps: **To the board**, then **Put on a stack…**.
+- ⬜ The **Move** buttons (game panel, "Where's my game?") open the Shelves screen and stop there: placing mode isn't built yet.
+- ⬜ Bruce's next PRs, in order: pick up a box + the turn chooser → placing mode + the board strip (with suggested spots) → new, moved and removed stacks → drag and drop on desktop.
 
 ### Later
 
-| ID | Story | Size |
-|---|---|---|
-| D5 | Automatic full re-plan – keep doing it in chat and import the result | XL13 |
-| D7 | Moving checklist between two plans | M3 |
-| E4 | Optional live BGG refresh (needs a small server) | L8 |
+| ID | Story | Size | Status |
+|---|---|---|---|
+| D5 | Automatic full re-plan | XL13 | stays in chat by design: Tony plans, you import the plan file |
+| D7 | Moving checklist between two plans | M3 | ⬜ (on top of compare) |
+| E4 | Optional live BGG refresh (needs a small server) | L8 | ⬜ |
 
-The full story texts are in the "App user stories" tab of the planning workbook and, for the MVP, in the part briefs below.
+### Not built yet
+
+- **Placing a box on the map** (D1, above). Until then the **Move** buttons do nothing useful.
+- **Finding the box to store a game in** (#62): the "Stored inside" picker is a plain list of all ~200 box titles, by the title on the box. So Terraforming Mars is listed as "A Mars terraformálása". A search that also matches BGG names isn't built yet.
+- **Being on top counts as easier to reach** (#48): parked for later.
+- Game families (B2), free space at a glance (D3), the moving checklist (D7), live BGG refresh (E4).
+
+The full story texts are in the "App user stories" tab of the planning workbook and, for the MVP, in the part briefs.
 
 ## Team
 
