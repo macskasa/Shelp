@@ -1,16 +1,18 @@
-// The Shelves screen (stories C2, C5 and the "where's my game?" highlight). Owner: Bruce (Part B).
+// The Shelves screen (stories C2, C3, C5 and the "where's my game?" highlight). Owner: Bruce (Part B).
 // Builds the drawing from the store, fits it to the screen width, shows a hover title for the
-// mouse and the S Pen, and highlights #/map?game=<id> or #/map?stack=<id>.
+// mouse and the S Pen, highlights #/map?game=<id>, and opens a stack's details on a tap, on
+// Enter / Space, or for #/map?stack=<id>.
 import { h, loadCss } from '../core/dom.js';
 import { on } from '../core/bus.js';
 import * as store from '../core/store.js';
 import { ZONES } from '../core/shelves.js';
-import { go, openGame } from '../core/contracts.js';
+import { go } from '../core/contracts.js';
 import { describeLocation } from '../core/format.js';
 import { buildScene, findInScene } from './scene.js';
 import { drawScene } from './draw.js';
 import { legend } from './legend.js';
 import { TITLE_PX } from './labels.js';
+import { openStackPanel } from './stack-panel.js';
 
 loadCss(new URL('./map.css', import.meta.url));
 
@@ -31,6 +33,7 @@ export function mountMap(el, params) {
   let scene = null;
   let drawing = null;
   let k = 0;
+  let selected = null; // id of the stack whose details panel is open
 
   function render() {
     scene = buildScene(store.getPlan(), store.getGame);
@@ -38,7 +41,7 @@ export function mountMap(el, params) {
     stage.replaceChildren(drawing.svg);
     k = 0;
     fit();
-    applyParams(false);
+    applyParams();
   }
 
   /** Work out screen px per cm and refit the text. The drawing always fills the frame's width. */
@@ -60,8 +63,8 @@ export function mountMap(el, params) {
     caption.hidden = false;
   }
 
-  function applyParams(scroll) {
-    drawing.highlight(null);
+  /** Show the highlight and caption for the current route params. scroll: bring it into view. */
+  function applyParams({ scroll = false } = {}) {
     caption.hidden = true;
     let target = null;
     if (current.game) {
@@ -82,10 +85,45 @@ export function mountMap(el, params) {
         setCaption(null, `There is no stack ${current.stack} in this plan.`);
       }
     }
+    // while a stack's panel is open, that stack is the one marked
+    if (selected) target = { stackId: selected, gameId: target?.stackId === selected ? target.gameId : null };
     drawing.highlight(target);
     if (target && scroll) {
       drawing.stackNode(target.stackId)?.scrollIntoView({ block: 'center', inline: 'center', behavior: reducedMotion() ? 'auto' : 'smooth' });
     }
+  }
+
+  /**
+   * After the route changed: scroll to the highlight and open the details for ?stack=.
+   * Runs one frame later, because during the hashchange core/dom.js closes every open panel and
+   * the router resets the scroll position. Never on a redraw, or every store change would
+   * open the panel again.
+   */
+  function afterRoute() {
+    requestAnimationFrame(() => {
+      applyParams({ scroll: true });
+      if (current.stack && scene.stacks.some((x) => x.id === current.stack)) openDetails(current.stack);
+    });
+  }
+
+  /** Open a stack's details panel (one at a time). */
+  function openDetails(stackId) {
+    if (selected) return;
+    const dlg = openStackPanel(stackId, {
+      onClose() {
+        selected = null;
+        applyParams();
+        // the drawing may have been rebuilt while the panel was open: give focus back to the stack
+        requestAnimationFrame(() => {
+          if (!document.activeElement || document.activeElement === document.body) {
+            drawing.stackNode(stackId)?.focus({ preventScroll: true });
+          }
+        });
+      },
+    });
+    if (!dlg) return;
+    selected = stackId;
+    applyParams();
   }
 
   // Hover title for the mouse and the S Pen (touch has no hover).
@@ -106,10 +144,18 @@ export function mountMap(el, params) {
   stage.addEventListener('pointermove', onHover);
   stage.addEventListener('pointerleave', () => { tip.hidden = true; });
 
-  // For now a tap on a box opens the game. Story C3 turns this into "tap a stack → stack details".
+  // A tap anywhere in a stack's column (boxes are only a few px tall on a phone) opens its details.
   stage.addEventListener('click', (e) => {
-    const box = e.target.closest?.('[data-game]');
-    if (box) openGame(box.dataset.game);
+    const st = e.target.closest?.('[data-stack]');
+    if (st) openDetails(st.dataset.stack);
+  });
+  // Keyboard: Tab to a stack, then Enter or Space.
+  stage.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    const st = e.target.closest?.('[data-stack]');
+    if (!st) return;
+    e.preventDefault();
+    openDetails(st.dataset.stack);
   });
 
   const resize = new ResizeObserver(() => fit());
@@ -117,12 +163,13 @@ export function mountMap(el, params) {
   const off = on('store:changed', () => render());
 
   render();
-  if (current.game || current.stack) requestAnimationFrame(() => applyParams(true));
+  if (current.game || current.stack) afterRoute();
 
   return {
     update(params) {
       current = params ?? {};
-      applyParams(true);
+      applyParams();
+      afterRoute();
     },
     destroy() {
       off();

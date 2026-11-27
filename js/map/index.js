@@ -3,7 +3,9 @@
 //   scene.js   where everything goes in the drawing, in cm (C2)
 //   labels.js  which titles fit at the current zoom
 //   draw.js    the SVG
-//   view.js    the Shelves screen: fit, highlight, hover
+//   view.js    the Shelves screen: fit, highlight, hover, tap / keyboard → stack details
+//   details.js what the stack details panel lists (C3)
+//   stack-panel.js  the stack details panel and "move to cupboard"
 import { h } from '../core/dom.js';
 import * as store from '../core/store.js';
 import { mountMap } from './view.js';
