@@ -1,8 +1,8 @@
 // Stack details panel (stories C3, B2.2). Owner: Bruce (Part B).
 // A bottom sheet on phones (a centred panel on wider screens), opened with showPanel() so the
 // Android back gesture closes it. Schema 2: it lists the boxes top to bottom by height, front row
-// first, each with what it rests on; a title opens the game panel; each box can go to the cupboard
-// (with an optional reason) or to the board – the boxes above settle down by themselves.
+// first, each with what it rests on; a title opens the game panel; Pick up opens the pick-up sheet
+// (move, turn, to the board or the cupboard, inside a box).
 // Warnings come from Stephen's v2 rule checker: block = red, warn = amber.
 import { h, showPanel, toast } from '../core/dom.js';
 import { on } from '../core/bus.js';
@@ -12,6 +12,7 @@ import { layoutStack2 } from '../core/geometry.js';
 import { checkPlan2, forStack } from '../rules/index.js';
 import { stackDetails } from './details.js';
 import { categoryChips, warningList } from './ui.js';
+import { openPickUp } from './pickup-sheet.js';
 
 let uniq = 0;
 
@@ -80,48 +81,7 @@ function boxItem(b) {
     h('div', { class: 'map-boxitem-meta' }, categoryChips(b.categories), h('span', {}, b.size)),
     h('div', { class: 'map-boxitem-moves' },
       h('button', {
-        type: 'button', class: 'btn', 'aria-label': `Move ${b.title} to the cupboard`,
-        onclick: () => askMoveToCupboard(b.gameId, b.title),
-      }, 'To cupboard'),
-      h('button', {
-        type: 'button', class: 'btn', 'aria-label': `Move ${b.title} to the board`,
-        onclick: () => moveToBoard(b.gameId, b.title),
-      }, 'To the board')));
-}
-
-/** Move a game to the board; the boxes above it settle down (the store does that). */
-function moveToBoard(gameId, title) {
-  try {
-    store.moveToBoard(gameId);
-    toast(`${title} is on the board now`);
-  } catch (err) {
-    toast(err.message, { error: true });
-  }
-}
-
-/** Ask for an optional reason, then move the game to the cupboard. */
-export function askMoveToCupboard(gameId, title) {
-  const titleId = `map-move-title-${++uniq}`;
-  const reason = h('input', { type: 'text', name: 'reason', maxlength: '200', autocomplete: 'off', placeholder: 'e.g. not played lately' });
-  const dlg = h('dialog', { class: 'panel map-move', 'aria-labelledby': titleId },
-    h('form', { onsubmit: (e) => { e.preventDefault(); move(); } },
-      h('h2', { id: titleId }, 'Move to the cupboard'),
-      h('p', {}, h('strong', {}, title)),
-      h('label', { class: 'map-field' }, h('span', {}, 'Reason (optional)'), reason),
-      h('div', { class: 'panel-actions' },
-        h('button', { type: 'button', class: 'btn', onclick: () => dlg.close() }, 'Cancel'),
-        h('button', { type: 'submit', class: 'btn btn-primary' }, 'Move'))));
-
-  function move() {
-    try {
-      store.moveToCupboard(gameId, reason.value.trim());
-      dlg.close();
-      toast(`${title} is in the cupboard now`);
-    } catch (err) {
-      toast(err.message, { error: true });
-    }
-  }
-
-  showPanel(dlg);
-  reason.focus();
+        type: 'button', class: 'btn', 'aria-label': `Pick up ${b.title}`,
+        onclick: () => openPickUp(b.gameId),
+      }, 'Pick up')));
 }
