@@ -73,6 +73,11 @@
 .io-check p { margin: 0; }
 .io-check-head { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; }
 .io-check-head .btn { margin-left: auto; min-height: 40px; }
+.io-check-section { display: flex; flex-direction: column; gap: 8px; }
+.io-check-section h3 { margin: 0; font-size: 1rem; }
+.io-check-block h3 { color: var(--danger); }
+.io-check-block .io-group { border-color: var(--danger); }
+.io-info { color: var(--muted); }
 
 /* Export */
 .io-wrap { flex-wrap: wrap; }
