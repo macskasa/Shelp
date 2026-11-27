@@ -54,24 +54,31 @@ All numbers are in `js/core/shelves.js` (`ZONES`, `GROUPS`, `BRACKET`). Don't co
 - **x** is measured in cm from the left end of a zone. On the wall shelves the left end is the stairs side, and the wall is at x = 200. Boxes may stick out up to 8 cm past the wall end (the overhang).
 - The wall shelves are three units, 60 | 80 | 60 cm, so the **joints** are at x = 60 and x = 140.
 - **Brackets** hang from the shelf above. Seen from the front each is a 0.4 cm wide bar centred on the joint, 6 cm tall at the back, getting lower towards the front (0 cm at the front edge). A stack may cross a bracket only if it is low enough: `bracketLimit(zone, depth)` gives the allowed height. That's why stacks start at x = 0.2 or 60.2.
-- **Depth** of every shelf is 38 cm. Boxes deeper than 38 cm are turned so the long side runs along the shelf.
+- **Depth** of every shelf is 38 cm. A box deeper than that should be turned long side out (`rot: true`), or the rule checker warns.
 - **Easy to reach**: top shelf 0–44, the whole bottom shelf, under the stairs, the narrow shelf. `isEasy(zoneId, x, w)`.
 - The **cupboard** is not drawn. It is a list of games with a reason each.
 
-### Stacking rules (from the planning sessions; enforced later by the rule checker, story D2)
+### The rules (Adam's decisions, checked by the rule checker in `js/rules/`)
 
-- A box may not be wider or deeper than the box under it by more than **1 cm** (`STACK_TOLERANCE`).
-- A stack must fit the usable height. Where it crosses a bracket it must be under `bracketLimit`.
-- Two rows (front + back, "2 deep") only in easy spots. Only card games stand like books (plus KLASK and Ice Cool, which are too big to lie down).
+| Blocks: never allowed | Warns: allowed with "place anyway" |
+|---|---|
+| A game without a box size on a shelf | Less than 2 cm air under the shelf above (the usable height). A topper (castle, bonsai) may go up to 0.5 cm below the shelf. |
+| A **pizza** game not lying flat | Too high where it crosses a bracket (`bracketLimit`, 1 cm air) |
+| Two stacks overlapping | A box sticking out more than **1 cm** over what it rests on (`STACK_TOLERANCE`). Several boxes on one box count together; a bridge counts from the outer edges of its two supports. |
+| Past the wall end (length + 8 cm overhang) | Deeper than the shelf + 0.5 cm (a stack of one standing box, like KLASK, may stick out) |
+| Taller than the physical shelf gap | Two rows (2 deep) outside an easy-to-reach spot |
+| A **bridge** whose two supports differ in height by more than 0.5 cm (it would tilt) | A **bridge** without enough support: its centre must be over the supports, and the gap between them at most a third of its width |
 
-## 4. Data model
+The store itself refuses the first two (missing size, pizza not flat), whatever path a change takes. The rest are the rule checker's job. The moving screens never offer "place anyway" for a blocking rule, and a plan import that breaks one is refused.
 
-One file format is used for the seed (`data/seed.json`), for backups and for plan imports.
+## 4. Data model (schema 2)
+
+One file format is used for the seed (`data/seed.json`), for backups and for plan imports. **Schema 2** is current. Schema 1 files (old backups, plan files from the planning chat, today's seed) are still accepted: the store upgrades them on load or import (`js/core/plan2.js`).
 
 ```jsonc
 {
   "app": "shelp",
-  "schema": 1,
+  "schema": 2,
   "games": [ Game, … ],        // optional in a plan-only import
   "plan": Plan,
   "meta": { }                  // optional, free-form (e.g. lastImport)
@@ -94,11 +101,12 @@ One file format is used for the seed (`data/seed.json`), for backups and for pla
   "age": "14+",                 // free text, or null
   "categories": ["popular"],    // any of "party", "coop", "popular", "duo"
   "inBgg": true,                // is it in Adam's BGG collection?
-  "notes": null                 // free text, or null
+  "notes": null,                // free text, or null
+  "pizza": true                 // true: may only lie flat on its biggest side (a quarter turn is fine)
 }
 ```
 
-Don't add fields on your own. Ask Tony; the schema check (`js/core/schema.js`) and this file change together.
+Pizza starts as `true` for every game except the 20 that stood in v5 (the card games under the stairs, KLASK, Ice Cool). New games are pizza. Don't add fields on your own. Ask Tony; the schema check (`js/core/schema.js`) and this file change together.
 
 ### Plan
 
@@ -107,13 +115,14 @@ Don't add fields on your own. Ask Tony; the schema check (`js/core/schema.js`) a
   "name": "v5 – brackets",
   "stacks": [ Stack, … ],
   "cupboard": [ { "game": "g156", "reason": "No room left after the bracket and stacking rules" } ],
-  "inside": { "g101": "g099" }   // expansion id → id of the box it is stored in (no nesting)
+  "inside": { "g101": "g099" },  // expansion id → id of the box it is stored in (no nesting)
+  "board": [ { "game": "g042" } ] // games moved to the board, in the order they arrived
 }
 ```
 
-Every game is in **at most one** place: a stack, the cupboard or inside another box. A game in none of them is **unplaced** (for example just imported from BGG).
+Every game is in **at most one** place: a stack, the cupboard, inside another box, or the board. **A game with no place at all is on the board too**, after the listed ones (e.g. new from a BGG import). `store.getBoard()` gives the full board in order.
 
-**A game without a box size (`dims: null`) is never on a stack.** It can be unplaced, in the cupboard or inside another box. The store refuses `placeOnStack` for it, refuses to remove the size of a game that is on a stack, and plans or backups that break the rule fail validation. So the map and the rule checker never meet a missing size. The "Size missing" filter in the catalog shows what still needs measuring.
+**A game without a box size (`dims: null`) is never on a stack.** It can be on the board, in the cupboard or inside another box.
 
 ### Stack
 
@@ -122,48 +131,70 @@ Every game is in **at most one** place: a stack, the cupboard or inside another 
   "id": "B3",
   "zone": "bottom",
   "x": 60.2,                     // left edge, cm from the zone's left end
-  "orientation": "flat",         // "flat": boxes lie flat, items go bottom → top
-                                 // "standing": boxes stand like books, items go left → right
-  "rows": [ [Item, …] ],         // 1 row, or 2 rows: rows[0] = front, rows[1] = back ("2 deep")
-  "topper": { "label": "LEGO castle", "w": 35, "h": 21 },   // optional object standing on top
-  "notes": ["Compile and Kontroll side by side on top"]      // optional, shown in stack details
+  "boxes": [ Box, … ],
+  "topper": { "label": "LEGO castle", "w": 35, "h": 21 },   // optional object on top, centred
+  "notes": ["Compile and Kontroll side by side on top"]      // optional, from the planning chat
 }
 ```
 
-**Item** is either one box `{ "game": "g102" }`, optionally with `"rot": true` (turned so the long side runs along the shelf, "long side out"), or a side-by-side group on one level: `{ "side": [ { "game": "g036" }, { "game": "g098" } ] }`.
-
-**How a box sits** (Bruce implements this; everyone else just needs the idea). With `dims = [s, m, l]`:
-
-- flat: height = s. Normally width (along the shelf) = m and depth = l. If `rot` is true or l > zone depth (38), then width = l and depth = m.
-- standing: width = s; height = l if l fits the zone's usable height, otherwise m; depth = the remaining side.
-
-`tests/fixtures/v5-geometry.json` has the expected `x, w, d, h` of every v5 stack, worked out in Python. Height includes the topper; depth of a 2-row stack is front + back.
-
-### Location (from `store.locate(id)`)
+**Box** – one game on the stack:
 
 ```jsonc
-{ "kind": "stack", "stackId": "B3", "zone": "bottom", "orientation": "flat",
-  "rows": 1, "row": 0, "index": 3, "side": 1, "above": [], "below": ["g104", "g102", "g178"] }
+{ "game": "g036", "row": 0, "x": 0, "up": "s", "rot": false, "on": ["g178"] }
+```
+
+| Field | Meaning |
+|---|---|
+| `row` | 0 = front, 1 = back. A stack is 2 deep when any box has row 1. |
+| `x` | cm from the stack's left edge to the box's left edge |
+| `up` | which side faces up: `"s"` flat (lying on its biggest face), `"m"` on its side, `"l"` on end (like a book) |
+| `rot` | `false`: the narrower of the two other sides runs along the shelf; `true`: the wider one ("long side out") |
+| `on` | what it rests on: `[]` the shelf floor, `["g178"]` that box, `["a", "b"]` across two boxes (a **bridge**) |
+
+- **Size of a box:** `boxSize(dims, up, rot)` in `js/core/geometry.js` gives `{ w, d, h }`.
+- **Height comes from gravity:** a box sits on the highest of its supports. `layoutStack2(stack, getGame)` gives every box's `x, y, z, w, d, h` and the stack's `w, d, h, pileH` and topper.
+- **One structure covers everything:** piles, several boxes side by side on one box, standing card games (boxes with `up: "l"` on the floor), and bridges.
+- **Bridges** rest on exactly two boxes in the same row, side by side, seen from the front only (no bridges between the front and back row).
+
+`tests/fixtures/v5-geometry.json` has the expected `x, w, d, h` of every v5 stack. The upgraded seed gives exactly these through `layoutStack2`.
+
+### Location (from `store.locate2(id)`)
+
+```jsonc
+{ "kind": "stack", "stackId": "B3", "zone": "bottom", "row": 0, "rows": 1, "x": 0, "up": "s", "rot": false,
+  "on": ["g178"], "above": ["g098"], "below": ["g178", "g102", "g104"] }
 { "kind": "inside", "hostId": "g099", "host": { …location of the host… } }
 { "kind": "cupboard", "reason": "…" }
-{ "kind": "unplaced" }
+{ "kind": "board", "index": 0 }
 null   // unknown id
 ```
 
-`index` counts from 0, bottom → top for flat stacks and left → right for standing ones. `above` and `below` are game ids, flat stacks only.
+- `above` holds every box resting on it, directly or higher up, nearest first; `below` holds everything under it.
+- `describeLocation2(loc, getTitle)` turns a location into text, e.g. "Bottom shelf · stack B3 · on Takenokolor · nothing on top".
+
+### The v1 shape, during Phase B only
+
+Until every part has moved to schema 2, the old reads still work. They are computed from the v2 data:
+- `getPlan()` / `getStack()`: stacks with `orientation` and `rows` of items, as before.
+- `locate()`: `index`, `side`, `above`; games on the board are `'unplaced'`.
+- `placeOnStack()`.
+
+**New code uses only the v2 functions.** Tony removes the v1 shape when Phase B is done.
 
 ## 5. What you get ready made (`js/core/`, owner Tony)
 
 | Module | What it gives you |
 |---|---|
-| `store.js` | `init()`, reads: `getGames()` (sorted by title), `getGame(id)`, `getPlan()`, `getStack(id)`, `getMeta()`, `locate(id)`, `exportData()`, `validate(obj)`. Writes: `updateGame(id, patch)`, `addGame(fields) → id`, `removeGame(id)`, `moveToCupboard(id, reason)`, `placeOnStack(id, stackId, { row, index })`, `setInside(id, hostId)`, `replacePlan(plan)`, `importData(obj) → 'all' \| 'plan'`, `resetToSeed()`, `setMeta(key, value)`, `batch(fn)`. Writes throw an `Error` with a readable message (and `err.problems`, a list, when there are several). |
+| `store.js` | `init()`. **Reads (v2):** `getGames()` (sorted by title), `getGame(id)`, `getPlan2()`, `getStack2(id)`, `locate2(id)`, `getBoard()`, `getMeta()`, `exportData()`, `validate(obj)`, `canUndo()`, `canRedo()`. **Writes:** `updateGame(id, patch)`, `addGame(fields) → id`, `removeGame(id)`, `moveToBoard(id)`, `moveToCupboard(id, reason)`, `setInside(id, hostId)`, `placeBox(id, { stackId, row, on, index, up, rot })`, `placeUnder(id, targetIds, { up, rot })`, `turnBox(id, { up, rot })`, `createStack(zone, { x }) → id`, `moveStack(id, x)`, `removeStack(id)` (games go to the board), `renumberStacks() → { old: new }`, `undo()`, `redo()`, `preview(fn) → { plan, games, error }` (try writes without keeping them), `replacePlan(plan)`, `importData(obj) → 'all' \| 'plan'`, `resetToSeed()`, `setMeta(key, value)`, `batch(fn)`. Every write except `setMeta` is one undo step (a `batch` is one step, up to 30 kept). Writes throw an `Error` with a readable message (and `err.problems`, a list, when there are several). **v1 (Phase B only):** `getPlan()`, `getStack(id)`, `locate(id)`, `placeOnStack(id, stackId, { row, index })`. |
+| `geometry.js` | `boxSize(dims, up, rot) → { w, d, h }`, `layoutStack2(stack, getGame) → { w, d, h, pileH, rows, boxes, topper }`. The geometry of schema 2, shared by everyone. |
+| `plan2.js` | The upgrade from schema 1, the v1 view and the edit operations behind the store. **Don't call it directly**; use the store. |
 | `bus.js` | `on(type, fn) → unsubscribe`, `emit(type, detail)`. Events: `store:changed` `{ games: id[] \| null, plan: bool }` (null = everything changed), `store:error` `{ message }` (app.js shows it), `route:changed` `{ id, params }`. |
 | `contracts.js` | `openGame(id)`, `showOnMap(gameId)`, `showStack(stackId)`, `go(screen, params)`, `provide(name, fn)`. |
 | `shelves.js` | `ZONES`, `GROUPS`, `BRACKET`, `STACK_TOLERANCE`, `bracketLimit(zone, depth)`, `isEasy(zoneId, x, w)`. |
 | `categories.js` | `CATEGORIES` (id, label, cssVar), `OTHER`, `CATEGORY_IDS`, `category(id)`, `colorsFor(game)` → list of CSS colours in fixed order. |
-| `format.js` | `formatDims(dims)` → "30.5 × 22.6 × 5.1 cm", `formatRange(r, unit)` → "2–4", `describeLocation(loc, getTitle)` → "Bottom shelf · stack B3 · at the bottom · 3 boxes on top". |
+| `format.js` | `formatDims(dims)` → "30.5 × 22.6 × 5.1 cm", `formatRange(r, unit)` → "2–4", `describeLocation2(loc, getTitle)` → "Bottom shelf · stack B3 · on Takenokolor · nothing on top" / "On the board". (`describeLocation` is the v1 version, Phase B only.) |
 | `dom.js` | `h(tag, props, ...children)` for HTML, `s(tag, attrs, ...children)` for SVG, `clear(el)`, `loadCss(url)`, `toast(text, { error })`, `showPanel(dialog)`: opens a `<dialog>` as a modal that the Android back gesture closes; `closePanels(done)`: closes all of them (`go()` already does this, so navigating from a panel needs no extra code). |
-| `schema.js` | `validateData(obj, knownIds)`, `validateGame(g)`, `validatePlan(plan, ids)`. The store already uses these. |
+| `schema.js` | `checkData(obj, known) → { problems, data }` (schema 1 or 2, upgraded to 2), `validateData`, `validateGame`, `validatePlan2`, `knownFrom(games)`. The store already uses these. |
 | `css/base.css` | Colours and basics: `--cat-party`, `--cat-coop`, `--cat-popular`, `--cat-duo`, `--cat-other`, `--accent`, `--bracket`, `--easy-zone`, … plus `.btn`, `.btn-primary`, `.card`, `.chip`, `dialog.panel`, `.toast`. Light and dark mode. Layout tokens: `--header-h`, and `--tabbar-h` (bottom tab bar height without the safe area: 56px below 1024 px, 0 on desktop). `.app-main` and `.toast` already keep clear of the tab bar. Anything you fix to the bottom of the screen must sit at `calc(var(--tabbar-h) + env(safe-area-inset-bottom))`. |
 | `index.html` | The header has three slots: `.app-title`, `#app-nav` (the screen nav, which becomes the bottom tab bar on phones) and `#app-tools` (global tools such as search). Peter's shell owns what goes into `#app-nav` and `#app-tools`. |
 
@@ -191,9 +222,9 @@ Load your stylesheet once in your module: `loadCss(new URL('./map.css', import.m
 | anyone → game panel (A) | `openGame(id)` | fallback panel in `contracts.js` until Stephen calls `provide('openGame', …)` |
 | catalog/search (C) → map (B) | `showOnMap(id)` → `#/map?game=id` | placeholder map already highlights the stack |
 | game panel (A) → map (B) | `showOnMap(id)` | – |
-| BGG import (A) → cupboard screen (B) | new games are added **unplaced**; Bruce lists unplaced games | test with `store.addGame({ title: 'Test' })` in the console |
-| Part A → shelf model (B) | `js/rules/` (rule checker) and `js/io/export.js` (CSV export) import `footprint()` and `layoutStack()` from `js/map/model.js`, read-only. Bruce keeps those two signatures stable; changes go through Tony. | in use |
-| map / stack details (B) → rule checker (A) | Bruce calls `checkStack(stack, getGame)` from `js/rules/` to show warnings | when D2 is merged |
+| BGG import / add a game (A) → board (B) | new games have no place, so they are on the board (`getBoard()`); v1 `locate()` calls them `'unplaced'` | in use |
+| geometry (core) → everyone | schema 2 geometry is `js/core/geometry.js` (`boxSize`, `layoutStack2`). In Phase B the rule checker, the CSV export and the map move to it. `js/map/model.js` (`footprint`, `layoutStack`, v1) stays stable until nobody imports it. | Phase B |
+| map / stack details (B) → rule checker (A) | Bruce calls the rule checker from `js/rules/` for warnings and previews. In Phase B Stephen adds v2 versions with `severity: 'block' \| 'warn'`. | in use; v2 in Phase B |
 | everyone → offline (C) | Peter's service worker caches every same-origin file at runtime, so nobody maintains a file list | – |
 
 ## 7. Who owns what
@@ -231,12 +262,15 @@ The placeholder screens in your folders were written by Tony only to test the wi
 
 - **Stack**: one pile (or a two-row block) at one x position. Ids like T1, M4, B3, L1, U2, S1, N3.
 - **Row**: front or back line of a stack ("2 deep").
-- **Item**: one box in a row, or a side-by-side group sharing one level.
+- **Box**: one game on a stack, with its position, which side is up, and what it rests on.
+- **Bridge**: a box resting across two boxes, like a brick in a wall.
+- **Board**: the holding area for games without a place, while you rearrange.
+- **Pizza**: a game that may only lie flat on its biggest side.
 - **Topper**: a non-game object on top of a stack (the LEGO castle, the bonsai).
 - **Long side out / rot**: the box is turned so its long side runs along the shelf.
 - **Standing**: boxes stand on edge like books.
 - **Inside**: an expansion stored in its base game's box; it takes no shelf space.
-- **Unplaced**: a game that is in no stack, not in the cupboard and not inside a box.
+- **Unplaced** (v1 word): a game on the board.
 
 ## Changes
 
@@ -247,3 +281,4 @@ The placeholder screens in your folders were written by Tony only to test the wi
 - 2026-11-27 – Stephen round 2 (`docs/part-a2.md`): new folder `js/rules/` (D2), which may import `footprint()` / `layoutStack()` from `js/map/model.js` read-only. Local testing: open the app with `?nosw` (section 8).
 - 2026-11-27 – **No missing sizes on shelves** (section 4): a game with `dims: null` can never be on a stack; the store and the schema check enforce it (Adam's decision).
 - 2026-11-27 – the CSV export (`js/io/export.js`) may also use `layoutStack()` read-only (section 6).
+- 2026-11-27 – **Schema 2 (Phase A):** games on games, bridges, which side is up, the pizza flag, the board, undo/redo, the final block/warn rules (section 3). New core modules `geometry.js` and `plan2.js`, v2 reads and writes in the store, and `describeLocation2`. The v1 reads keep working during Phase B. Briefs: `docs/part-a3.md`, `docs/part-b2.md`, `docs/part-c2.md`.

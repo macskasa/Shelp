@@ -3,7 +3,7 @@
 **Where is each board game on the shelves?** Shelp is a personal web app for Adam's board game collection. It shows a to-scale drawing of the IKEA BOAXEL shelves with every box on it, finds any game, keeps box sizes and categories, imports the BoardGameGeek collection export, and works offline on a phone.
 
 - **Live app:** https://macskasa.github.io/Shelp/
-- **Status:** MVP nearly done. Part A is finished, and Stephen has started on next-release stories (D2, E3, A4).
+- **Status:** the MVP is done. The next big step is moving games by hand. Phase A (Tony) moved the data to schema 2: games on games, bridges, which side is up, pizza games, the board, and undo. In Phase B the three parts move onto it (`docs/part-a3.md`, `docs/part-b2.md`, `docs/part-c2.md`).
 
 ## Contents
 
@@ -34,7 +34,7 @@ It works on other screens too (down to 360 px), but these are the ones it is tun
 ## How it's built
 
 - **Plain JavaScript ES modules, SVG and CSS.** No framework, no npm packages, no CDNs. GitHub Pages serves the files as they are.
-- **Data:** `data/seed.json` holds the 204 games and the shelf plan "v5 – brackets" worked out in the planning chat. On first start the app copies it into localStorage. After that all changes stay in the browser. Backups are the same JSON format.
+- **Data:** `data/seed.json` holds the 204 games and the shelf plan "v5 – brackets" worked out in the planning chat. On first start the app copies it into localStorage and upgrades it to schema 2 (boxes with positions; a box can rest on the floor, on one box, or across two). After that all changes stay in the browser, and every change can be undone. Backups are the same JSON format.
 - **Shelves are hard-coded** in `js/core/shelves.js`: three 200 cm wall shelves (units 60 | 80 | 60, 8 cm overhang at the wall end, BOAXEL brackets under the top two levels), the 80 cm unit under the stairs with three heights, and the narrow 8 cm shelf. There is no settings screen.
 - **BGG integration is offline:** Adam exports his collection as CSV on BoardGameGeek and imports the file. (Browsers can't call BGG directly. A live refresh would need a small server, story E4.)
 - **Offline:** a service worker caches the app, so it works without internet once it has been opened, and it can be added to the home screen.
@@ -96,9 +96,9 @@ Each developer is a separate Claude chat with this repo attached. They don't see
 |---|---|---|---|
 | **Adam** | Product owner. Merges PRs. | – | – |
 | **Tony** | Lead and code reviewer. Owns the shared core, data and docs. | – | `js/core/`, `js/app.js`, `index.html`, `css/base.css`, `data/`, `docs/` |
-| **Stephen** | Part A – data in and out: BGG import, game panel, backup and restore. Round 2: rule checker, CSV export, add a game | [docs/part-a.md](docs/part-a.md), [docs/part-a2.md](docs/part-a2.md) | `js/io/`, `js/game/`, `js/rules/` |
-| **Bruce** | Part B – shelf map: model, drawing, stack details, special placements, cupboard | [docs/part-b.md](docs/part-b.md) | `js/map/` |
-| **Peter** | Part C – catalog, search, app frame, offline | [docs/part-c.md](docs/part-c.md) | `js/catalog/`, `js/shell/`, `sw.js`, `manifest.webmanifest`, `icons/` |
+| **Stephen** | Part A – data in and out: BGG import, game panel, backup and restore. Round 2: rule checker, CSV export, add a game. Phase B: rules, export and pizza on schema 2 | [part-a](docs/part-a.md), [a2](docs/part-a2.md), [a3](docs/part-a3.md) | `js/io/`, `js/game/`, `js/rules/` |
+| **Bruce** | Part B – shelf map: model, drawing, stack details, special placements, cupboard. Phase B: the map and the picker on schema 2 | [part-b](docs/part-b.md), [b2](docs/part-b2.md) | `js/map/` |
+| **Peter** | Part C – catalog, search, app frame, offline. Phase B: search wording, the board, Undo | [part-c](docs/part-c.md), [c2](docs/part-c2.md) | `js/catalog/`, `js/shell/`, `sw.js`, `manifest.webmanifest`, `icons/` |
 
 The three parts only meet through the contracts in `js/core/contracts.js` (`openGame`, `showOnMap`, `showStack`, `go`) and the store. Placeholders exist for each, so every part can start today and be merged in any order.
 
@@ -120,7 +120,7 @@ css/base.css             colours, basics, light/dark (Tony)
 data/seed.json           204 games + plan v5 (Tony)
 icons/                   app icons (Peter)
 js/app.js                entry point: loads data, starts the parts (Tony)
-js/core/                 store, bus, contracts, shelves, categories, format, dom, schema (Tony)
+js/core/                 store, bus, contracts, shelves, categories, format, dom, schema, geometry, plan2 (Tony)
 js/shell/                router, navigation, service worker registration (Peter)
 js/catalog/              catalog list, search, where's my game (Peter)
 js/map/                  shelf model, drawing, stack details, cupboard (Bruce)

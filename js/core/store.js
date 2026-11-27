@@ -7,41 +7,62 @@
 //  - Write functions throw an Error with a readable message when a change is not allowed.
 //    Catch it and show the message to the user.
 //  - Use batch(() => { ... }) for many writes at once (e.g. a CSV import): one save, one event,
-//    and everything is rolled back if the function throws.
+//    one undo step, and everything is rolled back if the function throws.
+//
+// Data is stored in plan format v2 (schema 2: boxes with positions, games on games, bridges,
+// the board, the pizza flag; see js/core/plan2.js and docs/CONTEXT.md). During the move to v2
+// (Phase B) the old reads still work: getPlan(), getStack() and locate() return the v1 shape.
+// New code uses getPlan2(), getStack2(), locate2() and the v2 writes.
 import { emit } from './bus.js';
-import { APP, SCHEMA, validateData, validateGame, validatePlan } from './schema.js';
+import { APP, SCHEMA, checkData, knownFrom, validateGame } from './schema.js';
+import { ZONES } from './shelves.js';
+import {
+  detach as detach2, findBox, insertOn, insertUnder, locations2, nextStackId, renumber,
+  toV1Plan, turnBox as turn2,
+} from './plan2.js';
 
-export const STORAGE_KEY = 'shelp:data:v1';
+export const STORAGE_KEY = 'shelp:data:v1'; // the key name stays; the data inside is schema 2
 const BROKEN_KEY = 'shelp:data:broken';
 const SEED_URL = new URL('../../data/seed.json', import.meta.url);
+const HISTORY = 30;
 
-let data = null; // private, mutable: { app, schema, games: [], plan: {}, meta: {} }
+let data = null; // private, mutable, schema 2: { app, schema, games: [], plan: {}, meta: {} }
 let snap = null; // frozen copy handed out to readers
 let byId = new Map();
-let where = new Map();
+let view1 = null; // the plan in the v1 shape (compatibility)
+let where1 = new Map();
+let where2 = new Map();
+let board = []; // ids on the board, in order: moved there explicitly, then games with no place at all
 let seedCache = null;
 let storage = null;
 let depth = 0;
 let pending = null;
 let backup = null;
+let committed = null; // games + plan as of the last commit (for undo)
+let undoStack = [];
+let redoStack = [];
+let previewing = false;
 
 // ---------------------------------------------------------------- setup
 
 /**
  * Load saved data from localStorage, or the bundled seed on first run.
+ * Saved data in the old format is upgraded to schema 2.
  * Options (for tests): { seed: object, storage: {getItem, setItem, removeItem} }
  */
 export async function init({ seed, storage: st } = {}) {
   storage = st ?? (typeof localStorage !== 'undefined' ? localStorage : null);
   if (seed) seedCache = structuredClone(seed);
   let loaded = null;
+  let upgraded = false;
   const raw = storage?.getItem(STORAGE_KEY);
   if (raw) {
     try {
       const obj = JSON.parse(raw);
-      const errors = validateData(obj);
-      if (errors.length) throw new Error(errors.slice(0, 3).join('; '));
-      loaded = obj;
+      const { problems, data: ok } = checkData(obj);
+      if (problems.length) throw new Error(problems.slice(0, 3).join('; '));
+      loaded = ok;
+      upgraded = obj.schema !== SCHEMA;
     } catch (err) {
       console.error('[store] saved data is broken, starting from the seed', err);
       storage.setItem(BROKEN_KEY, raw);
@@ -49,8 +70,11 @@ export async function init({ seed, storage: st } = {}) {
   }
   data = loaded ?? (await loadSeed());
   data.meta ??= {};
+  undoStack = [];
+  redoStack = [];
+  committed = structuredClone({ games: data.games, plan: data.plan });
   rebuild();
-  if (!loaded) save();
+  if (!loaded || upgraded) save();
   return snap;
 }
 
@@ -60,14 +84,14 @@ async function loadSeed() {
     if (!res.ok) throw new Error(`Could not load the seed data (${res.status})`);
     seedCache = await res.json();
   }
-  const errors = validateData(seedCache);
-  if (errors.length) throw new Error(`Seed data is invalid: ${errors[0]}`);
-  return structuredClone(seedCache);
+  const { problems, data: ok } = checkData(structuredClone(seedCache));
+  if (problems.length) throw new Error(`Seed data is invalid: ${problems[0]}`);
+  return ok;
 }
 
 // ---------------------------------------------------------------- reads
 
-/** All games, sorted by title (Hungarian collation). Frozen. */
+/** All games, sorted by title (Hungarian collation). Frozen. Each has `pizza`. */
 export function getGames() {
   return snap.games;
 }
@@ -77,53 +101,82 @@ export function getGame(id) {
   return byId.get(id);
 }
 
-/** The whole plan: { name, stacks, cupboard, inside }. Frozen. */
-export function getPlan() {
-  return snap.plan;
-}
-
-/** One stack by id, or undefined. Frozen. */
-export function getStack(id) {
-  return snap.plan.stacks.find((s) => s.id === id);
-}
-
 /** Free-form app metadata, e.g. { lastImport: "2026-11-27T10:00:00Z" }. Frozen. */
 export function getMeta() {
   return snap.meta;
 }
 
+/** v2: the whole plan { name, stacks: [{ id, zone, x, boxes, topper?, notes? }], cupboard, inside, board }. Frozen. */
+export function getPlan2() {
+  return snap.plan;
+}
+
+/** v2: one stack by id, or undefined. Frozen. */
+export function getStack2(id) {
+  return snap.plan.stacks.find((s) => s.id === id);
+}
+
 /**
- * Where is a game? Returns one of:
+ * v2: where is a game? One of:
+ *  { kind: 'stack', stackId, zone, row, rows, x, up, rot, on, above, below }
+ *      on: what it rests on ([] = the shelf floor, two ids = across two boxes)
+ *      above: every box resting on it, directly or higher up, nearest first; below: everything under it
+ *  { kind: 'inside', hostId, host }   { kind: 'cupboard', reason }   { kind: 'board', index }
+ *  null for an unknown id
+ */
+export function locate2(id) {
+  if (!byId.has(id)) return null;
+  return where2.get(id) ?? { kind: 'board', index: board.indexOf(id) };
+}
+
+/**
+ * v2: the games on the board, in order. The board holds every game that has no other place:
+ * games moved there (in the order they arrived), then games that never had a place (e.g. new
+ * from a BGG import), by title. Frozen list of ids.
+ */
+export function getBoard() {
+  return board;
+}
+
+/** v1 (compatibility until Phase B is done): the plan in the old shape { name, stacks, cupboard, inside }. Frozen. */
+export function getPlan() {
+  return view1;
+}
+
+/** v1 (compatibility): one stack in the old shape. Frozen. */
+export function getStack(id) {
+  return view1.stacks.find((s) => s.id === id);
+}
+
+/**
+ * v1 (compatibility): where is a game, in the old shape. Games on the board are 'unplaced'.
  *  { kind: 'stack', stackId, zone, orientation, rows, row, index, side, above, below }
- *      rows: number of rows in the stack (2 = two deep); row: 0 = front, 1 = back
- *      index: position in the row – bottom→top for flat stacks, left→right for standing ones
- *      side: index inside a side-by-side group, or null
- *      above / below: ids of the games on top of / under it (flat stacks only, [] otherwise)
- *  { kind: 'inside', hostId, host }      host = locate(hostId)
- *  { kind: 'cupboard', reason }
- *  { kind: 'unplaced' }                  a known game that is nowhere yet (e.g. just imported)
- *  null                                  unknown id
+ *  { kind: 'inside', hostId, host }  { kind: 'cupboard', reason }  { kind: 'unplaced' }  null
  */
 export function locate(id) {
   if (!byId.has(id)) return null;
-  return where.get(id) ?? { kind: 'unplaced' };
+  return where1.get(id) ?? { kind: 'unplaced' };
 }
 
-/** Everything as one plain (mutable) object – this is the backup file format. */
+/** Everything as one plain (mutable) object – this is the backup file format (schema 2). */
 export function exportData() {
-  return { app: APP, schema: SCHEMA, exportedAt: new Date().toISOString(), ...structuredClone(stripSnap(data)) };
+  return { app: APP, exportedAt: new Date().toISOString(), ...structuredClone(stripSnap(data)), schema: SCHEMA };
 }
 
-/** Check a backup or plan file before importing. Returns a list of problems (empty = OK). */
+/** Check a backup or plan file (schema 1 or 2) before importing. Returns a list of problems (empty = OK). */
 export function validate(obj) {
-  return validateData(obj, new Set(byId.keys()), sizelessIds());
+  return checkData(obj, knownFrom(data.games)).problems;
 }
+
+/** Can the last change be undone / redone? */
+export const canUndo = () => undoStack.length > 0;
+export const canRedo = () => redoStack.length > 0;
 
 // ---------------------------------------------------------------- writes: games
 
 /**
  * Change fields of a game. `id` cannot change. Throws if the result is invalid.
- * The size of a game on a stack cannot be removed (games on shelves always have a size).
+ * A game on a stack cannot lose its size, and cannot become pizza while it stands or lies on its side.
  */
 export function updateGame(id, patch) {
   const i = indexOf(id);
@@ -131,19 +184,23 @@ export function updateGame(id, patch) {
   const next = { ...data.games[i], ...structuredClone(patch) };
   if (next.dims) next.dims = [...next.dims].sort((a, b) => a - b);
   check(validateGame(next));
-  if (next.dims == null && where.get(id)?.kind === 'stack') {
-    throw new Error(`${next.title} is on a shelf, so its box size cannot be removed. Move it to the cupboard first.`);
+  const onShelf = findBox(data.plan, id)?.box;
+  if (next.dims == null && onShelf) {
+    throw new Error(`${next.title} is on a shelf, so its box size cannot be removed. Move it to the cupboard or the board first.`);
+  }
+  if (next.pizza && onShelf && onShelf.up !== 's') {
+    throw new Error(`${next.title} does not lie flat on the shelf. Turn it flat first, then mark it as a pizza game.`);
   }
   data.games[i] = next;
   changed({ games: [id] });
 }
 
-/** Add a game. Only `title` is required. Returns the new id. The game starts unplaced. */
+/** Add a game. Only `title` is required. Returns the new id. It has no place yet, so it is on the board; pizza by default. */
 export function addGame(fields) {
   const id = nextId();
   const game = {
     id, title: '', bggId: null, bggName: null, type: 'base', dims: null, sizeSource: null,
-    players: null, time: null, age: null, categories: [], inBgg: false, notes: null,
+    players: null, time: null, age: null, categories: [], inBgg: false, notes: null, pizza: true,
     ...structuredClone(fields),
   };
   game.id = id;
@@ -154,11 +211,11 @@ export function addGame(fields) {
   return id;
 }
 
-/** Delete a game everywhere. Boxes stored inside it go to the cupboard. */
+/** Delete a game everywhere. Boxes stored inside it go to the cupboard; boxes on top of it settle down. */
 export function removeGame(id) {
   const i = indexOf(id);
   const title = data.games[i].title;
-  detach(id);
+  detach2(data.plan, id, rawGame);
   for (const [exp, host] of Object.entries(data.plan.inside)) {
     if (host === id) {
       delete data.plan.inside[exp];
@@ -169,32 +226,100 @@ export function removeGame(id) {
   changed({ games: [id], plan: true });
 }
 
-// ---------------------------------------------------------------- writes: plan
+// ---------------------------------------------------------------- writes: plan (v2)
+
+/** Put a game on the board (from wherever it is). Boxes that were on top of it settle down. */
+export function moveToBoard(id) {
+  indexOf(id);
+  detach2(data.plan, id, rawGame);
+  data.plan.board.push({ game: id });
+  changed({ games: [id], plan: true });
+}
 
 /** Put a game in the cupboard (from wherever it is). */
 export function moveToCupboard(id, reason = '') {
   indexOf(id);
-  detach(id);
+  detach2(data.plan, id, rawGame);
   data.plan.cupboard.push({ game: id, reason });
   changed({ games: [id], plan: true });
 }
 
 /**
- * Put a game on a stack (from wherever it is).
- * row: 0 = front (default), 1 = back.  index: position in the row, default = on top / rightmost.
- * A game without a box size cannot go on a stack. No other rule checking here (that's js/rules/).
+ * v2: put a game on a stack (from wherever it is).
+ * target = { stackId, row = 0, on = [], index, up = 's', rot = false }
+ *   on: [] = on the shelf floor, [id] = on top of that box, [a, b] = across two boxes (a bridge)
+ *   index: position among the boxes already on that surface, left to right (default: right end);
+ *          the boxes to its right move over.
+ * Refused: a game without a box size; a pizza game that does not lie flat (up must be 's').
+ * Nothing else is checked here – that is the rule checker's job (js/rules/).
  */
-export function placeOnStack(id, stackId, { row = 0, index } = {}) {
+export function placeBox(id, target) {
+  const game = mustPlaceable(id, target.up ?? 's');
+  if (!data.plan.stacks.some((s) => s.id === target.stackId)) throw new Error(`There is no stack ${target.stackId}`);
+  for (const s of target.on ?? []) if (s === id) throw new Error('A box cannot rest on itself');
+  detach2(data.plan, id, rawGame);
+  insertOn(data.plan, rawGame, id, { ...target, up: target.up ?? 's', rot: !!target.rot });
+  changed({ games: [game.id], plan: true });
+}
+
+/**
+ * v2: slide a game in UNDER other boxes. It takes their place and they rest on it.
+ * targets: ids of one box, or of boxes side by side on one surface.
+ */
+export function placeUnder(id, targets, { up = 's', rot = false } = {}) {
+  const game = mustPlaceable(id, up);
+  if (targets.includes(id)) throw new Error('A box cannot go under itself');
+  detach2(data.plan, id, rawGame);
+  insertUnder(data.plan, rawGame, id, targets, { up, rot });
+  changed({ games: [game.id], plan: true });
+}
+
+/**
+ * v2: turn a box on a shelf. up: 's' flat, 'm' on its side, 'l' on end; rot: which way round.
+ * A pizza game can only lie flat (it can still be turned with rot).
+ */
+export function turnBox(id, { up, rot } = {}) {
   const game = data.games[indexOf(id)];
-  if (!game.dims) throw new Error(`Add the box size of ${game.title} first – a game without a size cannot go on a shelf.`);
-  const st = data.plan.stacks.find((s) => s.id === stackId);
-  if (!st) throw new Error(`There is no stack ${stackId}`);
-  if (!st.rows[row]) throw new Error(`Stack ${stackId} has no ${row === 0 ? 'front' : 'back'} row`);
-  detach(id);
-  const r = st.rows[row];
-  const at = index == null ? r.length : Math.max(0, Math.min(index, r.length));
-  r.splice(at, 0, { game: id });
+  const onShelf = findBox(data.plan, id)?.box;
+  if (!onShelf) throw new Error(`${game.title} is not on a shelf`);
+  const nextUp = up ?? onShelf.up;
+  if (game.pizza && nextUp !== 's') throw new Error(`${game.title} is a pizza game: it can only lie flat (you can still turn it round).`);
+  turn2(data.plan, rawGame, id, { up: nextUp, rot });
   changed({ games: [id], plan: true });
+}
+
+/** v2: a new empty stack on a shelf at x (cm from the shelf's left end). Returns its id, e.g. "T10". */
+export function createStack(zoneId, { x = 0 } = {}) {
+  if (!ZONES[zoneId]) throw new Error(`Unknown shelf ${zoneId}`);
+  if (!(Number.isFinite(x) && x >= 0)) throw new Error('x must be a number ≥ 0');
+  const id = nextStackId(data.plan, zoneId);
+  data.plan.stacks.push({ id, zone: zoneId, x: Math.round(x * 100) / 100, boxes: [] });
+  changed({ games: [], plan: true });
+  return id;
+}
+
+/** v2: move a whole stack along its shelf. */
+export function moveStack(stackId, x) {
+  const st = mustStack(stackId);
+  if (!(Number.isFinite(x) && x >= 0)) throw new Error('x must be a number ≥ 0');
+  st.x = Math.round(x * 100) / 100;
+  changed({ games: [], plan: true });
+}
+
+/** v2: remove a stack. Its games go to the board (bottom first). */
+export function removeStack(stackId) {
+  const st = mustStack(stackId);
+  const ids = [...st.boxes].sort((a, b) => a.on.length - b.on.length || a.x - b.x).map((b) => b.game);
+  data.plan.stacks = data.plan.stacks.filter((s) => s !== st);
+  for (const id of ids) data.plan.board.push({ game: id });
+  changed({ games: ids, plan: true });
+}
+
+/** v2: rename every shelf's stacks left to right (T1, T2, …). Returns { oldId: newId } for those that changed. */
+export function renumberStacks() {
+  const map = renumber(data.plan);
+  changed({ games: [], plan: true });
+  return map;
 }
 
 /** Store an expansion inside another game's box. It takes no shelf space. */
@@ -206,48 +331,125 @@ export function setInside(id, hostId) {
   if (Object.values(data.plan.inside).includes(id)) {
     throw new Error(`Other boxes are stored inside ${title(id)} – take them out first`);
   }
-  detach(id);
+  detach2(data.plan, id, rawGame);
   data.plan.inside[id] = hostId;
   changed({ games: [id], plan: true });
 }
 
-/** Replace the whole plan (e.g. a plan made in chat). Games stay as they are. */
+/** Undo the last change (games and plan; metadata is kept). Returns false if there is nothing to undo. */
+export function undo() {
+  if (!undoStack.length) return false;
+  redoStack.push(structuredClone({ games: data.games, plan: data.plan }));
+  restore(undoStack.pop());
+  return true;
+}
+
+/** Redo the last undone change. Returns false if there is nothing to redo. */
+export function redo() {
+  if (!redoStack.length) return false;
+  undoStack.push(structuredClone({ games: data.games, plan: data.plan }));
+  restore(redoStack.pop());
+  return true;
+}
+
+// ---------------------------------------------------------------- writes: v1 compatibility
+
+/**
+ * v1 (compatibility): put a game on a stack, in the old terms.
+ * row: 0 = front, 1 = back. index: position in the row, bottom → top (flat) or left → right
+ * (standing); default = on top / at the right end. Prefer placeBox() in new code.
+ */
+export function placeOnStack(id, stackId, { row = 0, index } = {}) {
+  const game = data.games[indexOf(id)];
+  if (!game.dims) throw new Error(`Add the box size of ${game.title} first – a game without a size cannot go on a shelf.`);
+  const st = data.plan.stacks.find((s) => s.id === stackId);
+  if (!st) throw new Error(`There is no stack ${stackId}`);
+  const before = toV1Plan({ ...data.plan, stacks: [st] }).stacks[0];
+  if (!before.rows[row]) throw new Error(`Stack ${stackId} has no ${row === 0 ? 'front' : 'back'} row`);
+  const zone = ZONES[st.zone];
+  const longest = Math.max(...game.dims);
+  if (before.orientation === 'standing') {
+    const up = longest > zone.usable ? 'm' : 'l';
+    mustPlaceable(id, up);
+    detach2(data.plan, id, rawGame);
+    insertOn(data.plan, rawGame, id, { stackId, row, on: [], index, up, rot: false });
+  } else {
+    detach2(data.plan, id, rawGame);
+    const v1 = toV1Plan({ ...data.plan, stacks: [st] }).stacks[0];
+    const items = v1.rows[row] ?? [];
+    const ids = (it) => (it.side ? it.side.map((x) => x.game) : [it.game]);
+    const at = index == null ? items.length : Math.max(0, Math.min(index, items.length));
+    const rot = longest > zone.depth;
+    if (!items.length) insertOn(data.plan, rawGame, id, { stackId, row, on: [], up: 's', rot });
+    else if (at === items.length) insertOn(data.plan, rawGame, id, { stackId, row, on: ids(items[at - 1]).slice(0, 2), up: 's', rot });
+    else insertUnder(data.plan, rawGame, id, ids(items[at]), { up: 's', rot });
+  }
+  changed({ games: [id], plan: true });
+}
+
+/** Replace the whole plan (e.g. a plan made in chat), v1 or v2 shape. Games stay as they are. */
 export function replacePlan(plan) {
-  const next = normalizePlan(structuredClone(plan));
-  check(validatePlan(next, new Set(byId.keys()), sizelessIds()));
-  data.plan = next;
+  const v2 = Array.isArray(plan?.board) || (plan?.stacks ?? []).some((s) => Array.isArray(s?.boxes));
+  const { problems, data: ok } = checkData({ app: APP, schema: v2 ? 2 : 1, plan: structuredClone(plan) }, knownFrom(data.games));
+  check(problems);
+  data.plan = normalizePlan(ok.plan);
   changed({ games: null, plan: true });
 }
 
 /**
- * Import a file. Full file (games + plan) replaces everything; plan-only replaces the plan.
+ * Import a file (schema 1 or 2). Full file (games + plan) replaces everything; plan-only replaces the plan.
  * Returns 'all' or 'plan'. Throws with the list of problems if the file is invalid.
  */
 export function importData(obj) {
-  check(validate(obj));
-  if (obj.games) {
-    data = { app: APP, schema: SCHEMA, games: structuredClone(obj.games), plan: normalizePlan(structuredClone(obj.plan ?? emptyPlan())), meta: structuredClone(obj.meta ?? {}) };
+  const { problems, data: ok } = checkData(structuredClone(obj), knownFrom(data.games));
+  check(problems);
+  if (ok.games) {
+    data = { app: APP, schema: SCHEMA, games: ok.games, plan: normalizePlan(ok.plan ?? emptyPlan()), meta: ok.meta ?? {} };
     changed({ games: null, plan: true });
     return 'all';
   }
-  replacePlan(obj.plan);
+  data.plan = normalizePlan(ok.plan);
+  changed({ games: null, plan: true });
   return 'plan';
 }
 
-/** Throw away local changes and go back to the bundled seed data. */
+/** Throw away local changes and go back to the bundled seed data (can be undone). */
 export async function resetToSeed() {
-  data = await loadSeed();
-  data.meta = {};
+  const fresh = await loadSeed();
+  data = { ...fresh, meta: {} };
   changed({ games: null, plan: true });
 }
 
-/** Set one metadata key (value must be JSON-safe). */
+/** Set one metadata key (value must be JSON-safe). Not an undo step. */
 export function setMeta(key, value) {
   data.meta[key] = structuredClone(value);
-  changed({ games: [], plan: false });
+  changed({ games: [], plan: false, meta: true });
 }
 
-/** Run many writes as one change: one save, one event, full rollback if fn throws. */
+/**
+ * Try writes without keeping them: runs fn, returns what the data would look like, then puts
+ * everything back. Nothing is saved, no event fires, no undo step is made.
+ *   const { plan, games, error } = store.preview(() => store.placeBox(id, target));
+ * plan / games are frozen v2 copies (null if fn threw); error is the Error fn threw, or null.
+ * Use it for "what if" checks, e.g. run the rule checker on the previewed plan.
+ */
+export function preview(fn) {
+  if (previewing) throw new Error('preview() cannot be nested');
+  const saved = structuredClone(data);
+  previewing = true;
+  try {
+    fn();
+    return { plan: deepFreeze(structuredClone(data.plan)), games: deepFreeze(structuredClone(data.games)), error: null };
+  } catch (err) {
+    return { plan: null, games: null, error: err };
+  } finally {
+    data = saved;
+    pending = null;
+    previewing = false;
+  }
+}
+
+/** Run many writes as one change: one save, one event, one undo step, full rollback if fn throws. */
 export function batch(fn) {
   if (depth === 0) backup = structuredClone(data);
   depth++;
@@ -280,9 +482,23 @@ function indexOf(id) {
   return i;
 }
 
-const title = (id) => data.games.find((g) => g.id === id)?.title ?? id;
+const rawGame = (id) => data.games.find((g) => g.id === id);
+const title = (id) => rawGame(id)?.title ?? id;
 
-const sizelessIds = () => new Set(data.games.filter((g) => g.dims == null).map((g) => g.id));
+function mustStack(stackId) {
+  const st = data.plan.stacks.find((s) => s.id === stackId);
+  if (!st) throw new Error(`There is no stack ${stackId}`);
+  return st;
+}
+
+/** The game, if it may go on a shelf in that orientation; otherwise a readable error. */
+function mustPlaceable(id, up) {
+  const game = data.games[indexOf(id)];
+  if (!game.dims) throw new Error(`Add the box size of ${game.title} first – a game without a size cannot go on a shelf.`);
+  if (!['s', 'm', 'l'].includes(up)) throw new Error('up must be "s", "m" or "l"');
+  if (game.pizza && up !== 's') throw new Error(`${game.title} is a pizza game: it can only lie flat (you can still turn it round).`);
+  return game;
+}
 
 function check(errors) {
   if (errors.length) {
@@ -297,37 +513,25 @@ function nextId() {
   return `g${String(max + 1).padStart(3, '0')}`;
 }
 
-const emptyPlan = () => ({ name: 'Empty plan', stacks: [], cupboard: [], inside: {} });
+const emptyPlan = () => ({ name: 'Empty plan', stacks: [], cupboard: [], inside: {}, board: [] });
 
 function normalizePlan(p) {
   p.name ??= 'Imported plan';
   p.stacks ??= [];
   p.cupboard ??= [];
   p.inside ??= {};
+  p.board ??= [];
   return p;
 }
 
-/** Remove a game from wherever it is in the plan (stack, side group, cupboard, inside). */
-function detach(id) {
-  const p = data.plan;
-  for (const st of p.stacks) {
-    for (const row of st.rows) {
-      for (let i = row.length - 1; i >= 0; i--) {
-        const item = row[i];
-        if (item.game === id) row.splice(i, 1);
-        else if (item.side) {
-          item.side = item.side.filter((x) => x.game !== id);
-          if (item.side.length === 1) row[i] = item.side[0];
-          else if (item.side.length === 0) row.splice(i, 1);
-        }
-      }
-    }
-  }
-  p.cupboard = p.cupboard.filter((c) => c.game !== id);
-  delete p.inside[id];
+function restore(state) {
+  data.games = state.games;
+  data.plan = state.plan;
+  commit({ games: null, plan: true, fromHistory: true });
 }
 
 function changed(info) {
+  if (previewing) return;
   if (depth > 0) {
     pending = mergeInfo(pending, info);
     return;
@@ -336,12 +540,18 @@ function changed(info) {
 }
 
 function mergeInfo(a, b) {
-  if (!a) return { games: b.games ?? null, plan: !!b.plan };
+  if (!a) return { games: b.games ?? null, plan: !!b.plan, meta: !!b.meta };
   const games = a.games === null || b.games == null ? null : [...new Set([...a.games, ...b.games])];
-  return { games, plan: a.plan || !!b.plan };
+  return { games, plan: a.plan || !!b.plan, meta: a.meta && !!b.meta };
 }
 
 function commit(info) {
+  if (!info.meta && !info.fromHistory && committed) {
+    undoStack.push(committed);
+    if (undoStack.length > HISTORY) undoStack.shift();
+    redoStack = [];
+  }
+  committed = structuredClone({ games: data.games, plan: data.plan });
   rebuild();
   save();
   emit('store:changed', { games: info.games === undefined ? null : info.games, plan: !!info.plan });
@@ -350,7 +560,7 @@ function commit(info) {
 function save() {
   if (!storage) return;
   try {
-    storage.setItem(STORAGE_KEY, JSON.stringify({ ...stripSnap(data), savedAt: new Date().toISOString() }));
+    storage.setItem(STORAGE_KEY, JSON.stringify({ ...stripSnap(data), schema: SCHEMA, savedAt: new Date().toISOString() }));
   } catch (err) {
     console.error('[store] could not save', err);
     emit('store:error', { message: `Could not save your changes: ${err.message}` });
@@ -366,11 +576,23 @@ const collator = new Intl.Collator('hu', { sensitivity: 'base', numeric: true })
 
 function rebuild() {
   const copy = structuredClone(stripSnap(data));
+  copy.schema = SCHEMA;
   copy.games.sort((a, b) => collator.compare(a.title, b.title));
   snap = deepFreeze(copy);
   byId = new Map(snap.games.map((g) => [g.id, g]));
-  where = new Map();
-  for (const st of snap.plan.stacks) {
+  view1 = deepFreeze(toV1Plan(snap.plan));
+  where1 = whereV1(view1);
+  where2 = locations2(snap.plan);
+  const explicit = snap.plan.board.map((b) => b.game);
+  const placeless = snap.games.filter((g) => !where2.has(g.id)).map((g) => g.id);
+  board = Object.freeze([...explicit, ...placeless]);
+  for (const id of placeless) where2.set(id, Object.freeze({ kind: 'board', index: board.indexOf(id) }));
+}
+
+/** v1 locations from the v1 view (unchanged from schema 1). */
+function whereV1(plan) {
+  const where = new Map();
+  for (const st of plan.stacks) {
     st.rows.forEach((row, r) => {
       const flat = row.flatMap((item) => (item.side ? item.side.map((x) => x.game) : [item.game]));
       let pos = 0;
@@ -389,10 +611,11 @@ function rebuild() {
       });
     });
   }
-  for (const c of snap.plan.cupboard) where.set(c.game, Object.freeze({ kind: 'cupboard', reason: c.reason ?? '' }));
-  for (const [exp, host] of Object.entries(snap.plan.inside)) {
+  for (const c of plan.cupboard) where.set(c.game, Object.freeze({ kind: 'cupboard', reason: c.reason ?? '' }));
+  for (const [exp, host] of Object.entries(plan.inside)) {
     where.set(exp, Object.freeze({ kind: 'inside', hostId: host, host: where.get(host) ?? { kind: 'unplaced' } }));
   }
+  return where;
 }
 
 function deepFreeze(o) {
@@ -402,3 +625,4 @@ function deepFreeze(o) {
   }
   return o;
 }
+
