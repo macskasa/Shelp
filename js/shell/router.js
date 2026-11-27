@@ -9,8 +9,8 @@
 // Back button: every screen change is one history step, so Back walks back through the screens you
 // visited and leaves the app from the first one. An unknown or empty address is rewritten to the
 // default screen *in place* (no extra step), so the first Back from the start screen leaves the app.
-// Panels (core/dom.js showPanel) add their own history steps and are closed before a screen changes.
-import { clear } from '../core/dom.js';
+// Panels (core/dom.js showPanel) add their own history steps; go() closes them before a screen changes.
+import { clear, closePanels } from '../core/dom.js';
 import { emit } from '../core/bus.js';
 import { toHash, resolveRoute, sortScreens } from './routes.js';
 
@@ -39,19 +39,12 @@ export function getScreens() {
 export function go(id, params = {}) {
   const hash = toHash(id, params);
   forward = true;
-  const panelOpen = !!history.state?.shelpPanel;
-  if (location.hash === hash) {
-    // Same address: the browser fires no hashchange, so close open panels ourselves (each one removes
-    // its own history step) and render again.
-    if (panelOpen) for (const dlg of document.querySelectorAll('dialog[open]')) dlg.close();
-    render();
-  } else if (panelOpen) {
-    // Leaving from an open panel: replace the panel's history entry, so Back returns to the screen
-    // the panel was opened on. The hashchange then closes the panels (core/dom.js showPanel).
-    location.replace(hash);
-  } else {
-    location.hash = hash;
-  }
+  // Open panels are closed first and their history entries dropped, so Back from the new screen
+  // returns to the screen the panel was opened on (see core/dom.js closePanels).
+  closePanels(() => {
+    if (location.hash === hash) render(); // same address: the browser fires no hashchange
+    else location.hash = hash;
+  });
 }
 
 /** The screen the address bar is on right now: { id, params }. Unknown addresses give the default screen. */

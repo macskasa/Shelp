@@ -1,0 +1,106 @@
+/* Game details panel. Classes start with game-. Colours come from css/base.css. */
+
+dialog.game-panel {
+  padding: 0;
+  width: min(560px, calc(100vw - 24px));
+  max-height: 90vh;
+  max-height: 90dvh;
+  overflow: hidden;
+}
+dialog.game-panel[open] { display: flex; flex-direction: column; }
+
+/* Phones: bottom sheet */
+@media (max-width: 599px) {
+  dialog.game-panel {
+    width: 100%;
+    max-width: 100%;
+    margin: auto 0 0;
+    border-width: 1px 0 0;
+    border-radius: 16px 16px 0 0;
+  }
+}
+@media (max-width: 599px) and (prefers-reduced-motion: no-preference) {
+  dialog.game-panel[open] { animation: game-up 0.18s ease-out; }
+}
+@keyframes game-up { from { transform: translateY(24px); opacity: 0; } }
+
+.game-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 12px 12px 8px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.game-title { flex: 1; margin: 6px 0 0; font-size: 1.25rem; overflow-wrap: anywhere; }
+.game-close { min-width: 44px; min-height: 44px; padding: 0; line-height: 1; }
+
+.game-body {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 12px 16px calc(20px + env(safe-area-inset-bottom));
+}
+.game-body p, .game-body h3, .game-body h4 { margin: 0; }
+.game-sec { display: flex; flex-direction: column; gap: 8px; }
+.game-sec h3 { font-size: 1rem; }
+.game-sec h4 { font-size: 0.9rem; color: var(--muted); margin-top: 6px; }
+
+.game-facts { display: grid; grid-template-columns: max-content 1fr; gap: 4px 16px; margin: 0; }
+.game-facts dt { color: var(--muted); }
+.game-facts dd { margin: 0; }
+
+.game-label { font-weight: 600; padding: 0; }
+.game-link { color: var(--text); text-decoration: underline; text-underline-offset: 2px; }
+.game-link::after { content: ' ↗'; }
+.game-links { display: flex; flex-wrap: wrap; gap: 4px 16px; }
+.game-links .game-link, .game-bgg .game-link { display: inline-flex; align-items: center; min-height: 40px; }
+
+.game-body input, .game-body select, .game-body textarea {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  box-sizing: border-box;
+}
+.game-body textarea { resize: vertical; }
+
+.game-dims {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr auto 1fr auto;
+  gap: 6px;
+  align-items: center;
+  border: 0;
+  margin: 0;
+  padding: 0;
+}
+.game-dims legend { grid-column: 1 / -1; margin-bottom: 4px; }
+.game-dim { text-align: center; }
+
+.game-missing {
+  padding: 8px 10px;
+  border: 1px solid var(--danger);
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
+}
+.game-missing[hidden] { display: none; }
+.game-hint { color: var(--muted); }
+.game-hint.is-error { color: var(--danger); }
+.game-hint:empty { display: none; }
+
+.game-cats { display: flex; flex-wrap: wrap; gap: 8px; }
+.game-cat {
+  font: inherit;
+  min-height: 44px;
+  padding: 0 18px;
+  border: 2px solid var(--c);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+}
+.game-cat[aria-pressed='true'] { background: var(--c); color: #fff; font-weight: 600; }
+.game-cat[aria-pressed='true']::before { content: '✓ '; }
+
+.game-holds-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.game-holds-list .btn { width: 100%; min-height: 44px; text-align: left; }
