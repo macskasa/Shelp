@@ -1,7 +1,7 @@
 // Part B zoom and pan maths (story C2). Run from the repo root:  node --test
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { MAX_K, limits, clampView, fitWidth, zoomAt, panBy, pinchView, isVisible, reveal, viewBox } from '../js/map/viewport.js';
+import { MAX_K, limits, clampView, fitWidth, zoomAt, panBy, pinchView, isVisible, reveal, viewBox, wheelAction } from '../js/map/viewport.js';
 
 const scene = { width: 214, height: 262 };
 const near = (a, b, what, tol = 1e-6) => assert.ok(Math.abs(a - b) <= tol, `${what}: got ${a}, expected ${b}`);
@@ -82,4 +82,26 @@ test('reveal: no change when visible, otherwise centred at the same zoom', () =>
   const r = reveal(v, far, scene, ...DESK);
   assert.equal(r.k, 8);
   assert.ok(isVisible(r, far, ...DESK), 'now visible');
+});
+
+test('wheel without Ctrl pans both ways; Shift + wheel goes sideways (issue #49)', () => {
+  assert.deepEqual(wheelAction({ deltaX: 0, deltaY: 30 }, 800), { dx: 0, dy: -30 });
+  assert.deepEqual(wheelAction({ deltaX: -12, deltaY: 5 }, 800), { dx: 12, dy: -5 });
+  assert.deepEqual(wheelAction({ deltaY: 3, deltaMode: 1 }, 800), { dx: 0, dy: -48 }, 'lines');
+  assert.deepEqual(wheelAction({ deltaY: 1, deltaMode: 2 }, 800), { dx: 0, dy: -800 }, 'a page');
+  assert.deepEqual(wheelAction({ deltaY: 100, shiftKey: true }, 800), { dx: -100, dy: 0 }, 'shift on deltaY');
+  assert.deepEqual(wheelAction({ deltaX: 100, shiftKey: true }, 800), { dx: -100, dy: 0 }, 'shift on deltaX');
+  // scrolling down shows what is further down the drawing
+  const v = { x: 0, y: 0, k: 6 };
+  const a = wheelAction({ deltaY: 120 }, DESK[1]);
+  assert.ok(panBy(v, a.dx, a.dy, scene, ...DESK).y > 0);
+});
+
+test('Ctrl + wheel zooms at the pointer: a pinch in small steps, a mouse notch capped', () => {
+  const pinchIn = wheelAction({ deltaY: -4, ctrlKey: true }, 800);
+  near(pinchIn.zoom, Math.exp(0.04), 'pinch in');
+  assert.equal(pinchIn.dx, undefined);
+  assert.ok(wheelAction({ deltaY: 4, ctrlKey: true }, 800).zoom < 1, 'pinch out');
+  near(wheelAction({ deltaY: 100, ctrlKey: true }, 800).zoom, Math.exp(-0.2), 'notch out');
+  near(wheelAction({ deltaY: -3, deltaMode: 1, ctrlKey: true }, 800).zoom, Math.exp(0.2), 'line notch in');
 });
