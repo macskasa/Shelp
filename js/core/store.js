@@ -17,7 +17,7 @@
 // backups. Saving, renaming and deleting them are not undo steps; switching to one is.
 import { emit } from './bus.js';
 import {
-  APP, MAX_VERSIONS, SCHEMA, VERSION_NAME_MAX, checkData, checkVersions, knownFrom, validateGame,
+  APP, MAX_VERSIONS, SCHEMA, VERSION_NAME_MAX, checkData, checkVersions, cleanFamily, knownFrom, validateGame,
 } from './schema.js';
 import { ZONES } from './shelves.js';
 import {
@@ -37,6 +37,7 @@ let snap = null; // frozen copy handed out to readers
 let byId = new Map();
 let where2 = new Map();
 let board = []; // ids on the board, in order: moved there explicitly, then games with no place at all
+let families = []; // [{ name, ids }] by name, frozen (B2)
 let seedCache = null;
 let storage = null;
 let depth = 0;
@@ -157,6 +158,14 @@ export function getBoard() {
   return board;
 }
 
+/**
+ * Game families (B2): [{ name, ids }], sorted by name; ids in title order. A family with one game counts.
+ * Frozen. Games without a family are not listed.
+ */
+export function getFamilies() {
+  return families;
+}
+
 /** Everything as one plain (mutable) object – this is the backup file format (schema 2). */
 export function exportData() {
   const out = { app: APP, exportedAt: new Date().toISOString(), ...structuredClone(stripSnap(data)), schema: SCHEMA };
@@ -178,12 +187,15 @@ export const canRedo = () => redoStack.length > 0;
 /**
  * Change fields of a game. `id` cannot change. Throws if the result is invalid.
  * A game on a stack cannot lose its size, and cannot become pizza while it stands or lies on its side.
+ * `family` is cleaned (trimmed, '' → null) and takes the spelling of an existing family that differs
+ * only in letter case ("azul" joins "Azul"). To rename a whole family, use renameFamily.
  */
 export function updateGame(id, patch) {
   const i = indexOf(id);
   if ('id' in patch && patch.id !== id) throw new Error('The id of a game cannot change');
   const next = { ...data.games[i], ...structuredClone(patch) };
   if (next.dims) next.dims = [...next.dims].sort((a, b) => a - b);
+  if ('family' in patch) next.family = sameFamily(patch.family, id);
   check(validateGame(next));
   const onShelf = findBox(data.plan, id)?.box;
   if (next.dims == null && onShelf) {
@@ -201,10 +213,11 @@ export function addGame(fields) {
   const id = nextId();
   const game = {
     id, title: '', bggId: null, bggName: null, type: 'base', dims: null, sizeSource: null,
-    players: null, time: null, age: null, categories: [], inBgg: false, notes: null, pizza: true,
+    players: null, time: null, age: null, categories: [], inBgg: false, notes: null, pizza: true, family: null,
     ...structuredClone(fields),
   };
   game.id = id;
+  game.family = sameFamily(game.family, id);
   if (game.dims) game.dims = [...game.dims].sort((a, b) => a - b);
   check(validateGame(game));
   data.games.push(game);
@@ -225,6 +238,23 @@ export function removeGame(id) {
   }
   data.games.splice(i, 1);
   changed({ games: [id], plan: true });
+}
+
+/**
+ * Rename a family on every game in it: one undo step. Returns how many games changed.
+ * The new name is cleaned like updateGame's; an existing family's name merges the two (any letter case);
+ * null or '' takes the family off all its games. Throws if no game has that family.
+ */
+export function renameFamily(name, newName) {
+  const from = cleanFamily(name);
+  const members = data.games.filter((g) => from != null && g.family === from);
+  if (!members.length) throw new Error(`No game is in the family "${name}"`);
+  const ids = new Set(members.map((g) => g.id));
+  const to = sameFamily(newName, ids);
+  check(validateGame({ ...members[0], family: to }));
+  for (const g of members) g.family = to;
+  changed({ games: [...ids], plan: false });
+  return members.length;
 }
 
 // ---------------------------------------------------------------- writes: plan (v2)
@@ -561,6 +591,16 @@ function check(errors) {
   }
 }
 
+/** A cleaned family name, spelled like an existing family of other games when only the letter case differs. */
+function sameFamily(v, self) {
+  const name = cleanFamily(v);
+  if (typeof name !== 'string') return name;
+  const skip = self instanceof Set ? self : new Set([self]);
+  const key = name.toLocaleLowerCase('hu');
+  const other = data.games.find((g) => !skip.has(g.id) && typeof g.family === 'string' && g.family.toLocaleLowerCase('hu') === key);
+  return other ? other.family : name;
+}
+
 function nextId() {
   const max = Math.max(0, ...data.games.map((g) => Number(/^g(\d+)$/.exec(g.id)?.[1] ?? 0)));
   return `g${String(max + 1).padStart(3, '0')}`;
@@ -638,6 +678,9 @@ function rebuild() {
   const placeless = snap.games.filter((g) => !where2.has(g.id)).map((g) => g.id);
   board = Object.freeze([...explicit, ...placeless]);
   for (const id of placeless) where2.set(id, Object.freeze({ kind: 'board', index: board.indexOf(id) }));
+  const fam = new Map();
+  for (const g of snap.games) if (g.family) fam.set(g.family, [...(fam.get(g.family) ?? []), g.id]);
+  families = deepFreeze([...fam].sort((a, b) => collator.compare(a[0], b[0])).map(([name, ids]) => ({ name, ids })));
 }
 
 function deepFreeze(o) {

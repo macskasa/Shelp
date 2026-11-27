@@ -10,8 +10,9 @@ import * as map from './map/index.js'; // Part B – Bruce
 import * as catalog from './catalog/index.js'; // Part C – Peter
 import * as io from './io/index.js'; // Part A – Stephen
 import * as game from './game/index.js'; // Part A – Stephen
+import * as space from './space/index.js'; // Part C – Peter
 
-const PARTS = { map, catalog, io, game };
+const PARTS = { map, catalog, io, game, space };
 
 async function main() {
   const root = document.getElementById('app-main');

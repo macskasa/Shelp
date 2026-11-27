@@ -14,16 +14,15 @@ Tony is the lead and code reviewer.
   - Bruce: Part B, the map (Opus).
   - Peter: Part C, catalog, search, frame and offline (Sonnet).
 
-## Where things stand (2026-11-27, paused by Adam)
+## Where things stand (2026-11-27)
 
-- **Merged:** everything up to #70. The seed is schema 2 (#69), v1 is gone, and Phase C has Pick up, Turn, and Move through the put panel (#66). Also the "Stored inside" search (#68), the Shelves screen fitting the window (#70), and the sticky header fix (#67, in #69). README "Releases and stories" is current.
-- **Bruce:** placing mode + the board strip is [#72](https://github.com/macskasa/Shelp/pull/72), reviewed and ready to merge; no thread is running. Next: item 5 (stacks; split `js/map/view.js`, about 390 lines, as he offered), then item 6 (drag and drop, only after Adam has tried 4–6 on his phone).
-- **Paused (Adam):** Stephen and Peter have nothing running. Adam chose their next stories: **Stephen → B2 game families**, **Peter → D3 free space at a glance**. Before their briefs, two decisions are still open; ask Adam, don't assume:
-  1. **B2 "far apart" rule.** Story: "I can link games into a family (Azul, 7 Wonders, Mars, Root, Tokaido…). The map can highlight a family, and the rule checker warns when its members end up far apart." Tony's proposal: warn when a family's boxes on shelves aren't on one shelf with no other stack between them. Cupboard and board don't count; a box inside another counts where its host is. On today's plan that gives 0 warnings (families by BGG-name prefix are in one stack or in neighbours: Sky Team N1/N2, SETI M2/M3, Tokaido M3/M4). Alternatives: "same shelf" (looser), "same stack" (3 warnings today).
-  2. **D3, where it shows.** Story: "Each unit shows how much width and height is left. I can see at once where a new box could go." Tony's proposal: a core `js/core/space.js` (free width and tallest gap per unit: 60 | 80 | 60, under the stairs, narrow), then Peter builds a "Free space" screen in a new `js/space/` (Peter); Bruce can put the same numbers on the map later. Alternative: only a map toggle, by Bruce, after drag and drop.
-- **Tony's prep once decided:**
-  - B2: the `family` field (a name or null, one per game) in `schema.js`, the store and CONTEXT section 4; then `docs/part-a5.md` for Stephen: family editing in the game panel with suggestions, the rule, and `suggestSpots` keeping families together. The map highlight (Bruce, `#/map?family=`) and a catalog family filter (Peter) come after.
-  - D3: `js/core/space.js` with tests, then `docs/part-c4.md` for Peter, and ownership in CONTEXT section 7.
+- **Merged:** everything up to #72: Phase C has Pick up, Turn, Move through the put panel, placing mode and the board strip. README "Releases and stories" is current.
+- **Tony's core PR** (`tony/families-space`): the `family` field (schema, store: `getFamilies`, `renameFamily`, the seed with `family: null`), `js/core/space.js` with `tests/core-space.test.mjs`, the `js/space/` placeholder wired in `app.js`, and the briefs `docs/part-a5.md` and `docs/part-c4.md`. It merges first: Stephen's and Peter's branches start from it.
+- **Threads running** (each sends Tony one line when its PR is green):
+  - **Bruce**, `bruce/stacks`: `docs/part-b3.md` item 5 (stacks; split `js/map/view.js`). Also asked to key family warnings by `w.family` in `newProblems` (`js/map/spots.js`). Item 6 (drag and drop) waits until Adam has tried moving games on his phone.
+  - **Stephen**, `stephen/families`: `docs/part-a5.md` (B2).
+  - **Peter**, `peter/free-space`: `docs/part-c4.md` (D3).
+- **After B2:** the map highlight of a family (Bruce, `#/map?family=<name>`) and a family filter in the catalog (Peter). Bruce may show the D3 numbers on the map after drag and drop.
 - **Open issues:** #48 (later).
 - **Later:** D7 moving checklist (on top of Peter's compare), #48 (fewer boxes on top counts as easier to reach: Stephen's rules and `suggestSpots`).
 - **How the team runs:** a Claude Code project since 2026-11-27. The project conversation is Tony. Each piece of developer work is a thread (a new session from `create_session`, one PR each, Opus for Bruce, Sonnet for Stephen and Peter) whose prompt names the brief item, the branch (`outcome_branch`) and asks for a one-line `send_message` to Tony when the PR is green. Tony verifies on GitHub, reviews, and tells Adam one line. The opening messages are in `docs/kickoff.md`.
@@ -39,6 +38,8 @@ Tony is the lead and code reviewer.
 - **Stack names:** they keep their ids. A new stack gets the next free number on its shelf, and "Renumber left to right" is an explicit action.
 - **Thunder Road: Vendetta:** the BGG id in the workbook is a typo (8807105); the seed uses 342070.
 - **Lean workflow:** see CONTEXT sections 8 and 9.
+- **B2 "far apart":** a family warns unless its boxes on shelves are on one stack, or on one shelf with no other stack between them. The board and the cupboard don't count; a box inside another counts where its host is. 0 warnings on today's plan.
+- **D3, where it shows:** Tony's core `js/core/space.js`, and Peter's Free space screen in `js/space/`. Bruce may show the numbers on the map later.
 
 ## How to review a PR
 
