@@ -11,7 +11,8 @@ Your own brief is in `docs/part-a.md`, `docs/part-b.md` or `docs/part-c.md`.
 4. **No build step, no npm packages, no CDNs.** Plain ES modules that GitHub Pages serves as they are. The app must work offline, so nothing may load from another site.
 5. **Phone first, desktop too.** The main devices are two Samsung Galaxy Ultra phones, with the app installed from Chrome. It must also work well on a computer. See **Target devices** in section 2.
 6. **English UI.** Game titles stay as they are (mostly Hungarian). Sizes are in cm.
-7. **Small PRs, with tests for logic.** `node --test` must pass.
+7. **Small PRs, with tests for logic.** The **Tests** check on GitHub must be green.
+8. **Save tokens.** Read diffs, not whole files you already know. Run your own tests quietly. Keep PR descriptions short. Never print `data/seed.json`. Details are in sections 8 and 9.
 
 ## 2. What the app is for
 
@@ -231,7 +232,7 @@ Load your stylesheet once in your module: `loadCss(new URL('./map.css', import.m
 
 | Path | Owner |
 |---|---|
-| `index.html`, `js/app.js`, `js/core/**`, `css/base.css`, `data/**`, `docs/**`, `README.md`, `tests/store.test.mjs`, `tests/fixtures/v5-geometry.json` | **Tony** (lead) |
+| `index.html`, `js/app.js`, `js/core/**`, `css/base.css`, `data/**`, `docs/**`, `README.md`, `.github/**`, `tests/store.test.mjs`, `tests/plan2.test.mjs`, `tests/fixtures/v5-geometry.json` | **Tony** (lead) |
 | `js/io/**`, `js/game/**`, `js/rules/**`, `tests/io*.test.mjs`, `tests/game*.test.mjs`, `tests/rules*.test.mjs`, `tests/fixtures/bgg-*` | **Stephen** (Part A) |
 | `js/map/**`, `tests/map*.test.mjs` | **Bruce** (Part B) |
 | `js/catalog/**`, `js/shell/**`, `sw.js`, `manifest.webmanifest`, `icons/**`, `tests/catalog*.test.mjs`, `tests/shell*.test.mjs` | **Peter** (Part C) |
@@ -245,18 +246,27 @@ The placeholder screens in your folders were written by Tony only to test the wi
 - Build UI with `h()` / `s()`. No `innerHTML` with game data (titles may contain any character).
 - Accessible: real `<button>`s, labels on inputs, enough contrast, tap targets at least 40 px.
 - No `alert()` / `confirm()`. Use a `<dialog class="panel">` opened with `showPanel()`, or `toast()`.
-- Tests: `node:test` files in `tests/`, named `<part>*.test.mjs`. Keep logic (parsing, geometry, filtering) in plain functions without DOM, so it can be tested in Node. Run everything with `node --test` from the repo root.
+- Tests: `node:test` files in `tests/`, named `<part>*.test.mjs`. Keep logic (parsing, geometry, filtering) in plain functions without DOM, so it can be tested in Node.
+- **While working, run only your own tests, quietly:** `node --test --test-reporter=dot tests/map*.test.mjs` (use your prefix: `io`, `game`, `rules`, `map`, `catalog`, `shell`). A failure still prints its details.
+- **The full suite runs on GitHub** for every push (GitHub Actions, "Tests" check). Don't run it by hand or paste test output into chats. If you changed something other parts use, add `tests/store.test.mjs tests/plan2.test.mjs` to your local run.
+- **Big files:** never print `data/seed.json` (about 100 KB) or other large files. Query them with a one-liner, e.g. `node -e "const s=require('./data/seed.json'); console.log(s.games.length)"`.
 - Run locally: `python3 -m http.server 8000` in the repo root, then open **http://localhost:8000/?nosw**. The `?nosw` switch removes the service worker; without it you see your own changes one reload late. Reset local data from the browser console: `localStorage.clear()`.
 
 ## 9. Workflow
 
-1. Branch from `main`: `stephen/<topic>`, `bruce/<topic>`, `peter/<topic>`.
-2. Commit in small steps with clear messages.
-3. Push and open a PR into `main` using the template. Fill in **What**, **How I tested**, and **Requests for Tony** if you need anything in shared files.
-4. Tell Adam the PR number. Adam tells Tony, Tony reviews, and Adam merges (or tells Tony to merge).
-5. After a merge, pull `main` before starting the next PR.
+1. **Start of a round:** `git pull`, then read only what changed in the docs since your last round: the **Changes** list at the bottom of this file, and `git log --oneline -- docs/` / `git diff <your last commit>..HEAD -- docs/`. Don't re-read whole files you already know.
+2. Branch from `main`: `stephen/<topic>`, `bruce/<topic>`, `peter/<topic>`. Commit in small steps with clear messages.
+3. **Push, then check the Tests run** (it takes about a minute):
+   `gh api repos/macskasa/shelp/commits/$(git rev-parse HEAD)/check-runs --jq '.check_runs[] | "\(.name): \(.status) \(.conclusion)"'`
+   If it is red, the log is on GitHub (Actions tab). Fix it before asking for a review.
+4. Open a PR into `main` with the template. **About 15 lines in total.**
+5. Tell Adam **one line**: "PR #n is ready". Tony reviews **on the PR only**. When Adam says "Tony reviewed #n", read the review yourself:
+   `gh api repos/macskasa/shelp/pulls/<n>/reviews --jq '.[-1].body'` and `gh api repos/macskasa/shelp/issues/<n>/comments --jq '.[-1].body'`
+   Adam merges.
+6. After a merge, pull `main` before starting the next PR.
+7. **Fresh chat per phase.** When your brief is done, Adam may start a new chat for the next one. Everything you need is in the repo: this file, your brief, and the PR history.
 
-**Definition of done:** the stories' acceptance criteria are met, it works at 384 and 412 px wide (portrait and landscape) and on desktop Chrome, the Android back gesture behaves, there are no console errors, `node --test` passes, only your files changed, and the PR description says how you tested it.
+**Definition of done:** the stories' acceptance criteria are met, it works at 384 and 412 px wide (portrait and landscape) and on desktop Chrome, the Android back gesture behaves, there are no console errors, the **Tests** check is green, only your files changed, and the PR description says how you tested it.
 
 ## 10. Glossary
 
@@ -282,3 +292,4 @@ The placeholder screens in your folders were written by Tony only to test the wi
 - 2026-11-27 – **No missing sizes on shelves** (section 4): a game with `dims: null` can never be on a stack; the store and the schema check enforce it (Adam's decision).
 - 2026-11-27 – the CSV export (`js/io/export.js`) may also use `layoutStack()` read-only (section 6).
 - 2026-11-27 – **Schema 2 (Phase A):** games on games, bridges, which side is up, the pizza flag, the board, undo/redo, the final block/warn rules (section 3). New core modules `geometry.js` and `plan2.js`, v2 reads and writes in the store, and `describeLocation2`. The v1 reads keep working during Phase B. Briefs: `docs/part-a3.md`, `docs/part-b2.md`, `docs/part-c2.md`.
+- 2026-11-27 – **Leaner workflow:** the full test suite runs on GitHub for every push ("Tests" check), and locally you run only your own tests with the dot reporter (section 8). Reviews live only on the PR, and messages through Adam are one line. Read diffs at the start of a round, keep PR descriptions short, never print `seed.json`, and use a fresh chat per phase (section 9). New `docs/kickoff.md` holds the opening messages.
