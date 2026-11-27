@@ -81,3 +81,11 @@
 
 /* Export */
 .io-wrap { flex-wrap: wrap; }
+
+/* Game families (B2) */
+.io-fam-list { display: flex; flex-direction: column; gap: 10px; margin-top: 8px; }
+.io-fam-group input[type='text'] { width: 100%; min-height: 44px; box-sizing: border-box; }
+.io-fam-row { cursor: pointer; }
+.io-fam-names { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.io-fam-open { text-align: left; overflow-wrap: anywhere; }
+.io-section details > summary { min-height: 44px; display: flex; align-items: center; font-weight: 600; cursor: pointer; }

@@ -147,3 +147,21 @@ dialog.game-panel[open] { display: flex; flex-direction: column; }
 .game-pick-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
 .game-pick-btn { width: 100%; min-height: 44px; text-align: left; display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 2px; overflow-wrap: anywhere; }
 .game-pick-bgg { font-size: 0.85rem; }
+
+/* Family (B2): field, suggestion chips, "Also in …", rename */
+.game-body input[type='text'].game-family-input { width: 100%; }
+.game-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.game-chips[hidden], .game-also[hidden] { display: none; }
+.game-chip {
+  min-height: 40px; padding: 4px 14px; border: 1px solid var(--accent); border-radius: 999px;
+  background: transparent; color: var(--text); font: inherit; cursor: pointer; overflow-wrap: anywhere;
+}
+.game-chip::before { content: '+ '; }
+.game-also { margin: 8px 0 0; line-height: 1.2; }
+.game-also-link {
+  min-height: 40px; padding: 0 2px; border: 0; background: none; color: var(--text); font: inherit;
+  text-decoration: underline; text-underline-offset: 2px; cursor: pointer; text-align: left;
+}
+.game-rename { min-height: 44px; margin-top: 8px; }
+.game-family-rename { display: flex; flex-direction: column; gap: 8px; }
+.game-family-rename input { width: 100%; min-height: 44px; box-sizing: border-box; }

@@ -45,11 +45,11 @@ test('sizeText: largest first, no unit, empty when missing', () => {
 test('catalog: the columns of the workbook, one row per game, sorted by title', async () => {
   await fresh();
   const rows = catalog();
-  assert.deepEqual(rows[0], ['Title', 'BGG', 'Box size (cm)', 'Players', 'Play time (min)', 'Age', 'BGG name', 'Type', 'Location', 'Box size from', 'In BGG collection', 'Notes']);
+  assert.deepEqual(rows[0], ['Title', 'BGG', 'Box size (cm)', 'Players', 'Play time (min)', 'Age', 'BGG name', 'Type', 'Location', 'Box size from', 'In BGG collection', 'Notes', 'Family']);
   assert.deepEqual(rows[0], CATALOG_HEADER);
   assert.equal(rows.length - 1, 204);
   assert.deepEqual(rows.slice(1).map((r) => r[0]), store.getGames().map((g) => g.title));
-  assert.ok(rows.every((r) => r.length === 12));
+  assert.ok(rows.every((r) => r.length === 13));
 });
 
 test('catalog: values', async () => {
@@ -80,10 +80,10 @@ test('acceptance: the plan file has exactly 204 rows, every game once', async ()
   await fresh();
   const rows = plan();
   assert.deepEqual(rows[0], PLAN_HEADER);
-  assert.deepEqual(rows[0], ['Shelf', 'Spot', 'Stack (left → right)', 'Level / position (1 = bottom)', 'Row / pile', 'Game', 'Box size (cm)', 'Categories', 'Notes']);
+  assert.deepEqual(rows[0], ['Shelf', 'Spot', 'Stack (left → right)', 'Level / position (1 = bottom)', 'Row / pile', 'Game', 'Box size (cm)', 'Categories', 'Family', 'Notes']);
   const body = rows.slice(1);
   assert.equal(body.length, 204);
-  assert.ok(body.every((r) => r.length === 9));
+  assert.ok(body.every((r) => r.length === 10));
   assert.deepEqual(body.map((r) => r[5]).sort(), store.getGames().map((g) => g.title).sort());
 });
 
@@ -113,9 +113,9 @@ test('plan: spot, level, row / pile and notes', async () => {
   assert.equal(first('N1')[1], 'Easy');
 
   // notes only on the first row of the stack
-  assert.equal(first('T1')[8], 'Party games; 2 deep, long side out');
-  assert.ok(inStack('T1').slice(1).every((r) => r[8] === ''));
-  assert.equal(first('B6')[8], 'Sits across the 140 cm joint, low enough to pass under the bracket; 2 deep');
+  assert.equal(first('T1')[9], 'Party games; 2 deep, long side out');
+  assert.ok(inStack('T1').slice(1).every((r) => r[9] === ''));
+  assert.equal(first('B6')[9], 'Sits across the 140 cm joint, low enough to pass under the bracket; 2 deep');
 
   // levels count from the bottom, and a side-by-side group shares one level
   assert.deepEqual(inStack('B3').map((r) => r[3]), [1, 2, 3, 4, 4]);
@@ -149,7 +149,7 @@ test('plan: games stored inside a box come right after their host', async () => 
   assert.equal(zero[5], 'Lairs: Box Zero');
   assert.equal(zero[4], 'inside the base box');
   assert.equal(zero[6], '—');
-  assert.equal(zero[8], 'stored inside the Lairs box');
+  assert.equal(zero[9], 'stored inside the Lairs box');
   assert.deepEqual(zero.slice(0, 4), body[i].slice(0, 4), 'same shelf, spot, stack and level as the host');
   assert.equal(body.filter((r) => r[4] === 'inside the base box').length, 7);
 });
@@ -157,7 +157,7 @@ test('plan: games stored inside a box come right after their host', async () => 
 test('plan: the cupboard has its reason, and games on the board come last', async () => {
   await fresh();
   const cupboard = find(plan(), 'Twilight Struggle (Deluxe Edition)', 5);
-  assert.deepEqual([cupboard[0], cupboard[1], cupboard[2], cupboard[8]], ['Cupboard', 'Cupboard', '', "No room left – and it's a 5-hour game"]);
+  assert.deepEqual([cupboard[0], cupboard[1], cupboard[2], cupboard[9]], ['Cupboard', 'Cupboard', '', "No room left – and it's a 5-hour game"]);
 
   const id = store.addGame({ title: 'Fantasy Fluxx' });
   const rows = plan();
@@ -172,7 +172,7 @@ test('plan: a game taken out of its box moves to the cupboard rows', async () =>
   const zero = store.getGames().find((g) => g.title === 'Lairs: Box Zero');
   store.moveToCupboard(zero.id, 'Taken out of the Lairs box');
   const row = find(plan(), 'Lairs: Box Zero', 5);
-  assert.deepEqual([row[0], row[4], row[6], row[8]], ['Cupboard', '', '', 'Taken out of the Lairs box']);
+  assert.deepEqual([row[0], row[4], row[6], row[9]], ['Cupboard', '', '', 'Taken out of the Lairs box']);
 });
 
 test('both files survive a round trip through the CSV parser', async () => {
@@ -273,4 +273,18 @@ test('plan: the board comes last (moved games in order, then games with no place
   ]);
   assert.equal(rows[4][4], 'inside the base box');
   assert.equal(rows.length, 6, 'every game once');
+});
+
+test('Family column (B2): in the catalog and in the plan, after the categories', async () => {
+  await fresh();
+  const [azul, kids] = ['Azul', 'Azul Kids'].map((t) => store.getGames().find((g) => g.title === t).id);
+  store.batch(() => { store.updateGame(azul, { family: 'Azul' }); store.updateGame(kids, { family: 'Azul' }); });
+  const cat = catalog();
+  const c = col(cat[0], 'Family');
+  assert.equal(find(cat, 'Azul')[c], 'Azul');
+  assert.equal(find(cat, 'Ark Nova')[c], '');
+  const rows = plan();
+  assert.equal(col(rows[0], 'Family'), col(rows[0], 'Categories') + 1);
+  assert.equal(find(rows, 'Azul Kids', col(rows[0], 'Game'))[col(rows[0], 'Family')], 'Azul');
+  assert.ok(rows.every((r) => r.length === PLAN_HEADER.length));
 });
