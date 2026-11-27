@@ -6,7 +6,7 @@ import { CATEGORIES } from '../core/categories.js';
 import { formatDims } from '../core/format.js';
 import {
   cleanTitle, parseDims, dimsToInputs, sameDims, textOrNull, sizeSources, toggleCategory,
-  hostChoices, takenOutReason, bggVersions, bggSearch, setPizza, pizzaStamp,
+  hostChoices, hostResults, foldText, takenOutReason, bggVersions, bggSearch, setPizza, pizzaStamp,
 } from './logic.js';
 
 let uniq = 0;
@@ -175,41 +175,83 @@ export function pizzaSection(id) {
 // ---------------------------------------------------------------- A5: inside another box
 
 export function insideSection(id, openOther) {
-  const selectId = nextId('inside');
+  const searchId = nextId('inside');
   const note = h('p', { class: 'game-hint' });
-  const select = h('select', { id: selectId, onchange: choose });
+  const current = h('p', { class: 'game-inside-now' });
+  const search = h('input', {
+    type: 'search', id: searchId, autocomplete: 'off', autocapitalize: 'off', spellcheck: 'false', enterkeyhint: 'go',
+    placeholder: 'Type a title or BGG name', oninput: () => render(), onkeydown: keys,
+  });
+  const heading = h('p', { class: 'game-hint', role: 'status' });
+  const list = h('ul', { class: 'game-pick-list' });
+  const more = h('p', { class: 'game-hint', role: 'status' });
+  const searchBox = h('div', { class: 'game-pick' }, h('label', { class: 'game-label', for: searchId }, 'Search boxes'), search, heading, list, more);
   const holds = h('div', { class: 'game-holds' });
   const title = (gid) => store.getGame(gid)?.title ?? gid;
+  let shown = []; // the results on screen, first one = what Enter picks
+  let key = '';   // what the list shows now: a re-render with the same content keeps the buttons (a tap must not lose its button)
 
-  function choose() {
-    const hostId = select.value;
-    try {
-      if (hostId) store.setInside(id, hostId);
-      else {
-        const loc = store.locate2(id);
-        if (loc.kind === 'inside') store.moveToCupboard(id, takenOutReason(title(loc.hostId)));
-      }
-    } catch (err) {
-      toast(err.message, { error: true });
-      el.refresh(store.getGame(id)); // put the picker back to what is really stored
+  function keys(e) {
+    if (e.key === 'Escape') {
+      e.preventDefault(); // leaves the field; a second Esc closes the panel
+      e.stopPropagation();
+      search.blur();
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (shown[0]) pick(shown[0].id);
     }
   }
 
-  const el = {
+  function pick(hostId) {
+    try {
+      store.setInside(id, hostId);
+      search.value = '';
+    } catch (err) {
+      toast(err.message, { error: true });
+    }
+    render();
+  }
+
+  function takeOut() {
+    const loc = store.locate2(id);
+    if (loc.kind !== 'inside') return;
+    try {
+      store.moveToCupboard(id, takenOutReason(title(loc.hostId)));
+    } catch (err) {
+      toast(err.message, { error: true });
+    }
+  }
+
+  function render() {
+    const choice = hostChoices(id, store.getGames(), store.getPlan2());
+    searchBox.hidden = !!choice.blocked;
+    note.textContent = choice.blocked ?? '';
+    if (choice.blocked) { shown = []; key = ''; return; }
+    const r = hostResults(store.getGame(id), choice.hosts, search.value);
+    shown = r.results;
+    const next = [r.more, r.likely, ...shown.map((g) => `${g.id}|${g.title}|${g.bggName}`)].join('\n');
+    if (next === key) return;
+    key = next;
+    heading.textContent = r.likely ? 'Likely boxes' : (!shown.length && foldText(search.value) ? 'No box found.' : '');
+    clear(list).append(...shown.map((g) => h('li', {},
+      h('button', { type: 'button', class: 'btn game-pick-btn', onclick: () => pick(g.id) },
+        h('span', { class: 'game-pick-title' }, g.title),
+        g.bggName && g.bggName !== g.title ? h('span', { class: 'game-pick-bgg muted' }, g.bggName) : null))));
+    more.textContent = r.more ? `${r.more} more. Type more letters to narrow it down.` : '';
+  }
+
+  return {
     el: h('section', { class: 'game-sec' },
-      h('h3', {}, 'Stored inside another box?'),
-      h('label', { class: 'game-label', for: selectId }, 'Stored inside'),
-      select, note, holds),
+      h('h3', {}, 'Stored inside another box?'), current,
+      note, searchBox, holds),
     refresh() {
-      const games = store.getGames();
       const plan = store.getPlan2();
-      const choice = hostChoices(id, games, plan);
-      clear(select).append(
-        h('option', { value: '' }, 'Not inside another box'),
-        ...(choice.hosts ?? []).map((g) => h('option', { value: g.id }, g.title)));
-      select.value = plan.inside[id] ?? '';
-      select.disabled = !!choice.blocked;
-      note.textContent = choice.blocked ?? '';
+      const hostId = plan.inside[id];
+      clear(current).append(...(hostId ? [
+        h('span', {}, 'Stored inside '), h('strong', {}, title(hostId)), ' ',
+        h('button', { type: 'button', class: 'btn game-takeout', onclick: takeOut }, 'Take out'),
+      ] : [h('span', { class: 'muted' }, 'Not inside another box.')]));
+      render();
 
       const ids = Object.entries(plan.inside).filter(([, host]) => host === id).map(([gid]) => gid);
       ids.sort((a, b) => title(a).localeCompare(title(b), 'hu'));
@@ -220,7 +262,6 @@ export function insideSection(id, openOther) {
       ] : []));
     },
   };
-  return el;
 }
 
 // ---------------------------------------------------------------- notes

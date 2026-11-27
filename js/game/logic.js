@@ -89,6 +89,60 @@ export function hostChoices(gameId, games, plan) {
   return { hosts: games.filter((g) => g.id !== gameId && !plan.inside[g.id]) };
 }
 
+/** Lower case, accents removed, anything but letters and digits turned into single spaces: "Mars terraformálása" -> "mars terraformalasa". */
+export const foldText = (text) => String(text ?? '')
+  .normalize('NFD').replace(/\p{M}+/gu, '').toLowerCase()
+  .replace(/ß/g, 'ss').replace(/ø/g, 'o').replace(/đ/g, 'd').replace(/ł/g, 'l')
+  .replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
+
+/** How well one folded text matches the folded words: 0 = starts with the whole query, 1 = a word starts with each word, 2 = contains, null = no. */
+function textRank(folded, query, words) {
+  if (!folded) return null;
+  if (folded.startsWith(query)) return 0;
+  const parts = folded.split(' ');
+  if (words.every((w) => parts.some((p) => p.startsWith(w)))) return 1;
+  return words.every((w) => folded.includes(w)) ? 2 : null;
+}
+
+/**
+ * The boxes whose title or BGG name matches the typed text (case and accents ignored, every typed word must match),
+ * best first: title starts with it, BGG name starts with it, words start with it, contains it. Ties keep the title order.
+ * An empty query matches nothing.
+ */
+export function matchHosts(hosts, text) {
+  const query = foldText(text);
+  if (!query) return [];
+  const words = query.split(' ');
+  const ranked = [];
+  for (const g of hosts) {
+    const a = textRank(foldText(g.title), query, words);
+    const b = textRank(foldText(g.bggName), query, words);
+    const best = [a === null ? null : a * 2, b === null ? null : b * 2 + 1].filter((r) => r !== null);
+    if (best.length) ranked.push({ g, rank: Math.min(...best) });
+  }
+  ranked.sort((x, y) => x.rank - y.rank || x.g.title.localeCompare(y.g.title, 'hu'));
+  return ranked.map((r) => r.g);
+}
+
+/** Base games whose BGG name starts the expansion's BGG name ("Terraforming Mars" for "Terraforming Mars: Prelude"), longest name first. Nothing for a base game. */
+export function likelyHosts(game, hosts) {
+  const name = foldText(game?.bggName);
+  if (game?.type !== 'expansion' || !name) return [];
+  return hosts
+    .filter((g) => {
+      const base = foldText(g.bggName);
+      return g.type === 'base' && base && (name === base || name.startsWith(`${base} `));
+    })
+    .sort((a, b) => foldText(b.bggName).length - foldText(a.bggName).length || a.title.localeCompare(b.title, 'hu'));
+}
+
+/** The results to show for the "Stored inside" search: { results (at most `limit`), more (how many did not fit), likely (true: the empty-search suggestions) }. */
+export function hostResults(game, hosts, text, limit = 8) {
+  const typed = foldText(text) !== '';
+  const all = typed ? matchHosts(hosts, text) : likelyHosts(game, hosts);
+  return { results: all.slice(0, limit), more: Math.max(0, all.length - limit), likely: !typed && all.length > 0 };
+}
+
 /** The cupboard reason used when a game is taken out of its host box. */
 export const takenOutReason = (hostTitle) => `Taken out of the ${hostTitle} box`;
 
