@@ -5,11 +5,19 @@
 //   Spot = { kind: 'stack', target: { stackId, row, on, index, up, rot }, text, warnings }     -> store.placeBox(gameId, target)
 //        | { kind: 'new-stack', zone, x, up, rot, text, warnings }                            -> createStack(zone, { x }) + placeBox, in one batch
 //   text      "Bottom shelf · stack B3 · on Takenokolor · flat"   "Narrow shelf · new stack at 70 cm"
-//   warnings  only the NEW ones: what the placing adds to that stack (checker warnings, severity 'warn')
+//   warnings  only the NEW ones: what the placing adds to the stack the game goes to (checker warnings, severity 'warn').
+//             Not included: when the game is already on a shelf, taking it out can add a warning in the stack it LEAVES
+//             (the boxes settle). That one is the same for every spot, is never a block, and a preview shows it anyway.
 //
 // Only spots without a new blocking problem are returned. Ranking (best first):
-//   1. fewer new warnings   2. easy to reach   3. less overhang on what it rests on   4. an existing stack before a new one
-//   5. the lower stack (smallest height after placing)   6. the least turned (flat first), then shelf order, left to right
+//   1. fewer new warnings
+//   2. easy to reach
+//   3. least extra shelf length: how much wider the stack gets (a new stack counts its full width), because shelf length
+//      is what runs out; on top of a box, within the 1 cm rule, costs none
+//   4. an existing stack before a new one
+//   5. less overhang on what it rests on
+//   6. the lower stack (smallest height after placing, topper included)
+//   7. the least turned (flat first), then shelf order, left to right
 //
 // Every spot is tried on a copy of the one stack it changes, with detach() and insertOn() from js/core/plan2.js
 // (the only place outside the store allowed to call them: store.preview thousands of times would be too slow).
@@ -118,12 +126,14 @@ export function suggestSpots(plan, games, gameId, { limit = 5 } = {}) {
       overhang = side + deep;
     }
     const text = describe(layout.rows);
+    const extra = isNew ? layout.w : Math.max(0, layout.w - info(st).layout.w); // how much longer the stack gets on the shelf
     spots.push({
       rank: {
         warnings: fresh.length,
         hard: isEasy(work.zone, work.x + me.x, me.w) ? 0 : 1,
-        overhang: Math.round(overhang * 100) / 100,
+        extra: Math.round(extra * 100) / 100,
         isNew: isNew ? 1 : 0,
+        overhang: Math.round(overhang * 100) / 100,
         height: layout.h,
         turned: (way.up === 's' ? 0 : 2) + (way.rot ? 1 : 0),
         zone: ZONE_ORDER.indexOf(work.zone),
@@ -213,7 +223,7 @@ export function suggestSpots(plan, games, gameId, { limit = 5 } = {}) {
     }
   }
 
-  const order = ['warnings', 'hard', 'overhang', 'isNew', 'height', 'turned', 'zone', 'x', 'id', 'row', 'at', 'index'];
+  const order = ['warnings', 'hard', 'extra', 'isNew', 'overhang', 'height', 'turned', 'zone', 'x', 'id', 'row', 'at', 'index'];
   spots.sort((a, b) => {
     for (const k of order) {
       const [p, q] = [a.rank[k], b.rank[k]];
