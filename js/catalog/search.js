@@ -4,7 +4,7 @@
 // so "ejszaka" finds "A rettegés éjszakája", "fold" finds "Föld és víz" and "dune" finds "Dűne".
 // A search matches when every word you typed is found in the title or in the BGG name.
 // Ranking (lower = better): exact title, title starts with it, every word starts a word of the
-// title, every word is somewhere in the title, then the same two steps over title + BGG name.
+// title, every word is somewhere in the title, then the same two steps over title + BGG name + family name.
 
 const EXTRA = { ß: 'ss', æ: 'ae', œ: 'oe', ø: 'o', đ: 'd', ł: 'l', ı: 'i' };
 
@@ -23,7 +23,10 @@ export function fold(text) {
 export function searchKey(game) {
   const title = fold(game.title);
   const bgg = game.bggName ? fold(game.bggName) : '';
-  return { title, bgg: bgg === title ? '' : bgg };
+  const key = { title, bgg: bgg === title ? '' : bgg };
+  const family = game.family ? fold(game.family) : '';
+  if (family) key.family = family; // "Mars" finds the games of the family "Terraforming Mars"
+  return key;
 }
 
 /** What you typed, ready for matchScore(). An empty query (or only punctuation) has no tokens. */
@@ -43,7 +46,7 @@ export function matchScore(key, query) {
   if (title.startsWith(text)) return 1;
   if (tokens.every((t) => startsWord(title, t))) return 2;
   if (tokens.every((t) => title.includes(t))) return 3;
-  const both = key.bgg ? `${title} ${key.bgg}` : title;
+  const both = [title, key.bgg, key.family].filter(Boolean).join(' ');
   if (tokens.every((t) => startsWord(both, t))) return 4;
   if (tokens.every((t) => both.includes(t))) return 5;
   return null;

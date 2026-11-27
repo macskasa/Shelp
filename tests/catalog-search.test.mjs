@@ -214,3 +214,11 @@ test('moveHint: a game without a box size cannot be moved, the hint says what to
   assert.equal(moveHint(without), 'Add a box size first');
   assert.ok(without, 'the seed has games without a size');
 });
+
+test('the family name is part of the search key', () => {
+  const key = searchKey({ title: 'A Mars terraformálása', family: 'Terraforming Mars' });
+  assert.equal(key.family, 'terraforming mars');
+  assert.equal(matchScore(key, parseQuery('terraforming')), 4);
+  assert.equal(matchScore(key, parseQuery('mars terraforming')), 4);
+  assert.equal(matchScore(searchKey({ title: 'Azul' }), parseQuery('terraforming')), null);
+});

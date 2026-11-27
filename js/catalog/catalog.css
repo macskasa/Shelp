@@ -51,7 +51,8 @@
 }
 
 .cat-field { display: grid; gap: 4px; font-size: 0.9rem; color: var(--muted); }
-.cat-field select { min-height: 40px; color: var(--text); width: 100%; }
+.cat-field { min-width: 0; }
+.cat-field select { min-height: 40px; color: var(--text); width: 100%; min-width: 0; text-overflow: ellipsis; }
 .cat-check { display: flex; align-items: center; gap: 8px; min-height: 40px; }
 .cat-check input { width: 20px; height: 20px; margin: 0; }
 .cat-clear { justify-self: end; min-height: 40px; }
@@ -100,6 +101,9 @@
   color: var(--muted);
   font-size: 0.9rem;
 }
+.cat-family { overflow-wrap: anywhere; }
+.cat-family:empty { display: none; }
+.cat-family::before { content: '▸ '; opacity: 0.6; }
 .cat-chips { display: flex; flex-wrap: wrap; gap: 4px; }
 .cat-chips:empty { display: none; }
 .cat-chip {
@@ -136,7 +140,7 @@
 
   .cat-sortbar, .cat-row {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 210px 100px 100px 170px;
+    grid-template-columns: minmax(0, 1fr) 170px 210px 100px 100px 170px;
     gap: 12px;
     align-items: center;
     padding: 8px 16px;
@@ -158,10 +162,13 @@
 
   .cat-meta { display: contents; }
   .cat-title { grid-column: 1; grid-row: 1; }
-  .cat-chips { grid-column: 2; grid-row: 1; }
-  .cat-players { grid-column: 3; grid-row: 1; }
-  .cat-time { grid-column: 4; grid-row: 1; }
-  .cat-where { grid-column: 5; grid-row: 1; text-align: left; font-size: inherit; }
+  .cat-family { grid-column: 2; grid-row: 1; }
+  .cat-family::before { content: none; }
+  .cat-family:empty { display: block; }
+  .cat-chips { grid-column: 3; grid-row: 1; }
+  .cat-players { grid-column: 4; grid-row: 1; }
+  .cat-time { grid-column: 5; grid-row: 1; }
+  .cat-where { grid-column: 6; grid-row: 1; text-align: left; font-size: inherit; }
   .cat-players, .cat-time { color: var(--text); font-variant-numeric: tabular-nums; }
   .cat-unit { display: none; }
   .cat-row { min-height: 48px; }
@@ -176,3 +183,6 @@
 }
 
 .cat-pizza { margin-left: 0.35em; font-size: 0.85em; white-space: nowrap; }
+
+/* ---- family: the "Show on map" button above the list ---------------------------------------- */
+.cat-family-map { justify-self: start; min-height: 44px; }

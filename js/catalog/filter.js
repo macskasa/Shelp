@@ -22,12 +22,13 @@ export const PIZZA_OPTIONS = [
   ['yes', 'Pizza'],
   ['no', 'Not pizza'],
 ];
+export const NO_FAMILY = '-'; // state.family / URL value for "No family"; null = any family
 export const SORT_KEYS = ['title', 'players', 'time', 'where'];
 
 export const MAX_QUERY = 80;
 
 export const DEFAULT_STATE = Object.freeze({
-  q: '', cats: [], players: null, time: null, where: 'any', pizza: 'any', sizeMissing: false, sort: 'title', dir: 'asc',
+  q: '', cats: [], players: null, time: null, where: 'any', pizza: 'any', family: null, sizeMissing: false, sort: 'title', dir: 'asc',
 });
 
 // ---------------------------------------------------------------- entries
@@ -78,6 +79,7 @@ export function stateFromParams(params = {}) {
     time: TIME_STEPS.includes(time) ? time : null,
     where: whereFromParam(params.where),
     pizza: params.pizza === '1' ? 'yes' : params.pizza === '0' ? 'no' : 'any',
+    family: String(params.family ?? '').trim().slice(0, MAX_QUERY) || null,
     sizeMissing: params.nosize === '1',
     sort: SORT_KEYS.includes(params.sort) ? params.sort : 'title',
     dir: params.dir === 'desc' ? 'desc' : 'asc',
@@ -94,6 +96,7 @@ export function stateToParams(state) {
   if (state.where !== 'any') p.where = state.where;
   if (state.pizza === 'yes') p.pizza = '1';
   if (state.pizza === 'no') p.pizza = '0';
+  if (state.family != null) p.family = state.family;
   if (state.sizeMissing) p.nosize = '1';
   if (state.sort !== 'title') p.sort = state.sort;
   if (state.dir !== 'asc') p.dir = state.dir;
@@ -103,7 +106,24 @@ export function stateToParams(state) {
 /** How many filters are switched on (the sort and the search text do not count: the search field is always visible). */
 export function activeFilterCount(state) {
   return (state.cats.length ? 1 : 0) + (state.players != null) + (state.time != null)
-    + (state.where !== 'any') + (state.pizza !== 'any' ? 1 : 0) + (state.sizeMissing ? 1 : 0);
+    + (state.where !== 'any') + (state.pizza !== 'any' ? 1 : 0) + (state.family != null ? 1 : 0) + (state.sizeMissing ? 1 : 0);
+}
+
+/** A family that no longer exists (an old link) falls back to "Any". families = [{ name }] from store.getFamilies(). */
+export function knownFamily(state, families) {
+  const f = state.family;
+  if (f == null || f === NO_FAMILY || families.some((x) => x.name === f)) return state;
+  return { ...state, family: null };
+}
+
+/** The Family select's options as [value, label, …]: Any, "Azul (3)", No family. */
+export function familyOptions(families) {
+  return ['', 'Any', ...families.flatMap((f) => [f.name, `${f.name} (${f.ids.length})`]), NO_FAMILY, 'No family'];
+}
+
+/** The family the list shows right now (a real one, not "Any" or "No family"), else null: "Show on map" needs it. */
+export function shownFamily(state) {
+  return state.family != null && state.family !== NO_FAMILY ? state.family : null;
 }
 
 // ---------------------------------------------------------------- filtering
@@ -137,6 +157,7 @@ export function matches(entry, state) {
   if (state.time != null && !(g.time && g.time.max <= state.time)) return false; // the whole range fits
   if (state.where !== 'any' && entry.kind !== state.where) return false;
   if (state.pizza !== 'any' && (g.pizza === true) !== (state.pizza === 'yes')) return false;
+  if (state.family != null && (state.family === NO_FAMILY ? g.family != null : g.family !== state.family)) return false;
   if (state.sizeMissing && g.dims !== null) return false;
   return true;
 }

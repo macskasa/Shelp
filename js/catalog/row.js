@@ -27,6 +27,7 @@ export function buildRow(entry, onOpen) {
         bggName && h('span', { class: 'cat-bgg' }, bggName)),
       h('span', { class: 'cat-where' }, entry.where),
       h('span', { class: 'cat-meta' },
+        h('span', { class: 'cat-family', title: g.family ? `Family: ${g.family}` : null }, g.family ?? ''),
         h('span', { class: 'cat-chips' }, chips),
         h('span', { class: 'cat-players' }, players ? [players, h('span', { class: 'cat-unit' }, ' players')] : NONE),
         h('span', { class: 'cat-time' }, time ? [time, h('span', { class: 'cat-unit' }, ' min')] : NONE))));

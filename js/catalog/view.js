@@ -5,12 +5,12 @@
 import { h, loadCss } from '../core/dom.js';
 import { on } from '../core/bus.js';
 import * as store from '../core/store.js';
-import { openGame } from '../core/contracts.js';
+import { openGame, showFamily } from '../core/contracts.js';
 import { CATEGORIES, OTHER } from '../core/categories.js';
 import { buildRow } from './row.js';
 import {
-  TIME_STEPS, WHERE_OPTIONS, PIZZA_OPTIONS, activeFilterCount, countLabel, makeEntry, matches,
-  sortEntries, stateFromParams, stateToParams,
+  TIME_STEPS, WHERE_OPTIONS, PIZZA_OPTIONS, activeFilterCount, countLabel, familyOptions, knownFamily, makeEntry, matches,
+  shownFamily, sortEntries, stateFromParams, stateToParams,
 } from './filter.js';
 
 loadCss(new URL('./catalog.css', import.meta.url));
@@ -21,7 +21,8 @@ const SORT_COLUMNS = [['title', 'Title'], ['players', 'Players'], ['time', 'Time
 
 /** Mount the catalog into el. Returns { setParams(params), destroy() }. */
 export function mountCatalog(el, params) {
-  let state = stateFromParams(params);
+  let families = store.getFamilies();
+  let state = knownFamily(stateFromParams(params), families);
   let filtersOpen = activeFilterCount(state) > 0; // phones: the filter panel is folded away until needed
   let entries = [];
   let visible = []; // the entries on screen, in order: Enter opens the first one
@@ -49,6 +50,7 @@ export function mountCatalog(el, params) {
     (v) => setState({ time: v ? Number(v) : null }));
   const whereSel = select(WHERE_OPTIONS.flat(), (v) => setState({ where: v }));
   const pizzaSel = select(PIZZA_OPTIONS.flat(), (v) => setState({ pizza: v }));
+  const familySel = select(familyOptions([]), (v) => setState({ family: v === '' ? null : v }));
   const sizeBox = h('input', { type: 'checkbox', onchange: (e) => setState({ sizeMissing: e.target.checked }) });
 
   const panel = h('div', { class: 'cat-filters', id: 'cat-filters' },
@@ -57,6 +59,7 @@ export function mountCatalog(el, params) {
     field('Play time', timeSel),
     h('div', { class: 'cat-field-wide' }, field('Where', whereSel)),
     field('Pizza', pizzaSel),
+    field('Family', familySel),
     h('label', { class: 'cat-check' }, sizeBox, 'Size missing'),
     h('button', { class: 'btn cat-clear', type: 'button', onclick: clearFilters }, 'Clear filters'));
 
@@ -64,16 +67,18 @@ export function mountCatalog(el, params) {
     class: `cat-sort cat-sort-${key}`, type: 'button', onclick: () => sortBy(key),
   }, label, h('span', { class: 'cat-arrow', 'aria-hidden': 'true' }))]));
   const sortBar = h('div', { class: 'cat-sortbar' },
-    sortButtons.get('title'), h('span', { class: 'cat-sort-plain' }, 'Categories'),
+    sortButtons.get('title'), h('span', { class: 'cat-sort-plain' }, 'Family'), h('span', { class: 'cat-sort-plain' }, 'Categories'),
     sortButtons.get('players'), sortButtons.get('time'), sortButtons.get('where'));
 
+  const mapBtn = h('button', { class: 'btn cat-family-map', type: 'button', hidden: true,
+    onclick: () => { const f = shownFamily(state); if (f) showFamily(f); } }, 'Show on map');
   const list = h('ul', { class: 'cat-list' });
   const emptyText = h('p', {});
   const clearBtn = h('button', { class: 'btn', type: 'button', onclick: clearAll }, 'Clear filters');
   const empty = h('div', { class: 'cat-empty card', hidden: true }, emptyText, clearBtn);
 
   el.append(h('section', { class: 'cat-screen' },
-    h('div', { class: 'cat-bar' }, search, toggle, count), panel, sortBar, list, empty));
+    h('div', { class: 'cat-bar' }, search, toggle, count), panel, mapBtn, sortBar, list, empty));
 
   // ---- state changes
   function setState(patch) {
@@ -81,10 +86,10 @@ export function mountCatalog(el, params) {
     apply();
   }
   function clearFilters() {
-    setState({ cats: [], players: null, time: null, where: 'any', pizza: 'any', sizeMissing: false });
+    setState({ cats: [], players: null, time: null, where: 'any', pizza: 'any', family: null, sizeMissing: false });
   }
   function clearAll() {
-    setState({ q: '', cats: [], players: null, time: null, where: 'any', pizza: 'any', sizeMissing: false });
+    setState({ q: '', cats: [], players: null, time: null, where: 'any', pizza: 'any', family: null, sizeMissing: false });
   }
   function sortBy(key) {
     setState(state.sort === key ? { dir: state.dir === 'asc' ? 'desc' : 'asc' } : { sort: key, dir: 'asc' });
@@ -93,6 +98,10 @@ export function mountCatalog(el, params) {
   function rebuild() {
     const title = (id) => store.getGame(id)?.title ?? id;
     entries = store.getGames().map((g) => makeEntry(g, store.locate2(g.id), title));
+    families = store.getFamilies();
+    // options follow the data; a family that vanished (renamed, deleted) falls back to Any
+    familySel.replaceChildren(...familyOptions(families).flatMap((x, i, a) => (i % 2 ? [] : [h('option', { value: x }, a[i + 1])])));
+    state = knownFamily(state, families);
     rows.clear();
     for (const e of entries) rows.set(e.game.id, buildRow(e, openGame));
   }
@@ -126,6 +135,10 @@ export function mountCatalog(el, params) {
     setValue(timeSel, state.time == null ? '' : String(state.time));
     setValue(whereSel, state.where);
     setValue(pizzaSel, state.pizza);
+    setValue(familySel, state.family ?? '');
+    const fam = shownFamily(state);
+    mapBtn.hidden = !fam;
+    if (fam) mapBtn.setAttribute('aria-label', `Show the family ${fam} on the map`);
     sizeBox.checked = state.sizeMissing;
     for (const [key, b] of sortButtons) {
       const on = state.sort === key;
@@ -177,7 +190,7 @@ export function mountCatalog(el, params) {
   return {
     /** Back, or a tap on the Games tab, changed the params while the screen stays mounted. */
     setParams(next) {
-      state = stateFromParams(next);
+      state = knownFamily(stateFromParams(next), families);
       filtersOpen = filtersOpen || activeFilterCount(state) > 0;
       apply();
     },

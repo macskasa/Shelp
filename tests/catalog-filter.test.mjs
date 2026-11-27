@@ -5,7 +5,7 @@ import { readFileSync } from 'node:fs';
 import * as store from '../js/core/store.js';
 import {
   DEFAULT_STATE, stateFromParams, stateToParams, activeFilterCount, makeEntry, matches, sortEntries,
-  shortLocation, locationKind, countLabel, sortTitle,
+  shortLocation, locationKind, countLabel, sortTitle, knownFamily, familyOptions, shownFamily, NO_FAMILY,
 } from '../js/catalog/filter.js';
 
 const seed = JSON.parse(readFileSync(new URL('../data/seed.json', import.meta.url), 'utf8'));
@@ -27,7 +27,7 @@ test('default state shows every game', async () => {
 });
 
 test('state <-> URL params: round trip, defaults left out, rubbish ignored', () => {
-  const state = { q: 'föld és', cats: ['party', 'other'], players: 4, time: 30, where: 'cupboard', pizza: 'any', sizeMissing: true, sort: 'time', dir: 'desc' };
+  const state = { q: 'föld és', cats: ['party', 'other'], players: 4, time: 30, where: 'cupboard', pizza: 'any', family: null, sizeMissing: true, sort: 'time', dir: 'desc' };
   const params = stateToParams(state);
   assert.deepEqual(params, { q: 'föld és', cat: 'party,other', players: 4, time: 30, where: 'cupboard', nosize: '1', sort: 'time', dir: 'desc' });
   assert.deepEqual(stateFromParams(Object.fromEntries(Object.entries(params).map(([k, v]) => [k, String(v)]))), state);
@@ -215,4 +215,45 @@ test('pizza filter: any / pizza / not pizza, kept in the URL', () => {
   assert.equal(stateFromParams({ pizza: '0' }).pizza, 'no');
   assert.equal(stateFromParams({ pizza: 'x' }).pizza, 'any');
   assert.equal(activeFilterCount({ ...DEFAULT_STATE, pizza: 'yes' }), 1);
+});
+
+test('family filter: a name, "-" for no family, URL round trip, Clear resets', async () => {
+  const all = await entries();
+  const [a, b, c] = store.getGames();
+  store.updateGame(a.id, { family: 'Test Fam' });
+  store.updateGame(b.id, { family: 'test fam' }); // letter case joins the family
+  const withFam = store.getGames().map((g) => makeEntry(g, store.locate2(g.id), titleOf));
+  assert.deepEqual(ids(filter(withFam, { family: 'Test Fam' })), [a.id, b.id].sort());
+  assert.equal(filter(withFam, { family: NO_FAMILY }).length, all.length - 2);
+  assert.equal(filter(withFam, { family: null }).length, all.length);
+  assert.ok(ids(filter(withFam, { family: NO_FAMILY })).includes(c.id));
+  assert.deepEqual(stateToParams({ ...DEFAULT_STATE, family: 'Test Fam' }), { family: 'Test Fam' });
+  assert.deepEqual(stateToParams({ ...DEFAULT_STATE, family: NO_FAMILY }), { family: '-' });
+  assert.equal(stateFromParams({ family: '-' }).family, NO_FAMILY);
+  assert.equal(stateFromParams({ family: 'Test Fam' }).family, 'Test Fam');
+  assert.equal(stateFromParams({ family: '  ' }).family, null);
+  assert.equal(activeFilterCount({ ...DEFAULT_STATE, family: '-' }), 1);
+});
+
+test('family: unknown family falls back to Any, options list counts, shownFamily', async () => {
+  await entries();
+  const [a, b] = store.getGames();
+  store.updateGame(a.id, { family: 'Azul' });
+  store.updateGame(b.id, { family: 'Azul' });
+  const fams = store.getFamilies();
+  assert.equal(knownFamily({ ...DEFAULT_STATE, family: 'Gone' }, fams).family, null);
+  assert.equal(knownFamily({ ...DEFAULT_STATE, family: 'Azul' }, fams).family, 'Azul');
+  assert.equal(knownFamily({ ...DEFAULT_STATE, family: '-' }, fams).family, '-');
+  assert.deepEqual(familyOptions(fams), ['', 'Any', 'Azul', 'Azul (2)', '-', 'No family']);
+  assert.equal(shownFamily({ family: 'Azul' }), 'Azul');
+  assert.equal(shownFamily({ family: '-' }), null);
+  assert.equal(shownFamily({ family: null }), null);
+});
+
+test('search finds a game by its family name', () => {
+  const game = { id: 'x', title: 'A Mars terraformálása', family: 'Terraforming Mars', dims: null };
+  const e = makeEntry(game, null, titleOf);
+  assert.ok(matches(e, { ...DEFAULT_STATE, q: 'mars' }));
+  assert.ok(matches(e, { ...DEFAULT_STATE, q: 'terraforming' }));
+  assert.ok(!matches(makeEntry({ ...game, family: null }, null, titleOf), { ...DEFAULT_STATE, q: 'terraforming' }));
 });
