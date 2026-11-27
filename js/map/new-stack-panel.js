@@ -7,7 +7,7 @@ import { ZONES } from '../core/shelves.js';
 import { formatDims } from '../core/format.js';
 import { layoutStack2 } from '../core/geometry.js';
 import { orientationChoices } from './spots.js';
-import { newStackFn, checkMove } from './stacks.js';
+import { newStackFn, checkMove, fitNewStack } from './stacks.js';
 import { warningList } from './ui.js';
 import { stackPicture } from './stack-preview.js';
 
@@ -15,7 +15,8 @@ const num = (n) => (Math.round(n * 10) / 10).toLocaleString('en', { maximumFract
 let uniq = 0;
 
 /**
- * Open the sheet for a game and a spot { zone, x } (x already rounded / snapped).
+ * Open the sheet for a game and a spot { zone, x } (x already rounded / snapped). Per way up, the
+ * stack slides left within its gap when the box would run into the next stack (fitNewStack).
  * up / rot: the way up to preselect (a suggestion). onPlaced(stackId) runs once the panels are
  * closed, before the toast; onClose once the panel is gone. Returns the dialog, or null.
  */
@@ -41,15 +42,14 @@ export function openNewStackPanel(gameId, { zone, x, up = 's', rot = false, onPl
         h('button', { type: 'button', class: 'btn', onclick: () => dlg.close() }, 'Cancel'),
         submit)));
 
-  const fn = () => {
-    const o = orients[Number(upSel.value)] ?? orients[0];
-    return newStackFn(store, gameId, zone, x, o);
-  };
+  const orient = () => orients[Number(upSel.value)] ?? orients[0];
+  const at = () => fitNewStack(store.getPlan2(), store.getGame, zone, x, orient().w);
+  const fn = () => newStackFn(store, gameId, zone, at(), orient());
 
   function update() {
     const c = checkMove(store, fn(), 'Place');
     const parts = [];
-    where.textContent = `${ZONES[zone].label} · at ${num(x)} cm${c.result ? ` · becomes stack ${c.result}` : ''}`;
+    where.textContent = `${ZONES[zone].label} · at ${num(at())} cm${c.result ? ` · becomes stack ${c.result}` : ''}`;
     if (c.error) parts.push(h('p', { class: 'map-put-error' }, c.error.message));
     else {
       const st = c.plan.stacks.find((s) => s.id === c.result);

@@ -8,7 +8,7 @@ import { buildScene, SPACING } from '../js/map/scene.js';
 import { tapTarget } from '../js/map/placing.js';
 import { spotChoices } from '../js/map/spots.js';
 import {
-  newStackX, newStackFn, moveStackFn, checkMove, stepX, arrowStep, renameLines, removeText, X_STEP, SNAP,
+  newStackX, fitNewStack, newStackFn, moveStackFn, checkMove, stepX, arrowStep, renameLines, removeText, X_STEP, SNAP,
 } from '../js/map/stacks.js';
 
 const seed = JSON.parse(readFileSync(new URL('../data/seed.json', import.meta.url), 'utf8'));
@@ -149,6 +149,29 @@ test('renumber: the confirmation lists the renames from a preview, shelf order',
   assert.ok(b > 0 && lines[b + 1] === 'B1 → B2', lines.join(', '));
   assert.deepEqual(renameLines(null, store.getPlan2()), []);
   store.undo();
+  store.undo();
+  assert.equal(plan(), before);
+});
+
+test('a new stack slides left within its gap so the box ends before the next stack', () => {
+  const before = plan();
+  store.removeStack('M2'); // 30 cm free between M1 (ends 30.2) and M3 (starts 60.2)
+  const p = store.getPlan2();
+  assert.equal(fitNewStack(p, getGame, 'middle', 45, 19.5), 40.5, 'largest x on the 0.5 grid that ends by 60.2');
+  assert.equal(fitNewStack(p, getGame, 'middle', 32, 19.5), 32, 'fits where tapped: unchanged');
+  assert.equal(fitNewStack(p, getGame, 'middle', 45, 29.9), 30.2, 'never left of the gap start');
+  assert.equal(fitNewStack(p, getGame, 'middle', 45, 31), 45, 'too wide for the gap: unchanged, the check says why');
+  assert.equal(fitNewStack(p, getGame, 'narrow', 79, 0.5), 79);
+  assert.equal(fitNewStack({ stacks: [] }, getGame, 'bottom', 200, 10), 198, 'the wall end plus the overhang counts as the next stack');
+  // per way up: the fitted x passes the check
+  const id = byTitle('Scrabble Original');
+  const g = getGame(id);
+  for (const o of [{ up: 's', rot: false }, { up: 's', rot: true }]) {
+    const w = o.rot ? g.dims[2] : g.dims[1];
+    const x = fitNewStack(p, getGame, 'middle', 45, w);
+    const c = checkMove(store, newStackFn(store, id, 'middle', x, o), 'Place');
+    if (w <= 30) assert.deepEqual(c.block.filter((b) => b.rule === 'overlap'), [], `${o.rot}: ${x}`);
+  }
   store.undo();
   assert.equal(plan(), before);
 });
