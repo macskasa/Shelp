@@ -121,6 +121,27 @@
   text-overflow: ellipsis;
 }
 
+/* ---- Front row / Back row switch (issue #47), above the frame so it never covers the drawing -- */
+.map-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; margin: 0 0 8px; }
+.map-bar[hidden] { display: none; }
+.map-rows { display: inline-flex; flex: none; }
+.map-row-btn { min-height: 40px; min-width: 96px; padding: 6px 12px; font-size: 0.9rem; border-radius: 0; }
+.map-row-btn:first-child { border-radius: var(--radius) 0 0 var(--radius); }
+.map-row-btn:last-child { border-radius: 0 var(--radius) var(--radius) 0; margin-left: -1px; }
+.map-row-btn[aria-pressed='true'] { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+.map-rows-note { margin: 0; flex: 1 1 12em; font-size: 0.85rem; color: var(--muted); }
+
+/* back view: the front row of a 2-deep stack as faint outlines in front */
+.map-ghost {
+  fill: none;
+  stroke: var(--text);
+  stroke-opacity: 0.55;
+  stroke-width: 1px;
+  stroke-dasharray: 3 2;
+  vector-effect: non-scaling-stroke;
+  pointer-events: none;
+}
+
 /* ---- caption for #/map?game=… and #/map?stack=… ---------------------------------------------- */
 .map-caption {
   display: flex;

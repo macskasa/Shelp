@@ -1,4 +1,4 @@
-// The to-scale SVG front view (stories C2, C3). Owner: Bruce (Part B).
+// The to-scale SVG view of the shelves, front or back row (stories C2, C3, issue #47). Owner: Bruce (Part B).
 // Turns a scene from scene.js into SVG with s(). Drawing units are cm (the viewBox).
 // Text and outlines are sized in SCREEN px: map.css divides font sizes by the CSS variable --k
 // (screen px per cm) and uses non-scaling strokes, so they stay the same size at any zoom.
@@ -46,6 +46,11 @@ export function drawScene(scene, getGame) {
       boxNodes.set(b.gameId, node);
       boxData.set(b.gameId, b);
       g.append(node);
+    }
+    // back view: the front row as faint outlines in front of the back row
+    if (st.ghosts.length) {
+      g.append(s('g', { class: 'map-ghosts', 'aria-hidden': 'true' },
+        st.ghosts.map((b) => s('rect', { class: 'map-ghost', x: b.x, y: b.y, width: b.w, height: b.h }))));
     }
     if (st.topper) {
       const t = st.topper;

@@ -1,6 +1,7 @@
 // Part B – Shelf map. Owner: Bruce. Stories C1–C3, C5, C6.
 //   model.js        box and stack geometry (C1) – footprint() / layoutStack() are a contract
 //   scene.js        where everything goes in the drawing, in cm (C2)
+//   rows.js         which row of the 2-deep stacks a view draws (#47); row-switch.js is the switch
 //   labels.js       which titles fit at the current zoom
 //   draw.js         the SVG
 //   viewport.js     zoom and pan maths; pan-zoom.js reads the pointers
