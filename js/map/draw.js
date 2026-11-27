@@ -1,13 +1,16 @@
-// The to-scale SVG front view (story C2). Owner: Bruce (Part B).
+// The to-scale SVG front view (stories C2, C3). Owner: Bruce (Part B).
 // Turns a scene from scene.js into SVG with s(). Drawing units are cm (the viewBox).
 // Text and outlines are sized in SCREEN px: map.css divides font sizes by the CSS variable --k
 // (screen px per cm) and uses non-scaling strokes, so they stay the same size at any zoom.
 // refit(k, measure) decides which titles are readable at the current zoom.
+// Every stack is a focusable button (Tab, then Enter or Space); view.js handles the press.
 import { s } from '../core/dom.js';
 import { colorsFor } from '../core/categories.js';
 import { boxTitle, fitText, stackLabel, TITLE_PX } from './labels.js';
+import { stackAriaLabel } from './details.js';
 
 const SEAM = 0.05; // cm; stripes overlap a little so no light seam shows between them
+const RING = 0.6; // cm; rings sit this far outside the stack or box
 
 /**
  * @returns {{ svg: SVGSVGElement, refit(k, measure), highlight({ stackId, gameId } | null),
@@ -15,10 +18,12 @@ const SEAM = 0.05; // cm; stripes overlap a little so no light seam shows betwee
  */
 export function drawScene(scene, getGame) {
   const titles = []; // { node, box, title }
-  const toppers = []; // { node, topper }
+  const toppers = []; // { node, topper, room }
   const ids = []; // { node, stack }
   const stackNodes = new Map();
+  const stackData = new Map();
   const boxNodes = new Map();
+  const boxData = new Map();
   const zoneById = new Map(scene.zones.map((z) => [z.id, z]));
 
   const easy = scene.easy.map((e) => s('path', { class: 'map-easy', d: e.path }));
@@ -31,14 +36,15 @@ export function drawScene(scene, getGame) {
 
   const stacks = scene.stacks.map((st) => {
     const zone = zoneById.get(st.zone);
-    const g = s('g', { class: 'map-stack', 'data-stack': st.id },
-      // tap target: the whole column of the stack, from the top of the shelf down to its id
-      s('rect', { class: 'map-stack-hit', x: st.x, y: zone.top, width: Math.max(st.w, 2), height: st.label.y - zone.top + 3 }),
-      s('rect', { class: 'map-stack-ring', x: st.x - 0.6, y: st.top - 0.6, width: st.w + 1.2, height: st.h + 1.2, rx: 0.8 }),
-    );
+    const g = s('g', {
+      class: 'map-stack', 'data-stack': st.id, tabindex: '0', role: 'button', 'aria-label': stackAriaLabel(st.plan),
+    },
+    // tap target: the whole column of the stack, from the top of the shelf down to its id
+    s('rect', { class: 'map-stack-hit', x: st.x, y: zone.top, width: Math.max(st.w, 2), height: st.label.y - zone.top + 3 }));
     for (const b of st.boxes) {
       const node = drawBox(b, getGame(b.gameId), titles);
       boxNodes.set(b.gameId, node);
+      boxData.set(b.gameId, b);
       g.append(node);
     }
     if (st.topper) {
@@ -49,27 +55,43 @@ export function drawScene(scene, getGame) {
       g.append(s('g', { class: 'map-topper' },
         s('rect', { x: t.x, y: t.y, width: t.w, height: t.h, rx: 0.8 }), label));
     }
-    const id = s('text', { class: 'map-stack-id', x: st.label.x, y: st.label.y }, st.id);
+    const id = s('text', { class: 'map-stack-id', x: st.label.x, y: st.label.y, 'aria-hidden': 'true' }, st.id);
     ids.push({ node: id, stack: st });
     g.append(id);
     stackNodes.set(st.id, g);
+    stackData.set(st.id, st);
     return g;
   });
 
   const brackets = scene.brackets.map((b) => s('rect', { class: 'map-bracket', x: b.x, y: b.y, width: b.w, height: b.h }));
-  const labels = scene.labels.map((l) => s('text', { class: 'map-band', x: l.x, y: l.y }, l.text));
+  const labels = scene.labels.map((l) => s('text', { class: 'map-band', x: l.x, y: l.y, 'aria-hidden': 'true' }, l.text));
+
+  // Rings live in their own top layer: never hidden under a neighbour, and the stacks keep their
+  // order (which is also the Tab order).
+  const ring = (cls) => s('rect', { class: cls, rx: 0.8, visibility: 'hidden' });
+  const focusRing = ring('map-ring-focus');
+  const stackRing = ring('map-ring-stack');
+  const boxHalo = ring('map-ring-halo');
+  const boxLine = ring('map-ring-box');
 
   const svg = s('svg', {
     class: 'map-svg', viewBox: `0 0 ${scene.width} ${scene.height}`,
-    role: 'img', 'aria-label': 'The shelves drawn to scale, with every box',
+    role: 'group', 'aria-label': 'The shelves drawn to scale. Each stack is a button that opens its details.',
   },
-  s('g', { class: 'map-layer-easy' }, easy),
-  s('g', { class: 'map-layer-zones' }, zones),
+  s('g', { class: 'map-layer-easy', 'aria-hidden': 'true' }, easy),
+  s('g', { class: 'map-layer-zones', 'aria-hidden': 'true' }, zones),
   s('g', { class: 'map-layer-stacks' }, stacks),
-  s('g', { class: 'map-layer-brackets' }, brackets),
-  s('g', { class: 'map-layer-labels' }, labels));
+  s('g', { class: 'map-layer-brackets', 'aria-hidden': 'true' }, brackets),
+  s('g', { class: 'map-layer-labels', 'aria-hidden': 'true' }, labels),
+  s('g', { class: 'map-layer-rings', 'aria-hidden': 'true' }, stackRing, boxHalo, boxLine, focusRing));
 
-  let lit = [];
+  // keyboard focus ring (only for keyboard focus, not after a tap)
+  svg.addEventListener('focusin', (e) => {
+    const st = stackData.get(e.target.dataset?.stack);
+    if (st && e.target.matches(':focus-visible')) place(focusRing, st.x, st.top, st.w, st.h);
+  });
+  svg.addEventListener('focusout', () => hide(focusRing));
+
   return {
     svg,
     stackNode: (id) => stackNodes.get(id) ?? null,
@@ -86,23 +108,39 @@ export function drawScene(scene, getGame) {
       }
     },
 
-    /** Mark one stack and (optionally) one box in it. null clears the highlight. */
+    /**
+     * Mark one stack (green ring) and optionally one box in it (dark outline with a light halo,
+     * so it shows on green boxes too). null clears the highlight.
+     */
     highlight(target) {
-      for (const n of lit) n.classList.remove('is-hl');
-      lit = [];
-      if (!target) return;
-      const st = stackNodes.get(target.stackId);
-      const box = target.gameId ? boxNodes.get(target.gameId) : null;
-      for (const n of [st, box]) {
-        if (n) {
-          n.classList.add('is-hl');
-          lit.push(n);
-        }
+      for (const r of [stackRing, boxHalo, boxLine]) hide(r);
+      const st = target && stackData.get(target.stackId);
+      if (!st) return;
+      place(stackRing, st.x, st.top, st.w, st.h);
+      const b = target.gameId ? boxData.get(target.gameId) : null;
+      if (b) {
+        place(boxHalo, b.x, b.y, b.w, b.h, 0.1);
+        place(boxLine, b.x, b.y, b.w, b.h, 0.1);
       }
-      // draw the highlighted stack last, so its ring is not hidden under its neighbours
-      st?.parentNode?.append(st);
     },
   };
+}
+
+function place(rect, x, y, w, h, pad = RING) {
+  rect.setAttribute('x', x - pad);
+  rect.setAttribute('y', y - pad);
+  rect.setAttribute('width', Math.max(w, 0) + 2 * pad);
+  rect.setAttribute('height', Math.max(h, 0) + 2 * pad);
+  rect.setAttribute('visibility', 'visible');
+  // restart the pulse animation
+  rect.classList.remove('is-on');
+  void rect.getBoundingClientRect(); // forces a style flush, so the animation starts again
+  rect.classList.add('is-on');
+}
+
+function hide(rect) {
+  rect.setAttribute('visibility', 'hidden');
+  rect.classList.remove('is-on');
 }
 
 function drawBox(b, game, titles) {

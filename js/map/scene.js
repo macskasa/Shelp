@@ -44,7 +44,7 @@ const bandLabel = (z) => `${z.label} · ${z.height} cm high`;
  *   easy:   [{ path, x0, x1 }],             dashed "easy to reach" outlines (SVG path data)
  *   stacks: [{ id, zone, x, w, h, top, floor, standing, rows, back: [gameId], label: { x, y },
  *              boxes: [{ gameId, x, y, w, h, row, index, side, rot, missing, standing }],
- *              topper: null | { label, x, y, w, h }, layout }]
+ *              topper: null | { label, x, y, w, h }, layout, plan }]
  * }}
  * Box x/y is the top-left corner in the drawing. Only the FRONT row of a 2-row stack is drawn;
  * the back row's game ids are in `back`.
@@ -119,6 +119,7 @@ function placeStack(st, z, getGame) {
     boxes,
     topper: t ? { label: t.label, x: cm(x + t.x), y: cm(z.floor - t.y - t.h), w: t.w, h: t.h } : null,
     layout: lay,
+    plan: st, // the plan stack this was drawn from
   };
 }
 
