@@ -50,8 +50,8 @@
 .ver-empty { padding: 4px 0; }
 .ver-name { font-weight: 600; overflow-wrap: anywhere; }
 .ver-meta { font-size: 0.9rem; }
-.ver-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
-.ver-actions .btn { min-height: 40px; padding-inline: 10px; } /* three buttons share one row on a 384 px phone */
+.ver-actions { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 4px; }
+.ver-actions .btn { min-height: 40px; padding-inline: 10px; }
 
 /* the question panels (switch, delete) */
 .ver-confirm h2 { margin-top: 0; }
@@ -59,6 +59,41 @@
 .ver-check input { width: 22px; height: 22px; }
 .ver-check-note { grid-column: 2; margin: 0; font-size: 0.9rem; }
 
+/* the compare panel */
+.ver-pick { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; }
+.ver-pick label { display: grid; gap: 2px; font-size: 0.9rem; min-width: 0; }
+.ver-pick label:nth-of-type(1) { grid-column: 1; grid-row: 1; }
+.ver-pick label:nth-of-type(2) { grid-column: 1; grid-row: 2; }
+.ver-select { min-height: 44px; width: 100%; min-width: 0; font-size: 1rem; color: var(--text); }
+.ver-swap { grid-column: 2; grid-row: 1 / span 2; align-self: end; min-height: 44px; }
+.ver-summary { margin: 0; font-weight: 600; overflow-wrap: anywhere; }
+.ver-results { display: grid; gap: 14px; align-content: start; overflow-y: auto; overscroll-behavior: contain; min-height: 0; }
+.ver-group { display: grid; gap: 4px; }
+.ver-group h3 { margin: 0; font-size: 1.05rem; }
+.ver-group .ver-group { margin-top: 6px; }
+.ver-group .ver-group h3 { font-size: 0.95rem; font-weight: 600; color: var(--muted); }
+.ver-caption { margin: 0; font-size: 0.9rem; }
+.ver-lines { display: grid; margin: 0; padding: 0; list-style: none; border: 1px solid var(--border); border-radius: var(--radius); }
+.ver-lines li + li { border-top: 1px solid var(--border); }
+.ver-line {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  overflow-wrap: anywhere;
+}
+button.ver-line { cursor: pointer; }
+button.ver-line:active { background: color-mix(in srgb, currentColor 10%, transparent); }
+.ver-line-static { color: var(--muted); }
+
 @media (min-width: 1024px) {
   .ver-panel { margin-top: 8vh; max-height: 84vh; }
+  .ver-actions { grid-template-columns: repeat(4, auto); justify-content: start; }
+  .ver-compare { width: min(640px, 92vw); }
 }

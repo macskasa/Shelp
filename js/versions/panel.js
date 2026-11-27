@@ -6,6 +6,7 @@ import * as store from '../core/store.js';
 import { undoStep } from '../shell/history.js';
 import { fitToVisualViewport } from '../shell/viewport.js';
 import { confirmChoice } from './confirm.js';
+import { openCompare } from './compare-panel.js';
 import {
   NAME_MAX, autoSaveName, defaultName, describeVersion, formatSaved, hasRoom, nameProblem, switchQuestion,
 } from './logic.js';
@@ -120,6 +121,7 @@ export function openVersions() {
       h('div', { class: 'ver-meta muted' }, `${formatSaved(v.savedAt)} · ${describeVersion(v)}`),
       h('div', { class: 'ver-actions' },
         h('button', { class: 'btn', type: 'button', 'aria-label': `Switch to ${v.name}`, onclick: () => doSwitch(v) }, 'Switch to it'),
+        h('button', { class: 'btn', type: 'button', 'aria-label': `Compare ${v.name} with now`, onclick: () => openCompare({ from: v.id }) }, 'Compare'),
         h('button', { class: 'btn', type: 'button', 'aria-label': `Rename ${v.name}`, onclick: () => { editing = { id: v.id, value: v.name }; render(); } }, 'Rename'),
         h('button', { class: 'btn btn-danger', type: 'button', 'aria-label': `Delete ${v.name}`, onclick: () => doDelete(v) }, 'Delete')));
   }
