@@ -81,14 +81,14 @@ test('acceptance: Lairs holds Box Zero, and the location reads "Inside the Lairs
   await store.init({ seed, storage: memoryStorage() });
   const lairs = byTitle('Lairs');
   const zero = byTitle('Lairs: Box Zero');
-  assert.deepEqual(gamesInside(store.getPlan(), lairs.id, store.getGames()), [zero.id]);
-  assert.equal(store.locate(zero.id).kind, 'inside');
+  assert.deepEqual(gamesInside(store.getPlan2(), lairs.id, store.getGames()), [zero.id]);
+  assert.equal(store.locate2(zero.id).kind, 'inside');
 });
 
 test('hostChoices follows the one-level rule', async () => {
   await store.init({ seed, storage: memoryStorage() });
   const games = store.getGames();
-  const plan = store.getPlan();
+  const plan = store.getPlan2();
   const lairs = byTitle('Lairs');
   const zero = byTitle('Lairs: Box Zero');
 
@@ -105,15 +105,15 @@ test('hostChoices follows the one-level rule', async () => {
   // Every offered host is accepted by the store
   const target = byTitle('Ark Nova');
   store.setInside(target.id, hosts[0].id);
-  assert.equal(store.locate(target.id).kind, 'inside');
+  assert.equal(store.locate2(target.id).kind, 'inside');
 });
 
 test('taking a game out sends it to the cupboard with a reason', async () => {
   await store.init({ seed, storage: memoryStorage() });
   const zero = byTitle('Lairs: Box Zero');
   store.moveToCupboard(zero.id, takenOutReason('Lairs'));
-  assert.deepEqual(store.locate(zero.id), { kind: 'cupboard', reason: 'Taken out of the Lairs box' });
-  assert.deepEqual(gamesInside(store.getPlan(), byTitle('Lairs').id, store.getGames()), []);
+  assert.deepEqual(store.locate2(zero.id), { kind: 'cupboard', reason: 'Taken out of the Lairs box' });
+  assert.deepEqual(gamesInside(store.getPlan2(), byTitle('Lairs').id, store.getGames()), []);
 });
 
 test('cleanTitle trims and refuses blank names', () => {

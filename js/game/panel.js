@@ -95,8 +95,8 @@ export function openPanel(id) {
   dlg.addEventListener('focusout', () => setTimeout(() => { if (dlg.isConnected) refresh(); }, 0));
   dlg.addEventListener('close', () => {
     off();
-    if (store.getGame(id)) for (const s of sections) s.flush?.(); // (a deleted game has nothing to save)
-    // Esc or Back while typing must not lose the edit
+    // (a deleted game has nothing to save)
+    if (store.getGame(id)) for (const s of sections) s.flush?.(); // Esc or Back while typing must not lose the edit
     if (opener?.isConnected) opener.focus?.();
   }, { once: true });
   showPanel(dlg);

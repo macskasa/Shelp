@@ -95,7 +95,7 @@ test('apply: updates, adds, remembers ignored, keeps titles and the plan', async
     assert.equal(now.notes, g.notes);
   }
   const carcassonne = byTitle('Carcassonne');
-  assert.equal(store.locate(carcassonne.id).kind, 'unplaced');
+  assert.equal(store.locate2(carcassonne.id).kind, 'board');
   assert.equal(carcassonne.inBgg, true);
   assert.deepEqual(store.getMeta().bggIgnored, [448182], 'the unticked one is remembered');
   assert.equal(store.getMeta().lastImport, '2026-11-27T10:00:00.000Z');
@@ -150,12 +150,12 @@ test('missing games: nothing happens without a choice; keep and delete do what t
 test('deleting a host moves the games inside it to the cupboard', async () => {
   await fresh();
   const hitster = byTitle('Hitster – Magyar kiadás');
-  const inside = Object.entries(store.getPlan().inside).filter(([, host]) => host === hitster.id).map(([id]) => id);
+  const inside = Object.entries(store.getPlan2().inside).filter(([, host]) => host === hitster.id).map(([id]) => id);
   assert.ok(inside.length > 0);
   const plan = { ...planNow(), updates: [], fresh: [], ignored: [] };
   applyImport(plan, { deleteIds: [hitster.id] });
   assert.equal(store.getGame(hitster.id), undefined);
-  for (const id of inside) assert.equal(store.locate(id).kind, 'cupboard');
+  for (const id of inside) assert.equal(store.locate2(id).kind, 'cupboard');
 });
 
 test('one batch: a failing change rolls everything back', async () => {
