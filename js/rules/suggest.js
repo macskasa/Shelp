@@ -12,7 +12,8 @@
 // Only spots without a new blocking problem are returned. Ranking (best first):
 //   1. fewer new warnings (a spot that makes its family spread out, B2, has that family warning)
 //   1b. near its family: on a stack of a family member, then next to one on the same shelf, then the rest
-//   2. easy to reach
+//   2. easy to reach: the reach score of the game at that spot (reach.js): +4 outside an easy zone, +2 in the back row,
+//      +1 per box that would rest on it, up to 3 (a topper counts as one). Lower is better
 //   3. least extra shelf length: how much wider the stack gets (a new stack counts its full width), because shelf length
 //      is what runs out; on top of a box, within the 1 cm rule, costs none
 //   4. an existing stack before a new one
@@ -25,8 +26,9 @@
 // Nothing in `plan` or in the store is touched. Only what a spot can change is checked: that stack and its overlaps
 // with the other stacks on its shelf.
 import { boxSize, layoutStack2 } from '../core/geometry.js';
-import { ZONES, isEasy } from '../core/shelves.js';
+import { ZONES } from '../core/shelves.js';
 import { detach, insertOn, locations2, nextStackId, sameSet } from '../core/plan2.js';
+import { reachInStack } from './reach.js';
 import { checkStack2, overlapsWith, familyPlacement, isSpread, familyWarning } from './check2.js';
 
 const SLACK = 0.01;
@@ -51,6 +53,17 @@ function orientations(game) {
       seen.add(k);
       out.push({ up, rot, size });
     }
+  }
+  return out;
+}
+
+/** Ids of the boxes of `st` resting on `id`, directly or higher up. */
+function resting(st, id) {
+  const out = [];
+  const queue = [id];
+  while (queue.length) {
+    const at = queue.shift();
+    for (const b of st.boxes) if (b.on.includes(at) && !out.includes(b.game)) { out.push(b.game); queue.push(b.game); }
   }
   return out;
 }
@@ -161,7 +174,7 @@ export function suggestSpots(plan, games, gameId, { limit = 5 } = {}) {
       rank: {
         warnings: fresh.length,
         near: family.near,
-        hard: isEasy(work.zone, work.x + me.x, me.w) ? 0 : 1,
+        reach: reachInStack(work, layout, placed, resting(work, gameId)).score,
         extra: Math.round(extra * 100) / 100,
         isNew: isNew ? 1 : 0,
         overhang: Math.round(overhang * 100) / 100,
@@ -254,7 +267,7 @@ export function suggestSpots(plan, games, gameId, { limit = 5 } = {}) {
     }
   }
 
-  const order = ['warnings', 'near', 'hard', 'extra', 'isNew', 'overhang', 'height', 'turned', 'zone', 'x', 'id', 'row', 'at', 'index'];
+  const order = ['warnings', 'near', 'reach', 'extra', 'isNew', 'overhang', 'height', 'turned', 'zone', 'x', 'id', 'row', 'at', 'index'];
   spots.sort((a, b) => {
     for (const k of order) {
       const [p, q] = [a.rank[k], b.rank[k]];

@@ -306,3 +306,24 @@ test('a game without a family, or whose family has no other member on a shelf, i
   const lone = suggestSpots(plan, [flat('a1'), flat('a2'), { ...small, family: 'Solo' }], 'g', { limit: 5 });
   assert.deepEqual(lone, plain);
 });
+
+// ---------------------------------------------------------------- reach (#48)
+
+test('reach: a front-row spot beats a back-row one even when the back row costs no shelf length', () => {
+  const thin = (id) => mk(id, [7, 20, 10]); // 20 wide, 10 deep: a second row of 12 deep fits on the top shelf
+  const g = mk('g', [3, 20, 12]);
+  const plan = planOf([stack('A', 'top', 0.2, [box('a1')])]);
+  const spots = suggestSpots(plan, [thin('a1'), g], 'g', { limit: 200 }).filter((s) => s.kind === 'stack' && s.target.stackId === 'A');
+  const back = spots.filter((s) => s.target.row === 1 && !s.warnings.length);
+  assert.ok(back.length, 'a warning-free back-row spot exists');
+  const firstFront = spots.findIndex((s) => s.target.row === 0 && s.target.on.length === 0 && !s.warnings.length);
+  assert.ok(firstFront >= 0 && firstFront < spots.indexOf(back[0]));
+  assert.equal(suggestSpots(plan, [thin('a1'), g], 'g', { limit: 1 })[0].target?.row ?? 0, 0);
+});
+
+test('reach: an easy zone beats a hard one', () => {
+  const g = mk('g', [3, 20, 12]);
+  const plan = planOf([stack('M', 'middle', 0.2, [box('m1')])]); // the middle shelf is hard to reach at 0.2 cm
+  const top = suggestSpots(plan, [mk('m1', [7, 20, 10]), g], 'g', { limit: 1 })[0];
+  assert.ok(top.kind === 'new-stack' && top.zone !== 'middle', 'a new stack in an easy zone beats a hard-to-reach spot');
+});

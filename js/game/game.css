@@ -162,6 +162,8 @@ dialog.game-panel[open] { display: flex; flex-direction: column; }
   min-height: 40px; padding: 0 2px; border: 0; background: none; color: var(--text); font: inherit;
   text-decoration: underline; text-underline-offset: 2px; cursor: pointer; text-align: left;
 }
-.game-rename { min-height: 44px; margin-top: 8px; }
+.game-rename { min-height: 44px; }
+.game-family-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.game-family-actions[hidden] { display: none; }
 .game-family-rename { display: flex; flex-direction: column; gap: 8px; }
 .game-family-rename input { width: 100%; min-height: 44px; box-sizing: border-box; }

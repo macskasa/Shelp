@@ -3,7 +3,7 @@
 // Families: the existing ones; tap one to open its first game.
 import { h, clear, toast } from '../core/dom.js';
 import * as store from '../core/store.js';
-import { openGame } from '../core/contracts.js';
+import { openGame, showFamily } from '../core/contracts.js';
 import { suggestFamilies, familyLine } from '../game/family.js';
 
 let uniq = 0;
@@ -73,7 +73,9 @@ export function familiesSection() {
     const families = store.getFamilies();
     familiesHead.textContent = `Families (${families.length})`;
     clear(familiesBody).append(...(families.length
-      ? families.map((f) => h('button', { type: 'button', class: 'btn io-fam-open', onclick: () => openGame(f.ids[0]) }, familyLine(f)))
+      ? families.map((f) => h('div', { class: 'io-fam-item' },
+        h('button', { type: 'button', class: 'btn io-fam-open', onclick: () => openGame(f.ids[0]) }, familyLine(f)),
+        h('button', { type: 'button', class: 'btn io-fam-map', onclick: () => showFamily(f.name) }, 'Show on map')))
       : [h('p', { class: 'muted' }, 'No families yet.')]));
   }
 

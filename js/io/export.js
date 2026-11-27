@@ -3,7 +3,8 @@
 import { CATEGORIES } from '../core/categories.js';
 import { describeLocation2, formatRange } from '../core/format.js';
 import { layoutStack2 } from '../core/geometry.js';
-import { ZONES, isEasy } from '../core/shelves.js';
+import { ZONES } from '../core/shelves.js';
+import { reachAll } from '../rules/reach.js';
 import { localDate } from './time.js';
 
 export const CATALOG_HEADER = [
@@ -67,10 +68,8 @@ const zoneRank = (id) => {
   return i < 0 ? 99 : i;
 };
 
-function spotOf(stack, width) {
-  if (!isEasy(stack.zone, stack.x, width)) return 'Hard';
-  return stack.zone === 'top' ? 'Easy (from the stairs)' : 'Easy';
-}
+/** The "Spot" column: how easy the box is to get (reach.js), e.g. "Easy to reach", "Back row · 1 box on top". */
+const spotOf = (reach, id) => reach.get(id)?.text ?? '';
 
 /** Where a box sits in the tree: 1 = on the shelf, 2 = on a box that is on the shelf … (the longest path down). */
 function treeLevels(boxes) {
@@ -101,6 +100,7 @@ export function planRows(games, plan) {
   const getGame = (id) => byId.get(id);
   const title = (id) => byId.get(id)?.title ?? id;
   const rows = [PLAN_HEADER];
+  const reach = reachAll(plan, getGame);
 
   const inside = new Map(); // hostId -> [expansion ids], in title order
   for (const g of games) {
@@ -124,7 +124,6 @@ export function planRows(games, plan) {
   for (const stack of stacks) {
     const layout = layoutStack2(stack, getGame);
     const shelf = ZONES[stack.zone]?.label ?? stack.zone;
-    const spot = spotOf(stack, layout.w);
     const notes = (stack.notes ?? []).join('; ');
     const tree = treeLevels(layout.boxes);
     const siblings = new Map(); // "row|supports" -> how many boxes rest on exactly those supports
@@ -147,7 +146,7 @@ export function planRows(games, plan) {
         b.rot ? 'long side out' : null,
         b.on.length === 2 ? `across ${title(b.on[0])} and ${title(b.on[1])}` : null,
       ].filter(Boolean).join(', ');
-      add(b.gameId, { shelf, spot, stack: stack.id, level }, { pile, notes: i === 0 ? notes : '' });
+      add(b.gameId, { shelf, spot: spotOf(reach, b.gameId), stack: stack.id, level }, { pile, notes: i === 0 ? notes : '' });
     });
   }
 
