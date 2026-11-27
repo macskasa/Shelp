@@ -6,7 +6,7 @@ import * as store from '../js/core/store.js';
 import { describeLocation2 } from '../js/core/format.js';
 import {
   findByBggId, parseBggId, parseGameForm, parseRange, cleanTitle, parseDecimal, parseDims, dimsToInputs, sameDims, textOrNull, sizeSources, toggleCategory,
-  gamesInside, hostChoices, takenOutReason, bggPage, bggVersions, bggSearch, setPizza, pizzaStamp,
+  gamesInside, hostChoices, takenOutReason, bggPage, bggVersions, bggSearch, setPizza, pizzaStamp, moveBlockedReason,
 } from '../js/game/logic.js';
 
 const seed = JSON.parse(readFileSync(new URL('../data/seed.json', import.meta.url), 'utf8'));
@@ -244,4 +244,25 @@ test('pizzaStamp: changes when the game is turned, moved or undone, not when oth
   store.moveToBoard(klask.id);
   assert.equal(pizzaStamp(store.locate2(klask.id)), 'board');
   assert.equal(pizzaStamp(null), 'none');
+});
+
+test('moveBlockedReason: a game without a box size cannot be moved by hand', async () => {
+  await store.init({ seed, storage: memoryStorage() });
+  assert.equal(moveBlockedReason(byTitle('Lairs')), null);
+  const noSize = byTitle('Lairs: Box Zero');
+  assert.equal(noSize.dims, null);
+  assert.equal(moveBlockedReason(noSize), 'Add a box size first');
+  store.updateGame(noSize.id, { dims: [2, 10, 20] });
+  assert.equal(moveBlockedReason(store.getGame(noSize.id)), null, 'enabled as soon as the size is saved');
+  assert.equal(moveBlockedReason(undefined), 'Add a box size first');
+});
+
+
+test('deleteText says what settles down and what goes to the cupboard', async () => {
+  const { deleteText } = await import('../js/game/logic.js');
+  assert.equal(deleteText('Ark Nova'), 'Ark Nova is removed from the app and from the shelf plan.');
+  assert.equal(deleteText('Ark Nova', 2, ['Lairs: Box Zero']),
+    'Ark Nova is removed from the app and from the shelf plan. 2 boxes on top of it settle down. Lairs: Box Zero, stored inside it, goes to the cupboard.');
+  assert.match(deleteText('A', 1), /1 box on top of it settles down\./);
+  assert.match(deleteText('A', 0, ['B', 'C']), /B, C, stored inside it, go to the cupboard\./);
 });

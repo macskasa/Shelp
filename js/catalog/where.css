@@ -2,12 +2,12 @@
 
 .where-panel {
   /* top of the screen, not the middle: the keyboard covers the lower half on a phone */
-  --where-vh: 100dvh;
+  --panel-vh: 100dvh;
   display: flex;
   flex-direction: column;
   gap: 10px;
   margin: calc(env(safe-area-inset-top) + 8px) auto auto;
-  max-height: calc(var(--where-vh) - 16px - env(safe-area-inset-top));
+  max-height: calc(var(--panel-vh) - 16px - env(safe-area-inset-top));
   padding: 14px;
   overflow: hidden;
 }
@@ -40,6 +40,7 @@
 .where-name { display: grid; font-weight: 600; overflow-wrap: anywhere; }
 .where-bgg { color: var(--muted); font-size: 0.85rem; font-weight: 400; }
 .where-sentence { margin: 0; overflow-wrap: anywhere; }
+.where-note { margin: 0; color: var(--muted); font-size: 0.9rem; }
 .where-top { margin: 0; color: var(--muted); font-size: 0.9rem; overflow-wrap: anywhere; }
 .where-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
 .where-actions .btn { min-height: 40px; }

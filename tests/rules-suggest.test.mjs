@@ -129,18 +129,53 @@ test('ranking: no new warnings first, easy to reach before hard, an existing sta
   assert.ok(firstOnA < firstNew, 'an existing stack beats a new stack');
 });
 
-test('ranking: less overhang first, then the lower stack, then the least turned', () => {
-  // two boxes to rest on: A 30 wide (the game, 31 wide, sticks out 1 cm) and B 40 wide (no overhang), same height.
-  const plan = planOf([stack('A', 'bottom', 0.2, [box('a1')]), stack('B', 'bottom', 40, [box('b1')])]);
-  const games = [flat('a1'), mk('b1', [7, 40, 37]), mk('g', [5, 31, 37])];
+test('ranking: least extra shelf length – on top within the 1 cm rule beats a new stack and a spot beside other boxes', () => {
+  // a game 31 wide on a box 30 wide: 1 cm over, and the stack gets 1 cm longer. Beside it or in a free gap it would cost 31 cm.
+  const plan = planOf([stack('A', 'bottom', 0.2, [box('a1')])]);
+  const spots = suggestSpots(plan, [flat('a1'), mk('g', [5, 31, 37])], 'g', { limit: 1000 });
+  assert.deepEqual(spots[0].target, { stackId: 'A', row: 0, on: ['a1'], index: 0, up: 's', rot: false });
+  assert.deepEqual(spots[0].warnings, [], 'within the 1 cm rule');
+  const aside = spots.findIndex((s) => s.kind === 'stack' && s.target.on.length === 0 && s.target.row === 0 && s.warnings.length === 0);
+  const fresh = spots.findIndex((s) => s.kind === 'new-stack' && s.warnings.length === 0);
+  assert.ok(aside > 0 && fresh > 0);
+});
+
+test('ranking: a spot beside other boxes costs shelf length like a new stack, so an existing stack comes first', () => {
+  // the box is 36 cm high, so nothing fits on top of it (38.5 cm shelf): only beside it or in a free gap, 20 cm either way
+  const plan = planOf([stack('A', 'bottom', 0.2, [box('a1')])]);
+  const spots = suggestSpots(plan, [mk('a1', [36, 37, 38]), small], 'g', { limit: 1000 });
+  assert.ok(!spots.some((s) => s.kind === 'stack' && s.target.on.length));
+  assert.equal(spots[0].kind, 'stack');
+  assert.equal(spots[0].target.on.length, 0);
+  const firstNew = spots.findIndex((s) => s.kind === 'new-stack');
+  const lastBeside = spots.map((s, i) => (s.kind === 'stack' && s.warnings.length === 0 ? i : -1)).reduce((m, i) => Math.max(m, i), -1);
+  assert.ok(firstNew > spots.findIndex((s) => s.kind === 'stack'), 'an existing stack before a new one');
+  assert.ok(lastBeside >= 0);
+});
+
+test('ranking: with the same extra length, less overhang first', () => {
+  // two boxes side by side, 30 and 31 wide. A game 31 wide on the second sticks out 0 cm, on the first 1 cm; the stack stays 61 cm long.
+  const plan = planOf([stack('A', 'bottom', 0.2, [box('a1'), box('a2', { x: 30 })])]);
+  const games = [flat('a1'), mk('a2', [7, 31, 37]), mk('g', [5, 31, 37])];
   const spots = suggestSpots(plan, games, 'g', { limit: 1000 }).filter((s) => s.kind === 'stack' && s.target.on.length === 1 && !s.target.rot);
-  assert.equal(spots[0].target.stackId, 'B'); // 0 cm over its support instead of 1 cm
-  assert.equal(spots[1].target.stackId, 'A');
-  // beside a box on the floor the stack stays lower than on top of it
-  const all = suggestSpots(plan, games, 'g', { limit: 1000 }).filter((s) => s.kind === 'stack' && s.target.stackId === 'B' && s.warnings.length === 0);
-  const floor = all.findIndex((s) => s.target.on.length === 0 && s.target.row === 0 && !s.target.rot);
-  const top = all.findIndex((s) => s.target.on.length === 1 && !s.target.rot);
-  assert.ok(floor < top || floor === -1, 'the lower stack comes first');
+  assert.deepEqual(spots.slice(0, 2).map((s) => s.target.on), [['a2'], ['a1']]);
+});
+
+test('ranking: with the same overhang, the lower stack first', () => {
+  const plan = planOf([stack('A', 'bottom', 0.2, [box('a1')]), stack('B', 'bottom', 40, [box('b1'), box('b2', { on: ['b1'] })])]);
+  const spots = suggestSpots(plan, [flat('a1'), flat('b1'), flat('b2'), small], 'g', { limit: 1000 })
+    .filter((s) => s.kind === 'stack' && s.target.on.length === 1 && !s.target.rot && s.warnings.length === 0);
+  assert.deepEqual(spots.slice(0, 2).map((s) => s.target.on), [['a1'], ['b2']]); // a stack of 12 cm before a stack of 19 cm
+});
+
+test('ranking: with everything else the same, the least turned first, then flat before on its side', () => {
+  const plan = planOf([stack('A', 'bottom', 0.2, [box('a1')])]);
+  const onTop = suggestSpots(plan, [flat('a1'), small], 'g', { limit: 1000 }).filter((s) => s.kind === 'stack' && s.target.on.length === 1);
+  assert.deepEqual(onTop.slice(0, 2).map((s) => s.target.rot), [false, true]);
+  const loose = suggestSpots(plan, [flat('a1'), mk('g', [5, 20, 25], { pizza: false })], 'g', { limit: 1000 })
+    .filter((s) => s.kind === 'stack' && s.target.on.length === 1 && s.warnings.length === 0);
+  const order = loose.map((s) => `${s.target.up}${s.target.rot ? 'R' : ''}`);
+  assert.ok(order.indexOf('s') < order.indexOf('sR') && order.indexOf('sR') < order.indexOf('m'), order.join(' '));
 });
 
 test('the exact place a game has now is not suggested; turning it in place is', () => {

@@ -9,7 +9,7 @@ import { openGame } from '../core/contracts.js';
 import { CATEGORIES, OTHER } from '../core/categories.js';
 import { buildRow } from './row.js';
 import {
-  TIME_STEPS, WHERE_OPTIONS, activeFilterCount, countLabel, makeEntry, matches,
+  TIME_STEPS, WHERE_OPTIONS, PIZZA_OPTIONS, activeFilterCount, countLabel, makeEntry, matches,
   sortEntries, stateFromParams, stateToParams,
 } from './filter.js';
 
@@ -48,6 +48,7 @@ export function mountCatalog(el, params) {
   const timeSel = select(['', 'Any', ...TIME_STEPS.flatMap((t) => [String(t), `≤ ${t} min`])],
     (v) => setState({ time: v ? Number(v) : null }));
   const whereSel = select(WHERE_OPTIONS.flat(), (v) => setState({ where: v }));
+  const pizzaSel = select(PIZZA_OPTIONS.flat(), (v) => setState({ pizza: v }));
   const sizeBox = h('input', { type: 'checkbox', onchange: (e) => setState({ sizeMissing: e.target.checked }) });
 
   const panel = h('div', { class: 'cat-filters', id: 'cat-filters' },
@@ -55,6 +56,7 @@ export function mountCatalog(el, params) {
     field('Players', playersSel),
     field('Play time', timeSel),
     h('div', { class: 'cat-field-wide' }, field('Where', whereSel)),
+    field('Pizza', pizzaSel),
     h('label', { class: 'cat-check' }, sizeBox, 'Size missing'),
     h('button', { class: 'btn cat-clear', type: 'button', onclick: clearFilters }, 'Clear filters'));
 
@@ -79,10 +81,10 @@ export function mountCatalog(el, params) {
     apply();
   }
   function clearFilters() {
-    setState({ cats: [], players: null, time: null, where: 'any', sizeMissing: false });
+    setState({ cats: [], players: null, time: null, where: 'any', pizza: 'any', sizeMissing: false });
   }
   function clearAll() {
-    setState({ q: '', cats: [], players: null, time: null, where: 'any', sizeMissing: false });
+    setState({ q: '', cats: [], players: null, time: null, where: 'any', pizza: 'any', sizeMissing: false });
   }
   function sortBy(key) {
     setState(state.sort === key ? { dir: state.dir === 'asc' ? 'desc' : 'asc' } : { sort: key, dir: 'asc' });
@@ -123,6 +125,7 @@ export function mountCatalog(el, params) {
     setValue(playersSel, state.players == null ? '' : String(state.players));
     setValue(timeSel, state.time == null ? '' : String(state.time));
     setValue(whereSel, state.where);
+    setValue(pizzaSel, state.pizza);
     sizeBox.checked = state.sizeMissing;
     for (const [key, b] of sortButtons) {
       const on = state.sort === key;

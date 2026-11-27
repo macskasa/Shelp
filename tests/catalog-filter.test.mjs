@@ -27,7 +27,7 @@ test('default state shows every game', async () => {
 });
 
 test('state <-> URL params: round trip, defaults left out, rubbish ignored', () => {
-  const state = { q: 'föld és', cats: ['party', 'other'], players: 4, time: 30, where: 'cupboard', sizeMissing: true, sort: 'time', dir: 'desc' };
+  const state = { q: 'föld és', cats: ['party', 'other'], players: 4, time: 30, where: 'cupboard', pizza: 'any', sizeMissing: true, sort: 'time', dir: 'desc' };
   const params = stateToParams(state);
   assert.deepEqual(params, { q: 'föld és', cat: 'party,other', players: 4, time: 30, where: 'cupboard', nosize: '1', sort: 'time', dir: 'desc' });
   assert.deepEqual(stateFromParams(Object.fromEntries(Object.entries(params).map(([k, v]) => [k, String(v)]))), state);
@@ -49,7 +49,7 @@ test('state <-> URL params: round trip, defaults left out, rubbish ignored', () 
 test('activeFilterCount counts switched-on filters, not the sort', () => {
   assert.equal(activeFilterCount(DEFAULT_STATE), 0);
   assert.equal(activeFilterCount({ ...DEFAULT_STATE, cats: ['party', 'coop'], players: 3, sort: 'time' }), 2);
-  assert.equal(activeFilterCount({ cats: ['duo'], players: 2, time: 15, where: 'inside', sizeMissing: true, sort: 'title', dir: 'asc' }), 5);
+  assert.equal(activeFilterCount({ ...DEFAULT_STATE, cats: ['duo'], players: 2, time: 15, where: 'inside', sizeMissing: true, sort: 'title', dir: 'asc' }), 5);
 });
 
 test('short location text', async () => {
@@ -198,4 +198,20 @@ test('countLabel', () => {
   assert.equal(countLabel(0), '0 games');
   assert.equal(countLabel(1), '1 game');
   assert.equal(countLabel(37), '37 games');
+});
+
+test('pizza filter: any / pizza / not pizza, kept in the URL', () => {
+  const mk = (pizza) => ({ game: { id: 'x', title: 'X', pizza, categories: [], dims: null }, kind: 'shelf', where: 'B3' });
+  const yes = mk(true);
+  const no = mk(false);
+  const pass = (e, pizza) => matches(e, { ...DEFAULT_STATE, pizza });
+  assert.deepEqual([pass(yes, 'any'), pass(no, 'any')], [true, true]);
+  assert.deepEqual([pass(yes, 'yes'), pass(no, 'yes')], [true, false]);
+  assert.deepEqual([pass(yes, 'no'), pass(no, 'no')], [false, true]);
+  assert.deepEqual(stateToParams({ ...DEFAULT_STATE, pizza: 'yes' }), { pizza: '1' });
+  assert.deepEqual(stateToParams({ ...DEFAULT_STATE, pizza: 'no' }), { pizza: '0' });
+  assert.equal(stateFromParams({ pizza: '1' }).pizza, 'yes');
+  assert.equal(stateFromParams({ pizza: '0' }).pizza, 'no');
+  assert.equal(stateFromParams({ pizza: 'x' }).pizza, 'any');
+  assert.equal(activeFilterCount({ ...DEFAULT_STATE, pizza: 'yes' }), 1);
 });

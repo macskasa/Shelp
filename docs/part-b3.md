@@ -5,10 +5,15 @@ Phase C is Adam's top priority: he wants to rearrange the shelves in the app, bo
 **Start when** your Phase B items 2 and 3 are merged, and Tony's core PR is in (check that `toast()` takes `action` and that `pickUp` is in `js/core/contracts.js`).
 
 **PRs, in this order:**
-1. Pick up a box + the turn chooser (items 1 and 4)
-2. Placing mode + the board strip (items 3 and 2)
-3. Stacks (item 5)
-4. Drag and drop on desktop (item 6), only after Adam has tried 1–3 on his phone
+1. Scrolling pans on desktop (item 7, issue #49), a small one first
+2. The back row on the Shelves screen (item 8, issue #47)
+3. Your v1 leftovers (item 9), small
+4. Pick up a box + the turn chooser (items 1 and 4)
+5. Placing mode + the board strip (items 3 and 2)
+6. Stacks (item 5)
+7. Drag and drop on desktop (item 6), only after Adam has tried 4–6 on his phone
+
+Also on #51 (Tony's topper fix, issue #45): push the one-line change to `tests/map-scene.test.mjs` shown in the PR to its branch `tony/topper-centre`.
 
 ## Rules for every move
 
@@ -68,6 +73,27 @@ Phase C is Adam's top priority: he wants to rearrange the shelves in the app, bo
 - Mouse only (`pointerType === 'mouse'`). On the phone a drag would fight pan and zoom, and tapping through placing mode is the phone way.
 - Drag a box from the map or a chip from the board strip onto a stack. While dragging, the nearest spot under the pointer is outlined. Dropping opens the spot sheet with that spot chosen. Same check, same Place / Place anyway.
 - Esc during a drag cancels it.
+
+## 7. Scrolling pans on desktop (issue #49)
+
+- Today every wheel event zooms (`pan-zoom.js`). On a Mac trackpad, two-finger scrolling should **move** the drawing instead.
+- Wheel **without** Ctrl: pan by `deltaX` / `deltaY` (both directions; Shift + mouse wheel scrolls sideways, as browsers do).
+- Wheel **with** Ctrl: zoom at the pointer, as now. A trackpad pinch arrives as Ctrl + wheel, and Ctrl + mouse wheel zooms too. The + / − buttons stay.
+- Touch is unchanged: the phone has no wheel events.
+
+## 8. The back row (issue #47)
+
+- Today only the front row of a 2-deep stack is drawn (T1, B5, B6, L1). A back-row game can't be seen, and "Where's my game?" can only highlight its stack.
+- Add a **Front row / Back row** switch on the Shelves screen. In the back view, 2-deep stacks draw their back row, with the front row as faint outlines in front. Other stacks look the same.
+- `?game=` for a back-row game opens the back view and highlights the box. Leaving the screen goes back to the front view.
+- Placing mode (item 3) uses the same view to put a box in a back row.
+- Phone first: the switch is a two-button toggle, at least 40 px, and it doesn't cover the drawing.
+
+## 9. Remove your v1 leftovers
+
+Nothing in the app uses v1 any more. Before Tony removes the store's v1 functions, take out yours:
+- delete `js/map/model.js` and `tests/map-model.test.mjs`, and the `model.js` line in the comment at the top of `js/map/index.js`;
+- in `tests/map-scene.test.mjs`, drop the comparison with v1 (`layoutStack`, `store.getStack`); the v5 fixture test through `layoutStack2` already covers the geometry.
 
 ## Acceptance (whole phase)
 
