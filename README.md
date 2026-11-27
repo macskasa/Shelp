@@ -34,7 +34,7 @@ It works on other screens too (down to 360 px), but these are the ones it is tun
 ## How it's built
 
 - **Plain JavaScript ES modules, SVG and CSS.** No framework, no npm packages, no CDNs. GitHub Pages serves the files as they are.
-- **Data:** `data/seed.json` holds the 204 games and the shelf plan "v5 – brackets" worked out in the planning chat. On first start the app copies it into localStorage and upgrades it to schema 2 (boxes with positions; a box can rest on the floor, on one box, or across two). After that all changes stay in the browser, and every change can be undone. Backups are the same JSON format.
+- **Data:** `data/seed.json` holds the 204 games and the shelf plan "v5 – brackets" worked out in the planning chat. It is in schema 2 (boxes with positions; a box can rest on the floor, on one box, or across two), and on first start the app copies it into localStorage. After that all changes stay in the browser, and every change can be undone. Backups are the same JSON format.
 - **Shelves are hard-coded** in `js/core/shelves.js`: three 200 cm wall shelves (units 60 | 80 | 60, 8 cm overhang at the wall end, BOAXEL brackets under the top two levels), the 80 cm unit under the stairs with three heights, and the narrow 8 cm shelf. There is no settings screen.
 - **BGG integration is offline:** Adam exports his collection as CSV on BoardGameGeek and imports the file. (Browsers can't call BGG directly. A live refresh would need a small server, story E4.)
 - **Offline:** a service worker caches the app, so it works without internet once it has been opened, and it can be added to the home screen.
@@ -57,7 +57,7 @@ Size: S ≈ 1–2 points, M ≈ 3–5, L ≈ 8, XL ≈ 13.
 | A1 | Import my BGG collection export | M5 | Stephen | ✅ |
 | A2 | Start with today's catalog and plan (seed data) | S2 | Tony | ✅ |
 | A3 | Box sizes: edit, "size missing", link to BGG versions | S2 | Stephen (panel) · Peter (filter) | ✅ |
-| A5 | Expansions stored inside the base box | S2 | Stephen | ✅ (choosing the host box is hard: #62) |
+| A5 | Expansions stored inside the base box | S2 | Stephen | ✅ (search by title or BGG name, #62) |
 | A6 | Searchable catalog list | S3 | Peter | ✅ |
 | B1 | Categories with several tags and colours | S2 | Stephen (editing) · Tony (colours) | ✅ |
 | C1 | Built-in shelf model | M3 | Tony (numbers) · Bruce (geometry) | ✅ |
@@ -75,7 +75,7 @@ Size: S ≈ 1–2 points, M ≈ 3–5, L ≈ 8, XL ≈ 13.
 |---|---|---|---|---|
 | A4 | Add games that aren't in my BGG list | S1 | Stephen | ✅ (and Delete game, #50) |
 | B2 | Game families (Azul, 7 Wonders, Mars…) | S2 | Tony (schema) · Stephen | ⬜ |
-| D1 | Move a game (drag on desktop, pick a spot on phone) | L8 | Bruce | 🚧 see below |
+| D1 | Move a game (drag on desktop, pick a spot on phone) | L8 | Bruce | 🚧 moving works from lists; tapping the drawing comes next (see below) |
 | D2 | Rule checker (1 cm overhang rule, heights, brackets, 2 deep only in easy spots…) | M5 | Stephen | ✅ (Data screen; behind every move) |
 | D3 | Free space at a glance | S2 | – | ⬜ not scheduled |
 | D4 | Suggest a spot for a new game | L8 | Stephen (logic) · Bruce (screen) | 🚧 the logic is done; it shows in placing mode, which isn't built yet |
@@ -83,11 +83,9 @@ Size: S ≈ 1–2 points, M ≈ 3–5, L ≈ 8, XL ≈ 13.
 | E3 | Export to spreadsheet (CSV) | S1 | Stephen | ✅ |
 
 **D1 today:**
-- ✅ In stack details, each box has **To cupboard** and **To the board**.
-- ✅ On the Cupboard screen, **Put on a stack…** places a game from the board or the cupboard. You choose the stack, the spot (on the shelf, on top of a box, across two boxes, or under one) and which way up. Rule problems are shown first, and Undo works.
-- So moving a box from one stack to another works today in two steps: **To the board**, then **Put on a stack…**.
-- ⬜ The **Move** buttons (game panel, "Where's my game?") open the Shelves screen and stop there: placing mode isn't built yet.
-- ⬜ Bruce's next PRs, in order: pick up a box + the turn chooser → placing mode + the board strip (with suggested spots) → new, moved and removed stacks → drag and drop on desktop.
+- ✅ **Pick up** (in stack details and on the Cupboard screen) opens a sheet: **Move**, **Turn** (only the orientations allowed, drawn to scale), **To the board**, **To the cupboard…** and **Put inside a box…** (the game panel). It says first what happens to the boxes on top.
+- ✅ **Move** (in that sheet, the game panel and "Where's my game?") opens **Put on a stack…**: you choose the stack, the spot (on the shelf, on top of a box, across two boxes, or under one) and which way up. Rule problems are shown first. Every move closes the panels and shows a toast with Undo.
+- ⬜ Bruce's next PRs, in order: placing mode (tap a stack or an empty spot on the drawing) + the board strip (with suggested spots) → new, moved and removed stacks → drag and drop on desktop.
 
 ### Later
 
@@ -99,8 +97,7 @@ Size: S ≈ 1–2 points, M ≈ 3–5, L ≈ 8, XL ≈ 13.
 
 ### Not built yet
 
-- **Placing a box on the map** (D1, above). Until then the **Move** buttons do nothing useful.
-- **Finding the box to store a game in** (#62): the "Stored inside" picker is a plain list of all ~200 box titles, by the title on the box. So Terraforming Mars is listed as "A Mars terraformálása". A search that also matches BGG names isn't built yet.
+- **Placing a box by tapping the drawing** (D1, above). Until then, Move opens the Put on a stack… panel.
 - **Being on top counts as easier to reach** (#48): parked for later.
 - Game families (B2), free space at a glance (D3), the moving checklist (D7), live BGG refresh (E4).
 

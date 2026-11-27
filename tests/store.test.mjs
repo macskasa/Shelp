@@ -8,7 +8,8 @@ import { validateData } from '../js/core/schema.js';
 import { describeLocation2, formatDims, formatRange } from '../js/core/format.js';
 import { ZONES, bracketLimit, isEasy } from '../js/core/shelves.js';
 
-const seed = JSON.parse(readFileSync(new URL('../data/seed.json', import.meta.url), 'utf8'));
+const seed = JSON.parse(readFileSync(new URL('../data/seed.json', import.meta.url), 'utf8')); // schema 2
+const seedV1 = JSON.parse(readFileSync(new URL('./fixtures/seed-v1.json', import.meta.url), 'utf8')); // for schema 1 files
 
 function memoryStorage(initial = {}) {
   const m = new Map(Object.entries(initial));
@@ -122,14 +123,14 @@ test('games without a box size never go on a shelf', async () => {
   // a game on a shelf cannot lose its size
   assert.throws(() => store.updateGame(id('Ark Nova'), { dims: null }), /cannot be removed/);
   assert.deepEqual(store.getGame(id('Ark Nova')).dims, [7, 30, 37]);
-  // a plan or backup that puts a size-less game on a stack is refused
-  const plan = structuredClone(seed.plan);
+  // a plan or backup (schema 1, as made in chat) that puts a size-less game on a stack is refused
+  const plan = structuredClone(seedV1.plan);
   plan.inside = Object.fromEntries(Object.entries(plan.inside).filter(([k]) => k !== boxZero));
   plan.stacks.find((s) => s.id === 'B4').rows[0].push({ game: boxZero });
   plan.cupboard = plan.cupboard.filter((c) => c.game !== boxZero);
   assert.ok(store.validate({ app: 'shelp', schema: 1, plan }).some((p) => p.includes('no box size')));
   assert.throws(() => store.replacePlan(plan), /no box size/);
-  const full = { app: 'shelp', schema: 1, games: structuredClone(seed.games), plan };
+  const full = { app: 'shelp', schema: 1, games: structuredClone(seedV1.games), plan };
   assert.ok(validateData(full).some((p) => p.includes('no box size')));
 });
 
@@ -178,11 +179,11 @@ test('export → import round trip, and plan-only import', async () => {
   assert.equal(store.importData(backup), 'all');
   assert.equal(store.locate2(id('Azul')).kind, 'cupboard');
 
-  const planOnly = { app: 'shelp', schema: 1, plan: structuredClone(seed.plan) };
+  const planOnly = { app: 'shelp', schema: 1, plan: structuredClone(seedV1.plan) };
   assert.equal(store.importData(planOnly), 'plan');
   assert.equal(store.locate2(id('Azul')).stackId, 'B2');
 
-  const bad = { app: 'shelp', schema: 1, plan: { ...structuredClone(seed.plan), cupboard: [{ game: 'g999', reason: '' }] } };
+  const bad = { app: 'shelp', schema: 1, plan: { ...structuredClone(seedV1.plan), cupboard: [{ game: 'g999', reason: '' }] } };
   assert.ok(store.validate(bad).some((p) => p.includes('g999')));
   assert.throws(() => store.importData(bad), /g999/);
 });

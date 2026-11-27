@@ -34,6 +34,7 @@ Also on #51 (Tony's topper fix, issue #45): push the one-line change to `tests/m
   - **Put inside a box…**: a host picker with a title search. Candidates are every other game that is not itself inside a box. `store.setInside` refuses the rest; show its message.
 - When boxes rest on the picked box, say so before the move: "2 boxes on top settle down onto Takenokolor". The store already lets them settle when a box leaves.
 - The same sheet opens from the board strip (item 2) and the cupboard list. Turn is shown only for a box on a shelf.
+- **Changed by Tony (2026-11-27):** **Put inside a box…** calls `openGame(id)`: the game panel's "Stored inside" picker becomes searchable (Stephen, #62), so there's one picker. And until placing mode (item 3) exists, **Move** and `#/map?pick=<id>` open the "Put on a stack…" panel for that game, so the Move buttons elsewhere already work.
 
 ## 2. The board strip
 
