@@ -1,87 +1,85 @@
-// Part B stack details tests (story C3). Run from the repo root:  node --test
+// Part B stack details tests (stories C3, B2.2 – schema 2). Run: node --test --test-reporter=dot tests/map*.test.mjs
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { layoutStack } from '../js/map/model.js';
-import { stackDetails, stackAriaLabel, gameCount } from '../js/map/details.js';
+import * as store from '../js/core/store.js';
+import { layoutStack2 } from '../js/core/geometry.js';
+import { stackDetails, stackAriaLabel, restsOn } from '../js/map/details.js';
 
 const seed = JSON.parse(readFileSync(new URL('../data/seed.json', import.meta.url), 'utf8'));
-const games = new Map(seed.games.map((g) => [g.id, g]));
-const getGame = (id) => games.get(id);
-const stack = (id) => seed.plan.stacks.find((s) => s.id === id);
-const details = (id) => stackDetails(stack(id), layoutStack(stack(id), getGame), getGame);
+const mem = new Map();
+await store.init({ seed, storage: { getItem: (k) => mem.get(k) ?? null, setItem: (k, v) => mem.set(k, v), removeItem: (k) => mem.delete(k) } });
+const getGame = store.getGame;
+const byTitle = (t) => store.getGames().find((g) => g.title === t).id;
+const details = (id, plan = store.getPlan2()) => {
+  const st = plan.stacks.find((s) => s.id === id);
+  return stackDetails(st, layoutStack2(st, getGame), getGame);
+};
 const titles = (row) => row.boxes.map((b) => b.title);
 
-test('header facts: id, shelf, size (w × h from the model), game count', () => {
+test('header facts: id, shelf, size (w × h from layoutStack2), game count, notes', () => {
   const d = details('B3');
-  assert.equal(d.id, 'B3');
-  assert.equal(d.shelf, 'Bottom shelf');
-  assert.equal(d.size, '24 × 27.7 cm');
-  assert.equal(d.count, 5);
+  assert.deepEqual([d.id, d.shelf, d.size, d.count], ['B3', 'Bottom shelf', '24 × 27.7 cm', 5]);
   assert.deepEqual(d.tags, []);
   assert.deepEqual(d.notes, ['Compile and Kontroll side by side on top']);
 });
 
-test('flat stack: boxes top to bottom, a side-by-side level keeps its order', () => {
-  const d = details('B3');
-  assert.equal(d.rows.length, 1);
-  assert.equal(d.rows[0].label, null);
-  assert.equal(d.rows[0].order, 'top to bottom');
-  assert.deepEqual(titles(d.rows[0]), ['Compile: Main 2', 'Kontroll', 'Takenokolor', 'Legacy of Yu', "Let's Go! To Japan"]);
-  assert.deepEqual(d.rows[0].boxes[0].flags, ['side by side']);
-  assert.deepEqual(d.rows[0].boxes[1].flags, ['side by side']);
-  assert.deepEqual(d.rows[0].boxes[2].flags, []);
+test('a tree, top to bottom: each box says what it rests on', () => {
+  const [row] = details('B3').rows;
+  assert.equal(row.label, null);
+  assert.deepEqual(titles(row), ['Compile: Main 2', 'Kontroll', 'Takenokolor', 'Legacy of Yu', "Let's Go! To Japan"]);
+  assert.deepEqual(row.boxes.map((b) => b.rests), [
+    'on Takenokolor', 'on Takenokolor', 'on Legacy of Yu', "on Let's Go! To Japan", 'on the shelf',
+  ]);
 });
 
-test('topper and long side out: M4 with the LEGO castle and Ark Nova turned', () => {
-  const d = details('M4');
-  assert.deepEqual(d.tags, ['LEGO castle on top']);
-  assert.equal(d.size, '37.2 × 36 cm', 'height includes the castle');
-  const [ark, deluxe] = d.rows[0].boxes;
-  assert.equal(ark.title, 'Ark Nova');
-  assert.deepEqual(ark.flags, ['long side out']);
-  assert.equal(ark.size, '37 × 30 × 7 cm');
-  assert.equal(deluxe.title, 'Tokaido: Deluxe Edition');
+test('a bridge says "across …" and is listed on top (store.preview, nothing saved)', () => {
+  const [compile, kontroll, bridge] = ['Compile: Main 2', 'Kontroll', 'T.I.M.E Stories: Lumen Fidei'].map(byTitle);
+  const { plan } = store.preview(() => store.placeBox(bridge, { stackId: 'B3', on: [compile, kontroll] }));
+  const top = details('B3', plan).rows[0].boxes[0];
+  assert.equal(top.gameId, bridge);
+  assert.equal(top.rests, 'across Compile: Main 2 and Kontroll');
+  assert.equal(details('B3', plan).count, 6);
+});
+
+test('topper, long side out and on its side', () => {
+  const m4 = details('M4');
+  assert.deepEqual(m4.tags, ['LEGO castle on top']);
+  assert.equal(m4.size, '37.2 × 36 cm', 'height includes the castle');
+  assert.deepEqual(m4.rows[0].boxes.find((b) => b.title === 'Ark Nova').flags, ['long side out']);
+  const klask = details('T9').rows[0].boxes[0];
+  assert.deepEqual([klask.rests, klask.flags], ['on the shelf', ['on its side']]);
 });
 
 test('two rows: front row first, then the back row, each top to bottom', () => {
   const d = details('T1');
   assert.deepEqual(d.tags, ['2 deep']);
   assert.deepEqual(d.rows.map((r) => r.label), ['Front row', 'Back row']);
-  const front = stack('T1').rows[0].map((it) => getGame(it.game).title).reverse();
-  const back = stack('T1').rows[1].map((it) => getGame(it.game).title).reverse();
-  assert.deepEqual(titles(d.rows[0]), front);
-  assert.deepEqual(titles(d.rows[1]), back);
-  assert.ok(d.rows[0].boxes.every((b) => b.flags.includes('long side out')));
   assert.equal(d.count, 13);
+  assert.equal(d.rows[0].boxes.at(-1).rests, 'on the shelf');
+  assert.ok(d.rows[0].boxes.every((b) => b.flags.includes('long side out')));
 });
 
-test('standing stacks list left to right', () => {
+test('standing card games: all on the shelf, standing, left to right', () => {
   const d = details('L1');
-  assert.deepEqual(d.tags, ['2 deep', 'standing']);
-  assert.equal(d.rows[0].order, 'left to right');
-  assert.deepEqual(titles(d.rows[0]), stack('L1').rows[0].map((it) => getGame(it.game).title));
-  assert.deepEqual(details('T9').tags, ['standing']);
-});
-
-test('categories and a missing size come through', () => {
-  const st = { id: 'X', zone: 'narrow', x: 0, orientation: 'flat', rows: [[{ game: 'a' }]] };
-  const g = { a: { title: 'Mystery', dims: null, categories: ['duo', 'coop'] } };
-  const d = stackDetails(st, layoutStack(st, (id) => g[id]), (id) => g[id]);
-  assert.deepEqual(d.rows[0].boxes[0], { gameId: 'a', title: 'Mystery', categories: ['duo', 'coop'], size: 'size missing', flags: [] });
-  assert.equal(d.shelf, 'Narrow shelf');
+  assert.deepEqual(d.tags, ['2 deep']);
+  const front = d.rows[0].boxes;
+  assert.ok(front.every((b) => b.rests === 'on the shelf' && b.flags.includes('standing')));
+  const xs = front.map((b) => store.locate2(b.gameId).x);
+  assert.deepEqual(xs, [...xs].sort((a, b) => a - b), 'left to right');
 });
 
 test('an empty stack has no boxes', () => {
-  const st = { id: 'E', zone: 'middle', x: 0, orientation: 'flat', rows: [[]] };
-  const d = stackDetails(st, layoutStack(st, getGame), getGame);
-  assert.deepEqual(d.rows[0].boxes, []);
-  assert.equal(d.count, 0);
-  assert.equal(d.size, '0 × 0 cm');
+  const st = { id: 'E', zone: 'middle', x: 0, boxes: [] };
+  const d = stackDetails(st, layoutStack2(st, getGame), getGame);
+  assert.deepEqual([d.count, d.size, d.rows.length, d.rows[0].boxes.length], [0, '0 × 0 cm', 1, 0]);
 });
 
-test('accessible names count every game', () => {
-  assert.equal(stackAriaLabel('B3', 'bottom', gameCount(stack('B3'))), 'Stack B3, Bottom shelf, 5 games');
+test('restsOn and the accessible name', () => {
+  const t = (id) => ({ a: 'Alpha', b: 'Beta' })[id];
+  assert.equal(restsOn([], t), 'on the shelf');
+  assert.equal(restsOn(['a'], t), 'on Alpha');
+  assert.equal(restsOn(['a', 'b'], t), 'across Alpha and Beta');
+  assert.equal(stackAriaLabel('B3', 'bottom', 5), 'Stack B3, Bottom shelf, 5 games');
   assert.equal(stackAriaLabel('T9', 'top', 1), 'Stack T9, Top shelf, 1 game');
-  assert.equal(gameCount(stack('L1')), 18);
 });

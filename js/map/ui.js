@@ -10,9 +10,14 @@ export function categoryChips(categories) {
   });
 }
 
-/** A list of rule warnings; existing problems (isNew === false) are marked "already". */
+const SEVERITY = { block: { icon: '⛔', name: 'Not allowed' }, warn: { icon: '⚠', name: 'Warning' } };
+
+/**
+ * A list of rule warnings. v2 warnings carry a severity: block = red, warn = amber (the icon has
+ * an accessible name, so it is not colour alone). Existing problems (isNew === false) say "already".
+ */
 export function warningList(warnings) {
-  return h('ul', { class: 'map-warnings' }, warnings.map((w) => h('li', {},
-    h('span', { class: 'map-warn-icon', 'aria-hidden': 'true' }, '⚠'),
+  return h('ul', { class: 'map-warnings' }, warnings.map((w) => h('li', { class: w.severity ? `map-sev-${w.severity}` : null },
+    h('span', { class: 'map-warn-icon', role: 'img', 'aria-label': SEVERITY[w.severity]?.name ?? 'Warning' }, SEVERITY[w.severity]?.icon ?? '⚠'),
     h('span', {}, w.message, w.isNew === false ? h('span', { class: 'map-already' }, ' (already)') : null))));
 }
