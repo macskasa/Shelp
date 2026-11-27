@@ -196,7 +196,7 @@ const memoryStorage = () => {
 const fresh = () => store.init({ seed, storage: memoryStorage() });
 const keyOf = (w) => `${w.rule}|${w.stackId}|${w.gameId}|${w.otherStackId}|${w.rule === 'bracket' ? w.message : ''}`;
 
-test('seed: every game gets suggestions in under 200 ms, and nothing in the store changes', async () => {
+test('seed: suggestions take a median under 200 ms and at most 400 ms for the slowest game, and nothing in the store changes', async () => {
   await fresh();
   const plan = store.getPlan2();
   const games = store.getGames();
@@ -216,7 +216,7 @@ test('seed: every game gets suggestions in under 200 ms, and nothing in the stor
   const median = best[best.length >> 1].ms;
   const slowest = best[best.length - 1];
   if (process.env.SUGGEST_TIMING) console.log(`median ${median.toFixed(1)} ms, slowest ${slowest.ms.toFixed(1)} ms (${slowest.title})`);
-  // The 200 ms target holds for the typical game; the slowest one gets 2x headroom. A real 2x slowdown breaks both.
+  // The 200 ms target holds for the typical game; the slowest one gets 2x headroom. On a fast machine neither limit fails; on a slow runner the slowest-game limit is the one that does.
   assert.ok(median < 200, `median game took ${median.toFixed(0)} ms`);
   assert.ok(slowest.ms < 400, `${slowest.title} took ${slowest.ms.toFixed(0)} ms`);
   assert.equal(JSON.stringify(store.exportData().plan), before);
