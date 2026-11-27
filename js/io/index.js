@@ -4,6 +4,7 @@ import { on } from '../core/bus.js';
 import * as store from '../core/store.js';
 import { bggSection } from './bgg-view.js';
 import { backupSection } from './backup-view.js';
+import { addGameSection } from './add-view.js';
 import { checkSection } from './check-view.js';
 import { exportSection } from './export-view.js';
 
@@ -28,6 +29,7 @@ export const screens = [
       const root = h('div', { class: 'io-screen' },
         counts,
         check.el,
+        addGameSection(),
         bgg.el,
         backup.el,
         exportSection());
