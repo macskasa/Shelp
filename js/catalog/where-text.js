@@ -28,3 +28,10 @@ function onTopText(loc, getTitle) {
   if (names.length === 1) return `On top${of}: ${names[0]}`;
   return `On top${of}, nearest first: ${names.join(', ')}`;
 }
+
+export const NO_SIZE_HINT = 'Add a box size first';
+
+/** Moving needs a box size (a game without one can never be on a shelf). The hint to show, or null if moving is possible. */
+export function moveHint(game) {
+  return game.dims ? null : NO_SIZE_HINT;
+}

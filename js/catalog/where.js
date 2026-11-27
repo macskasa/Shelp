@@ -4,9 +4,10 @@
 import { h, loadCss, showPanel } from '../core/dom.js';
 import { on } from '../core/bus.js';
 import * as store from '../core/store.js';
-import { openGame, showOnMap } from '../core/contracts.js';
+import { openGame, pickUp, showOnMap } from '../core/contracts.js';
+import { fitToVisualViewport } from '../shell/viewport.js';
 import { rankMatches, searchKey } from './search.js';
-import { whereText } from './where-text.js';
+import { moveHint, whereText } from './where-text.js';
 
 loadCss(new URL('./where.css', import.meta.url));
 
@@ -53,13 +54,17 @@ export function openWhere() {
   function card(game) {
     const { sentence, onTop } = whereText(store.locate2(game.id), title);
     const bgg = game.bggName && game.bggName !== game.title ? game.bggName : null;
+    const hint = moveHint(game);
+    const hintId = `where-note-${game.id}`;
     return h('li', { class: 'where-item' },
       h('div', { class: 'where-name' }, game.title, bgg && h('span', { class: 'where-bgg' }, bgg)),
       h('p', { class: 'where-sentence' }, sentence),
       onTop && h('p', { class: 'where-top' }, onTop),
       h('div', { class: 'where-actions' },
         h('button', { class: 'btn btn-primary', type: 'button', onclick: () => showOnMap(game.id) }, 'Show on map'),
-        h('button', { class: 'btn', type: 'button', onclick: () => openGame(game.id) }, 'Details')));
+        h('button', { class: 'btn', type: 'button', disabled: !!hint, 'aria-describedby': hint ? hintId : null, onclick: () => pickUp(game.id) }, 'Move'),
+        h('button', { class: 'btn', type: 'button', onclick: () => openGame(game.id) }, 'Details')),
+      hint && h('p', { class: 'where-note', id: hintId }, hint));
   }
 
   // Follow the store (an Undo, a move, an import) while the panel is open.
@@ -69,13 +74,7 @@ export function openWhere() {
   load();
 
   // On a phone the keyboard covers the lower part of the screen: keep the panel inside what is left.
-  const vv = window.visualViewport;
-  const fit = () => { if (vv) dlg.style.setProperty('--where-vh', `${Math.floor(vv.height)}px`); };
-  if (vv) {
-    fit();
-    vv.addEventListener('resize', fit);
-    dlg.addEventListener('close', () => vv.removeEventListener('resize', fit), { once: true });
-  }
+  fitToVisualViewport(dlg);
 
   showPanel(dlg);
   input.focus();
