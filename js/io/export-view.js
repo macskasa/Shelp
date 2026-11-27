@@ -17,6 +17,6 @@ export function exportSection() {
     h('h2', {}, 'Export to spreadsheet'),
     h('p', { class: 'muted' }, 'Two CSV files with the same columns as the tabs of the planning workbook, so you can paste them back in. Accents work in Google Sheets and Excel.'),
     h('div', { class: 'io-buttons io-start io-wrap' },
-      h('button', { type: 'button', class: 'btn', onclick: () => save(catalogFileName(), catalogRows(store.getGames(), store.locate)) }, 'Download catalog (CSV)'),
-      h('button', { type: 'button', class: 'btn', onclick: () => save(planFileName(), planRows(store.getGames(), store.getPlan())) }, 'Download shelf plan (CSV)')));
+      h('button', { type: 'button', class: 'btn', onclick: () => save(catalogFileName(), catalogRows(store.getGames(), store.locate2)) }, 'Download catalog (CSV)'),
+      h('button', { type: 'button', class: 'btn', onclick: () => save(planFileName(), planRows(store.getGames(), store.getPlan2())) }, 'Download shelf plan (CSV)')));
 }
