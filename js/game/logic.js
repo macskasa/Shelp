@@ -180,3 +180,9 @@ export function setPizza(store, id, on) {
     return { ok: false, message: err.message, pizza: store.getGame(id)?.pizza === true };
   }
 }
+
+/**
+ * What a pizza refusal depends on: where the game is and how it lies. The message is out of date as soon as this
+ * changes (the game was turned flat, moved or taken off the shelf, or an Undo put it back).
+ */
+export const pizzaStamp = (loc) => (loc?.kind === 'stack' ? `stack|${loc.stackId}|${loc.up}` : (loc?.kind ?? 'none'));

@@ -6,7 +6,7 @@ import { CATEGORIES } from '../core/categories.js';
 import { formatDims } from '../core/format.js';
 import {
   cleanTitle, parseDims, dimsToInputs, sameDims, textOrNull, sizeSources, toggleCategory,
-  hostChoices, takenOutReason, bggVersions, bggSearch, setPizza,
+  hostChoices, takenOutReason, bggVersions, bggSearch, setPizza, pizzaStamp,
 } from './logic.js';
 
 let uniq = 0;
@@ -145,10 +145,12 @@ export function pizzaSection(id) {
   const inputId = nextId('pizza');
   const hint = h('p', { class: 'game-hint is-error', role: 'status' });
   const input = h('input', { type: 'checkbox', role: 'switch', id: inputId, onchange: toggle });
+  let shownFor = null; // what the message was about (pizzaStamp), null = no message
 
   function toggle() {
     const r = setPizza(store, id, input.checked);
     hint.textContent = r.ok ? '' : r.message; // the store says why, e.g. the game stands on a shelf
+    shownFor = r.ok ? null : pizzaStamp(store.locate2(id));
     if (!r.ok) input.checked = r.pizza;
   }
 
@@ -158,7 +160,15 @@ export function pizzaSection(id) {
       h('label', { class: 'game-switch', for: inputId }, input, h('span', {}, 'Pizza – may only lie flat')),
       h('p', { class: 'game-hint muted' }, 'A pizza game lies flat on its biggest side; a quarter turn is fine. It is never stood up on a shelf.'),
       hint),
-    refresh: (g) => { input.checked = g.pizza === true; },
+    refresh(g) {
+      input.checked = g.pizza === true;
+      // An old message goes when what it was about has changed (Undo, turned or moved elsewhere). It stays while
+      // nothing changed: the panel also refreshes on focusout, right after the tap that set the message.
+      if (shownFor !== null && shownFor !== pizzaStamp(store.locate2(id))) {
+        hint.textContent = '';
+        shownFor = null;
+      }
+    },
   };
 }
 
