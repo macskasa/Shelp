@@ -78,3 +78,19 @@ const r3 = (n) => Math.round(n * 1000) / 1000;
 export function viewBox(v, fw, fh) {
   return `${r3(v.x)} ${r3(v.y)} ${r3(fw / v.k)} ${r3(fh / v.k)}`;
 }
+
+/**
+ * What a wheel event does (issue #49). Without Ctrl it pans: two-finger trackpad scrolling or the
+ * mouse wheel move the drawing, both ways, and Shift + mouse wheel goes sideways. With Ctrl it
+ * zooms at the pointer: a trackpad pinch arrives as Ctrl + wheel, and Ctrl + mouse wheel zooms too.
+ * deltaMode 1 is lines, 2 is pages (one frame height). Returns screen px to pan the drawing by
+ * (for panBy), or a zoom factor (for zoomAt).
+ */
+export function wheelAction({ deltaX = 0, deltaY = 0, deltaMode = 0, ctrlKey = false, shiftKey = false }, fh) {
+  const unit = deltaMode === 1 ? 16 : deltaMode === 2 ? fh : 1;
+  // a pinch sends small steps; one Ctrl + mouse wheel notch (~100 px) is capped at about 18 %
+  if (ctrlKey) return { zoom: Math.exp(Math.max(-0.2, Math.min(0.2, -deltaY * unit * 0.01))) };
+  // some browsers leave Shift + wheel on deltaY; sideways is what the user means
+  const [x, y] = shiftKey && !deltaX ? [deltaY, 0] : [deltaX, deltaY];
+  return { dx: -x * unit || 0, dy: -y * unit || 0 }; // || 0: no -0
+}

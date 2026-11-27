@@ -1,9 +1,10 @@
 // Zoom and pan on the map with Pointer Events (story C2). Owner: Bruce (Part B).
-// One finger (or the S Pen, or the mouse) drags, two fingers pinch, the mouse wheel and a
-// trackpad pinch zoom around the pointer. A tap that does not move stays a normal click, so
-// tapping a stack still opens it; the click after a drag or pinch is swallowed.
+// One finger (or the S Pen, or the mouse) drags, two fingers pinch. The wheel and two-finger
+// trackpad scrolling pan; Ctrl + wheel and a trackpad pinch zoom around the pointer (issue #49).
+// A tap that does not move stays a normal click, so tapping a stack still opens it; the click
+// after a drag or pinch is swallowed.
 // The maths is in viewport.js; this file only reads pointers and sets the SVG viewBox.
-import { clampView, fitWidth, zoomAt, panBy, pinchView, reveal, viewBox } from './viewport.js';
+import { clampView, fitWidth, zoomAt, panBy, pinchView, reveal, viewBox, wheelAction } from './viewport.js';
 
 const SLOP = { touch: 8, pen: 4, mouse: 4 }; // px a pointer must move before it is a drag
 const reducedMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -133,11 +134,10 @@ export function createPanZoom(stage, { onChange }) {
     e.preventDefault();
     stop();
     const r = stage.getBoundingClientRect();
-    const lines = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? r.height : 1;
-    // a trackpad pinch arrives as ctrl + wheel with small steps
-    const factor = Math.exp(-e.deltaY * lines * (e.ctrlKey ? 0.01 : 0.0015));
+    const act = wheelAction(e, r.height);
     fitted = false;
-    set(zoomAt(view, factor, e.clientX - r.left, e.clientY - r.top, scene, fw, fh));
+    if (act.zoom) set(zoomAt(view, act.zoom, e.clientX - r.left, e.clientY - r.top, scene, fw, fh));
+    else set(panBy(view, act.dx, act.dy, scene, fw, fh));
   }
 
   stage.addEventListener('pointerdown', onDown);
