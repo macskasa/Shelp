@@ -67,3 +67,6 @@
 /* Desktop: dropping a file on the screen */
 .io-screen { min-height: 60vh; }
 .io-screen.io-dropping { outline: 2px dashed var(--accent); outline-offset: 6px; border-radius: var(--radius); }
+
+/* Export */
+.io-wrap { flex-wrap: wrap; }
