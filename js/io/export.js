@@ -8,11 +8,11 @@ import { localDate } from './time.js';
 
 export const CATALOG_HEADER = [
   'Title', 'BGG', 'Box size (cm)', 'Players', 'Play time (min)', 'Age', 'BGG name', 'Type', 'Location',
-  'Box size from', 'In BGG collection', 'Notes',
+  'Box size from', 'In BGG collection', 'Notes', 'Family',
 ];
 export const PLAN_HEADER = [
   'Shelf', 'Spot', 'Stack (left → right)', 'Level / position (1 = bottom)', 'Row / pile', 'Game', 'Box size (cm)',
-  'Categories', 'Notes',
+  'Categories', 'Family', 'Notes',
 ];
 
 export const catalogFileName = (date = new Date()) => `shelp-catalog-${localDate(date)}.csv`;
@@ -56,6 +56,7 @@ export function catalogRows(games, locateGame) {
     g.sizeSource ?? '',
     g.inBgg ? 'Yes' : 'No',
     g.notes ?? '',
+    g.family ?? '',
   ])];
 }
 
@@ -111,10 +112,10 @@ export function planRows(games, plan) {
   const add = (id, where, extra = {}) => {
     const g = byId.get(id);
     if (!g) return;
-    rows.push([where.shelf, where.spot, where.stack ?? '', where.level ?? '', extra.pile ?? '', g.title, sizeText(g.dims), categoriesText(g), extra.notes ?? '']);
+    rows.push([where.shelf, where.spot, where.stack ?? '', where.level ?? '', extra.pile ?? '', g.title, sizeText(g.dims), categoriesText(g), g.family ?? '', extra.notes ?? '']);
     for (const inner of inside.get(id) ?? []) {
       const e = byId.get(inner);
-      rows.push([where.shelf, where.spot, where.stack ?? '', where.level ?? '', 'inside the base box', e.title, '—', categoriesText(e), `stored inside the ${g.title} box`]);
+      rows.push([where.shelf, where.spot, where.stack ?? '', where.level ?? '', 'inside the base box', e.title, '—', categoriesText(e), e.family ?? '', `stored inside the ${g.title} box`]);
     }
   };
 

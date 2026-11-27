@@ -10,7 +10,8 @@
 //             (the boxes settle). That one is the same for every spot, is never a block, and a preview shows it anyway.
 //
 // Only spots without a new blocking problem are returned. Ranking (best first):
-//   1. fewer new warnings
+//   1. fewer new warnings (a spot that makes its family spread out, B2, has that family warning)
+//   1b. near its family: on a stack of a family member, then next to one on the same shelf, then the rest
 //   2. easy to reach
 //   3. least extra shelf length: how much wider the stack gets (a new stack counts its full width), because shelf length
 //      is what runs out; on top of a box, within the 1 cm rule, costs none
@@ -26,7 +27,7 @@
 import { boxSize, layoutStack2 } from '../core/geometry.js';
 import { ZONES, isEasy } from '../core/shelves.js';
 import { detach, insertOn, locations2, nextStackId, sameSet } from '../core/plan2.js';
-import { checkStack2, overlapsWith } from './check2.js';
+import { checkStack2, overlapsWith, familyPlacement, isSpread, familyWarning } from './check2.js';
 
 const SLACK = 0.01;
 const BRIDGE_LEVEL = 0.5; // a bridge may rest on two boxes whose tops differ by this much
@@ -34,7 +35,7 @@ const BRACKET_HALF = 0.2; // brackets are 0.4 cm wide, centred on the joint
 const ZONE_ORDER = Object.keys(ZONES);
 
 const fmt = (n) => String(Math.round(n * 10) / 10);
-const key = (w) => `${w.rule}|${w.gameId}|${w.otherStackId}|${w.rule === 'bracket' ? w.message : ''}`;
+const key = (w) => (w.rule === 'family' ? `family|${w.family}` : `${w.rule}|${w.gameId}|${w.otherStackId}|${w.rule === 'bracket' ? w.message : ''}`);
 const cloneStack = (st) => ({ ...st, boxes: st.boxes.map((b) => ({ ...b, on: [...b.on] })) });
 const ORIENTATION = { s: 'flat', m: 'on its side', l: 'on end' };
 
@@ -101,6 +102,33 @@ export function suggestSpots(plan, games, gameId, { limit = 5 } = {}) {
     return knownMemo.get(st.id);
   };
 
+  // B2: where the rest of the game's family is (worked out once). Without the game, the base plan has the other members.
+  const fam = game.family ? familyPlacement(base, getGame) : null;
+  const famIds = fam?.members.get(game.family) ?? [];
+  const famSet = new Set(famIds);
+  const famSpread = famIds.length ? isSpread(famIds, fam.zoneOf, fam.lists) : false;
+  /** { warning, near } for the game going to stack `st` (existing id, or a new one at zone/x): the family check of that spot. */
+  function familySpot(st, isNew) {
+    if (!famIds.length) return { warning: null, near: 0 };
+    const list = fam.lists.get(st.zone) ?? [];
+    let at = list.indexOf(st.id);
+    let next = list;
+    if (at < 0) { // a new stack, or an empty one: it holds boxes once the game is there
+      const o = others(st.zone).filter((x) => x.st.id !== st.id);
+      at = o.filter((x) => x.st.x < st.x || (x.st.x === st.x && x.st.id < st.id)).length;
+      next = [...o.map((x) => x.st.id)];
+      next.splice(at, 0, st.id);
+    }
+    const ids = [...famSet, st.id].filter((id, i, a) => a.indexOf(id) === i);
+    const zoneOf = new Map(fam.zoneOf).set(st.id, st.zone);
+    const lists = new Map(fam.lists).set(st.zone, next);
+    const order = [...lists.entries()].flatMap(([z, l]) => l.map((id) => ({ id, z: ZONE_ORDER.indexOf(z), i: l.indexOf(id) })));
+    const shelfOrder = ids.sort((a, b) => order.find((o) => o.id === a).z - order.find((o) => o.id === b).z || order.find((o) => o.id === a).i - order.find((o) => o.id === b).i);
+    const warning = !famSpread && isSpread(ids, zoneOf, lists) ? familyWarning(game.family, shelfOrder) : null;
+    const near = famSet.has(st.id) ? 0 : (famSet.has(next[at - 1]) || famSet.has(next[at + 1]) ? 1 : 2);
+    return { warning, near };
+  }
+
   const spots = [];
 
   /** Try one spot on a copy of `st` (a stack of the base plan, or a new empty one). */
@@ -110,6 +138,8 @@ export function suggestSpots(plan, games, gameId, { limit = 5 } = {}) {
     const layout = layoutStack2(work, getGame);
     const end = work.x + layout.w;
     const found = [...checkStack2(work, getGame, layout), ...overlapsWith(work, end, others(work.zone))];
+    const family = familySpot(work, isNew);
+    if (family.warning) found.push(family.warning);
     const old = isNew ? null : known(st);
     const fresh = old ? found.filter((w) => !old.has(key(w))) : found;
     if (fresh.some((w) => w.severity === 'block')) return;
@@ -130,6 +160,7 @@ export function suggestSpots(plan, games, gameId, { limit = 5 } = {}) {
     spots.push({
       rank: {
         warnings: fresh.length,
+        near: family.near,
         hard: isEasy(work.zone, work.x + me.x, me.w) ? 0 : 1,
         extra: Math.round(extra * 100) / 100,
         isNew: isNew ? 1 : 0,
@@ -223,7 +254,7 @@ export function suggestSpots(plan, games, gameId, { limit = 5 } = {}) {
     }
   }
 
-  const order = ['warnings', 'hard', 'extra', 'isNew', 'overhang', 'height', 'turned', 'zone', 'x', 'id', 'row', 'at', 'index'];
+  const order = ['warnings', 'near', 'hard', 'extra', 'isNew', 'overhang', 'height', 'turned', 'zone', 'x', 'id', 'row', 'at', 'index'];
   spots.sort((a, b) => {
     for (const k of order) {
       const [p, q] = [a.rank[k], b.rank[k]];

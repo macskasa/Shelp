@@ -4,6 +4,8 @@
 //   checkStack2(stack, getGame) -> Warning[]   one v2 stack, without the overlap rule (that needs the other stacks)
 //   checkPlan2(plan, getGame)   -> Warning[]   every stack, plus overlaps between stacks of one zone
 //   Warning = { stackId, gameId /* or null */, otherStackId /* overlaps, else null */, rule, severity, message }
+//   The 'family' warning (B2) is one per family: it also has family (the name) and stackIds (every member stack, in shelf order);
+//   stackId is the first of them. Needs the whole plan, so only checkPlan2 makes it.
 //   severity 'block': never allowed (the moving screens offer no "place anyway")   'warn': allowed with "place anyway"
 //
 // One overlap warning is made per pair of stacks: stackId is the stack that starts later, otherStackId the other one.
@@ -25,6 +27,7 @@ export const SEVERITY = {
   depth: 'warn',
   'two-deep': 'warn',
   'bridge-support': 'warn',
+  family: 'warn',
 };
 export const RULES2 = Object.keys(SEVERITY);
 
@@ -217,19 +220,77 @@ export function overlapsWith(stack, end, others) {
   return out;
 }
 
+const ZONE_ORDER = Object.keys(ZONES);
+
+/**
+ * Where the members of each family are (B2). A box counts at its stack, a game inside a box where its host is;
+ * the board, the cupboard and a host that is not on a shelf don't count.
+ * Returns { members: Map<family, stackId[]> in shelf order, zoneOf: Map<stackId, zone>, lists: Map<zone, stackId[]> }
+ * where lists holds, per shelf, the stacks that hold boxes in x order.
+ */
+export function familyPlacement(plan, getGame) {
+  const zoneOf = new Map();
+  const lists = new Map();
+  const order = new Map(); // stackId -> position in shelf order
+  const sorted = plan.stacks.filter((st) => st.boxes?.length && ZONES[st.zone])
+    .sort((a, b) => ZONE_ORDER.indexOf(a.zone) - ZONE_ORDER.indexOf(b.zone) || a.x - b.x);
+  sorted.forEach((st, i) => {
+    zoneOf.set(st.id, st.zone);
+    order.set(st.id, i);
+    lists.set(st.zone, [...(lists.get(st.zone) ?? []), st.id]);
+  });
+  const stackOf = new Map(); // gameId -> stackId
+  for (const st of sorted) for (const b of st.boxes) stackOf.set(b.game, st.id);
+  const found = new Map();
+  const add = (gameId, stackId) => {
+    const fam = getGame(gameId)?.family;
+    if (!fam || !stackId) return;
+    if (!found.has(fam)) found.set(fam, new Set());
+    found.get(fam).add(stackId);
+  };
+  for (const [gameId, stackId] of stackOf) add(gameId, stackId);
+  for (const [gameId, hostId] of Object.entries(plan.inside ?? {})) add(gameId, stackOf.get(hostId));
+  const members = new Map([...found].map(([fam, ids]) => [fam, [...ids].sort((a, b) => order.get(a) - order.get(b))]));
+  return { members, zoneOf, lists };
+}
+
+/** Is a family spread out? ids = its member stacks. Fine: one stack, or one shelf with no other box stack between them. */
+export function isSpread(ids, zoneOf, lists) {
+  if (ids.length < 2) return false;
+  const zones = new Set(ids.map((id) => zoneOf.get(id)));
+  if (zones.size > 1) return true;
+  const list = lists.get([...zones][0]) ?? [];
+  const at = ids.map((id) => list.indexOf(id)).sort((a, b) => a - b);
+  return at[at.length - 1] - at[0] + 1 !== at.length;
+}
+
+const joinNames = (list) => (list.length < 2 ? list.join('') : `${list.slice(0, -1).join(', ')} and ${list[list.length - 1]}`);
+
+/** The family warning for a family whose member stacks (in shelf order) are `ids`. */
+export const familyWarning = (family, ids) => ({
+  rule: 'family', severity: SEVERITY.family, family, stackId: ids[0], stackIds: [...ids], gameId: null, otherStackId: null,
+  message: `${/^the /i.test(family) ? '' : 'The '}${family} family is spread out: ${joinNames(ids)}. Keep a family on one shelf, next to each other.`,
+});
+
 const blocksFirst = (list) => [...list.filter((w) => w.severity === 'block'), ...list.filter((w) => w.severity !== 'block')];
 
-/** Checks of the whole plan: every stack, and overlaps. Warnings of one stack stay together, in plan order, blocks first. */
+/** Checks of the whole plan: every stack, and overlaps. Warnings of one stack stay together, in plan order, blocks first. Then the family warnings. */
 export function checkPlan2(plan, getGame) {
   const over = overlaps2(plan, getGame);
-  return plan.stacks.flatMap((st) => blocksFirst([...checkStack2(st, getGame), ...(over.get(st.id) ?? [])]));
+  const out = plan.stacks.flatMap((st) => blocksFirst([...checkStack2(st, getGame), ...(over.get(st.id) ?? [])]));
+  const { members, zoneOf, lists } = familyPlacement(plan, getGame);
+  for (const [family, ids] of [...members].sort((a, b) => a[0].localeCompare(b[0], 'hu'))) {
+    if (isSpread(ids, zoneOf, lists)) out.push(familyWarning(family, ids));
+  }
+  return out;
 }
 
 /** The blocking warnings only. A plan with any of these may not be saved or imported. */
 export const blocking = (warnings) => warnings.filter((w) => w.severity === 'block');
 
-/** The warnings that concern one stack: its own, and overlaps where it is the other stack. */
-export const forStack = (warnings, stackId) => warnings.filter((w) => w.stackId === stackId || w.otherStackId === stackId);
+/** The warnings that concern one stack: its own, overlaps where it is the other stack, and family warnings where it is a member stack. */
+export const forStack = (warnings, stackId) =>
+  warnings.filter((w) => w.stackId === stackId || w.otherStackId === stackId || w.stackIds?.includes(stackId));
 
 /** For the Plan check card: warnings grouped by severity and then by stack, in plan order. */
 export function groupWarnings(warnings) {

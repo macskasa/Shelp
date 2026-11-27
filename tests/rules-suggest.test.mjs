@@ -264,3 +264,45 @@ test('seed: the store accepts every suggestion, and it adds no blocking problem 
   }
   assert.ok(checked > 100, `${checked} suggestions checked`);
 });
+
+// ---------------------------------------------------------------- families (B2)
+
+test('a family member is suggested on or beside its family, and a spread-out spot carries the family warning', () => {
+  const plan = planOf([
+    stack('B1', 'bottom', 0.2, [box('a1')]),
+    stack('B2', 'bottom', 40, [box('x1')]),
+    stack('B3', 'bottom', 80, [box('x2')]),
+    stack('T1', 'top', 0.2, [box('a2')]),
+  ]);
+  const games = [flat('a1'), flat('a2'), flat('x1'), flat('x2'), { ...small, family: 'Azul' }]
+    .map((g) => (['a1', 'a2'].includes(g.id) ? { ...g, family: 'Azul' } : g));
+  const spots = suggestSpots(plan, games, 'g', { limit: 200 });
+  assert.ok(spots.length);
+  const first = spots[0];
+  const stackOf = (s) => (s.kind === 'stack' ? s.target.stackId : null);
+  // Azul is at B1 and T1 (already spread): the first spot has no new warning and sits on a member stack
+  assert.deepEqual(first.warnings, []);
+  assert.ok(['B1', 'T1'].includes(stackOf(first)), first.text);
+
+  // a family on B1 only: a spot in the middle of B1..B3 would spread it
+  const plan2 = planOf([stack('B1', 'bottom', 0.2, [box('a1')]), stack('B2', 'bottom', 40, [box('x1')]), stack('B3', 'bottom', 80, [box('x2')])]);
+  const g2 = [{ ...flat('a1'), family: 'Azul' }, flat('x1'), flat('x2'), { ...small, family: 'Azul' }];
+  const all = suggestSpots(plan2, g2, 'g', { limit: 500 });
+  const near = all[0];
+  assert.deepEqual(near.warnings, []);
+  assert.equal(stackOf(near), 'B1');
+  const onB3 = all.find((s) => stackOf(s) === 'B3');
+  assert.deepEqual(onB3.warnings.map((w) => w.rule), ['family']);
+  assert.equal(onB3.warnings[0].family, 'Azul');
+  assert.ok(all.indexOf(onB3) > all.indexOf(near));
+  // beside the family comes before further away: B2 (next to B1) ranks before a new far stack
+  const beside = all.findIndex((s) => stackOf(s) === 'B2' && s.warnings.length === 0);
+  assert.ok(beside < 0 || beside < all.findIndex((s) => s.kind === 'new-stack' && s.zone === 'bottom' && s.x > 100));
+});
+
+test('a game without a family, or whose family has no other member on a shelf, is not affected', () => {
+  const plan = planOf([stack('A', 'bottom', 0.2, [box('a1')]), stack('B', 'top', 0.2, [box('a2')])]);
+  const plain = suggestSpots(plan, [flat('a1'), flat('a2'), small], 'g', { limit: 5 });
+  const lone = suggestSpots(plan, [flat('a1'), flat('a2'), { ...small, family: 'Solo' }], 'g', { limit: 5 });
+  assert.deepEqual(lone, plain);
+});

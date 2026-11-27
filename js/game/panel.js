@@ -6,6 +6,7 @@ import { openGame, pickUp, showOnMap } from '../core/contracts.js';
 import { describeLocation2, formatRange } from '../core/format.js';
 import { confirmPanel } from '../io/confirm.js';
 import { bggPage, bggSearch, deleteText, gamesInside, moveBlockedReason } from './logic.js';
+import { familySection } from './family-view.js';
 import { categorySection, extLink, insideSection, notesSection, pizzaSection, sizeSection, titleSection } from './fields.js';
 
 let uniq = 0;
@@ -51,7 +52,7 @@ export function openPanel(id) {
     closePanels(() => toast(`Deleted ${g.title}`, { action: { label: 'Undo', run: store.undo } }));
   }
   const nameSection = titleSection(id, save);
-  const sections = [nameSection, sizeSection(id, save), categorySection(id, save), pizzaSection(id), insideSection(id, openGame), notesSection(id, save)];
+  const sections = [nameSection, sizeSection(id, save), categorySection(id, save), familySection(id, save, openGame), pizzaSection(id), insideSection(id, openGame), notesSection(id, save)];
 
   const dlg = h('dialog', { class: 'panel game-panel', 'aria-labelledby': titleId },
     h('header', { class: 'game-head' }, title,

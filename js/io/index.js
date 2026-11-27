@@ -6,6 +6,7 @@ import { bggSection } from './bgg-view.js';
 import { backupSection } from './backup-view.js';
 import { addGameSection } from './add-view.js';
 import { checkSection } from './check-view.js';
+import { familiesSection } from './families-view.js';
 import { exportSection } from './export-view.js';
 
 const hasFiles = (e) => [...(e.dataTransfer?.types ?? [])].includes('Files');
@@ -21,6 +22,7 @@ export const screens = [
       const bgg = bggSection();
       const backup = backupSection();
       const check = checkSection();
+      const families = familiesSection();
       const showCounts = () => {
         const p = store.getPlan2();
         counts.textContent = `${store.getGames().length} games · plan “${p.name}” · ${p.stacks.length} stacks · ${p.cupboard.length} in the cupboard`;
@@ -29,6 +31,7 @@ export const screens = [
       const root = h('div', { class: 'io-screen' },
         counts,
         check.el,
+        families.el,
         addGameSection(),
         bgg.el,
         backup.el,
@@ -52,7 +55,7 @@ export const screens = [
       });
 
       el.append(root);
-      const off = on('store:changed', () => { showCounts(); check.refresh(); bgg.refresh(); backup.refresh(); });
+      const off = on('store:changed', () => { showCounts(); check.refresh(); families.refresh(); bgg.refresh(); backup.refresh(); });
       return off;
     },
   },

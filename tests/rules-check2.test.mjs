@@ -47,8 +47,8 @@ test('a good stack gives nothing; every warning has the full shape', () => {
   }
 });
 
-test('RULES2 lists the twelve rules, six of them blocking', () => {
-  assert.equal(RULES2.length, 12);
+test('RULES2 lists the thirteen rules, six of them blocking', () => {
+  assert.equal(RULES2.length, 13);
   assert.deepEqual(RULES2.filter((r) => SEVERITY[r] === 'block'),
     ['size-missing', 'pizza', 'overlap', 'length', 'shelf-height', 'bridge-level']);
 });
@@ -346,4 +346,70 @@ test('boardLine', () => {
   assert.equal(boardLine(0), '');
   assert.equal(boardLine(1), '1 game is on the board');
   assert.equal(boardLine(3), '3 games are on the board');
+});
+
+// ---------------------------------------------------------------- family (B2)
+
+test('family (warn): the seed with every suggested family linked has none', async () => {
+  const { suggestFamilies } = await import('../js/game/family.js');
+  const m = new Map();
+  await store.init({ seed, storage: { getItem: (k) => (m.has(k) ? m.get(k) : null), setItem: (k, v) => m.set(k, String(v)), removeItem: (k) => m.delete(k) } });
+  store.batch(() => { for (const f of suggestFamilies(store.getGames())) for (const id of f.ids) store.updateGame(id, { family: f.name }); });
+  assert.ok(store.getFamilies().length >= 20);
+  assert.deepEqual(only(checkPlan2(store.getPlan2(), store.getGame), 'family'), []);
+});
+
+/** A world with one-box stacks: each [id, zone, x, familyOfItsGame]. */
+function famWorld(list, extra = {}) {
+  games.clear();
+  const stacks = list.map(([id, zone, x, family]) => {
+    const g = game(`g${id}`, [7, 30, 37], { family });
+    return stack(id, zone, x, family === undefined ? [] : [box(g)]);
+  });
+  return { stacks, cupboard: [], inside: {}, board: [], ...extra };
+}
+
+test('family (warn): next to each other on one shelf is fine, so is one stack', () => {
+  const plan = famWorld([['B1', 'bottom', 0.2, 'Azul'], ['B2', 'bottom', 40, 'Azul'], ['B3', 'bottom', 80, 'Root']]);
+  assert.deepEqual(only(checkPlan2(plan, getGame), 'family'), []);
+  const one = famWorld([['B1', 'bottom', 0.2, 'Azul']]);
+  one.stacks[0].boxes.push(box(game('gx', [7, 30, 37], { family: 'Azul' }), { on: ['gB1'] }));
+  assert.deepEqual(only(checkPlan2(one, getGame), 'family'), []);
+});
+
+test('family (warn): another shelf gives one warning naming both stacks', () => {
+  const plan = famWorld([['T1', 'top', 0.2, 'Azul'], ['B1', 'bottom', 0.2, 'Azul'], ['B2', 'bottom', 40, 'Azul']]);
+  const w = only(checkPlan2(plan, getGame), 'family');
+  assert.equal(w.length, 1);
+  assert.deepEqual(w[0], {
+    rule: 'family', severity: 'warn', family: 'Azul', stackId: 'T1', stackIds: ['T1', 'B1', 'B2'], gameId: null, otherStackId: null,
+    message: 'The Azul family is spread out: T1, B1 and B2. Keep a family on one shelf, next to each other.',
+  });
+  assert.equal(forStack([w[0]], 'B2').length, 1, 'forStack matches stackIds');
+  assert.equal(forStack([w[0]], 'B9').length, 0);
+});
+
+test('family (warn): a stack with boxes between gives one, an empty stack between gives none', () => {
+  const between = famWorld([['B1', 'bottom', 0.2, 'Azul'], ['B2', 'bottom', 40, 'Root'], ['B3', 'bottom', 80, 'Azul']]);
+  assert.equal(only(checkPlan2(between, getGame), 'family').length, 1);
+  const empty = famWorld([['B1', 'bottom', 0.2, 'Azul'], ['B2', 'bottom', 40, undefined], ['B3', 'bottom', 80, 'Azul']]);
+  assert.deepEqual(only(checkPlan2(empty, getGame), 'family'), []);
+  const grouped = groupWarnings(only(checkPlan2(between, getGame), 'family'));
+  assert.equal(grouped.warn.length, 1);
+});
+
+test('family (warn): an expansion inside its host counts at the host; board and cupboard are ignored', () => {
+  const plan = famWorld([['B1', 'bottom', 0.2, 'Azul'], ['B2', 'bottom', 40, 'Root'], ['B3', 'bottom', 80, 'Root']]);
+  game('exp', [3, 10, 10], { family: 'Azul' });
+  game('away', [3, 10, 10], { family: 'Azul' });
+  game('cup', [3, 10, 10], { family: 'Azul' });
+  plan.inside = { exp: 'gB3' }; // Azul at B1 and (inside) B3, Root between
+  assert.equal(only(checkPlan2(plan, getGame), 'family').length, 1);
+  plan.inside = { exp: 'gB1' }; // the same stack as the host: fine
+  plan.board = [{ game: 'away' }];
+  plan.cupboard = [{ game: 'cup', reason: 'x' }];
+  assert.deepEqual(only(checkPlan2(plan, getGame), 'family'), []);
+  plan.inside = { exp: 'hostOnBoard' }; // host not on a shelf: ignored
+  game('hostOnBoard', [3, 10, 10]);
+  assert.deepEqual(only(checkPlan2(plan, getGame), 'family'), []);
 });
