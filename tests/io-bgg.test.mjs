@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import * as store from '../js/core/store.js';
-import { parseBggCsv, planImport, diffGame, newGameFields } from '../js/io/bgg.js';
+import { parseBggCsv, planImport, diffGame, newGameFields, afterImportHints } from '../js/io/bgg.js';
 import { applyImport } from '../js/io/apply.js';
 
 const seed = JSON.parse(readFileSync(new URL('../data/seed.json', import.meta.url), 'utf8'));
@@ -167,4 +167,14 @@ test('one batch: a failing change rolls everything back', async () => {
   delete before.exportedAt;
   delete after.exportedAt;
   assert.deepEqual(after, before);
+});
+
+test('after adding games, the done message says what is left to do', () => {
+  assert.deepEqual(afterImportHints([]), []);
+  const base = { bggId: 1, name: 'A', type: 'base' };
+  const exp = { bggId: 2, name: 'B', type: 'expansion' };
+  assert.equal(afterImportHints([base]).length, 1);
+  assert.match(afterImportHints([base])[0], /rename it or set its size/);
+  assert.match(afterImportHints([base, exp])[1], /^1 of them is an expansion.*Stored inside/);
+  assert.match(afterImportHints([exp, { ...exp, bggId: 3 }])[1], /^All of them are expansions/);
 });

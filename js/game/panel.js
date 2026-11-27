@@ -5,7 +5,7 @@ import * as store from '../core/store.js';
 import { openGame, showOnMap } from '../core/contracts.js';
 import { describeLocation, formatRange } from '../core/format.js';
 import { bggPage, bggSearch } from './logic.js';
-import { categorySection, extLink, insideSection, notesSection, sizeSection } from './fields.js';
+import { categorySection, extLink, insideSection, notesSection, sizeSection, titleSection } from './fields.js';
 
 let uniq = 0;
 
@@ -30,16 +30,17 @@ export function openPanel(id) {
   const bgg = h('p', { class: 'game-bgg' });
   const facts = h('dl', { class: 'game-facts' });
   const where = h('p', { class: 'game-where' });
-  const sections = [sizeSection(id, save), categorySection(id, save), insideSection(id, openGame), notesSection(id, save)];
+  const nameSection = titleSection(id, save);
+  const sections = [nameSection, sizeSection(id, save), categorySection(id, save), insideSection(id, openGame), notesSection(id, save)];
 
   const dlg = h('dialog', { class: 'panel game-panel', 'aria-labelledby': titleId },
     h('header', { class: 'game-head' }, title,
       h('button', { type: 'button', class: 'btn game-close', 'aria-label': 'Close', onclick: () => dlg.close() }, '✕')),
     h('div', { class: 'game-body' },
-      bgg, facts,
+      nameSection.el, bgg, facts,
       h('section', { class: 'game-sec' }, h('h3', {}, 'Where is it?'), where,
         h('button', { type: 'button', class: 'btn btn-primary', onclick: () => showOnMap(id) }, 'Show on map')),
-      ...sections.map((s) => s.el)));
+      ...sections.slice(1).map((s) => s.el)));
 
   function refresh() {
     const g = store.getGame(id);
