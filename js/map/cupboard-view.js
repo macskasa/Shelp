@@ -1,14 +1,14 @@
 // The Cupboard screen (stories C6, B2.3). Owner: Bruce (Part B).
 // Lists the games in the cupboard (with the reason) and the games on the board (store.getBoard(),
-// in board order). "Put on a stack…" opens the picker (put-panel.js). A game without a box size can
-// never be on a shelf, so it gets "measure it first" instead.
+// in board order). "Pick up" opens the pick-up sheet (pickup-sheet.js). A game without a box size can
+// never be on a shelf, so it also says "measure it first".
 import { h, loadCss } from '../core/dom.js';
 import { on } from '../core/bus.js';
 import * as store from '../core/store.js';
 import { openGame } from '../core/contracts.js';
 import { formatDims } from '../core/format.js';
 import { offShelf } from './cupboard.js';
-import { openPutPanel } from './put-panel.js';
+import { openPickUp } from './pickup-sheet.js';
 import { categoryChips } from './ui.js';
 
 loadCss(new URL('./map.css', import.meta.url));
@@ -38,11 +38,13 @@ export function mountCupboard(el) {
 }
 
 function row(game, reason) {
+  const pick = h('button', { type: 'button', class: 'btn map-cup-put', onclick: () => openPickUp(game.id), 'aria-label': `Pick up ${game.title}` }, 'Pick up');
   const action = game.dims
-    ? h('button', { type: 'button', class: 'btn map-cup-put', onclick: () => openPutPanel(game.id) }, 'Put on a stack…')
+    ? pick
     : h('div', { class: 'map-cup-measure' },
       h('span', {}, 'Measure it first'),
-      h('button', { type: 'button', class: 'btn', onclick: () => openGame(game.id), 'aria-label': `Add the box size of ${game.title}` }, 'Add size'));
+      h('button', { type: 'button', class: 'btn', onclick: () => openGame(game.id), 'aria-label': `Add the box size of ${game.title}` }, 'Add size'),
+      pick);
   return h('li', { class: 'map-cupitem' },
     h('button', { type: 'button', class: 'map-boxitem-title', onclick: () => openGame(game.id) }, game.title),
     h('div', { class: 'map-boxitem-meta' }, categoryChips(game.categories ?? []), h('span', {}, formatDims(game.dims))),

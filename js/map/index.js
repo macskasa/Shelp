@@ -8,6 +8,8 @@
 //   details.js      what the stack details panel lists (C3); stack-panel.js shows it
 //   cupboard.js     what the cupboard screen lists, placement preview (C6); cupboard-view.js shows it
 //   ui.js           category chips and warning lists
+//   pickup.js       what the pick-up sheet offers and the turn options (Phase C); pickup-sheet.js and
+//                   turn-panel.js show them; put-panel.js is "Put on a stack…" (also #/map?pick= for now)
 import { mountMap } from './view.js';
 import { mountCupboard } from './cupboard-view.js';
 

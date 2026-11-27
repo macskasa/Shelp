@@ -332,3 +332,57 @@ dialog.panel.map-put { width: min(520px, calc(100vw - 24px)); max-height: min(90
 .map-preview { margin: 0 0 12px; padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--radius); }
 .map-preview p { margin: 0 0 4px; }
 .map-put-error { color: var(--danger); font-weight: 600; }
+
+/* ---- pick-up sheet (Phase C item 1) ------------------------------------------------------------ */
+.map-pick-where { margin: 0 0 8px; }
+.map-settle { margin: 0 0 12px; padding: 6px 10px; border-left: 3px solid var(--accent); background: var(--bg); font-size: 0.9rem; }
+.map-pick-actions { display: flex; flex-direction: column; gap: 8px; }
+.map-pick-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0;
+  min-height: 48px;
+  padding: 6px 12px;
+  text-align: left;
+}
+.map-pick-btn .muted { font-size: 0.8rem; font-weight: normal; }
+@media (min-width: 600px) {
+  .map-pick-actions { display: grid; grid-template-columns: 1fr 1fr; }
+}
+
+/* ---- turn chooser (Phase C item 4) -------------------------------------------------------------- */
+.map-turn-hint { margin: -4px 0 8px; font-size: 0.85rem; }
+.map-turn-opts { display: grid; grid-template-columns: 1fr; gap: 6px; margin: 0 0 12px; }
+@media (min-width: 480px) {
+  .map-turn-opts { grid-template-columns: 1fr 1fr; }
+}
+.map-turn-opt {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 56px;
+  padding: 4px 10px 4px 4px;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+.map-turn-opt[aria-pressed='true'] { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent) inset; }
+.map-turn-text { display: flex; flex-direction: column; font-size: 0.9rem; }
+.map-turn-text .muted { font-size: 0.8rem; }
+.map-turn-now {
+  margin-left: 6px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--accent-text);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+.map-turn-icon { flex: none; }
+.map-turn-front { fill: var(--surface); stroke: currentColor; stroke-width: 1.2; }
+.map-turn-side { fill: var(--border); stroke: currentColor; stroke-width: 1.2; stroke-linejoin: round; }
