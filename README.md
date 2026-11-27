@@ -3,7 +3,7 @@
 **Where is each board game on the shelves?** Shelp is a personal web app for Adam's board game collection. It shows a to-scale drawing of the IKEA BOAXEL shelves with every box on it, finds any game, keeps box sizes and categories, imports the BoardGameGeek collection export, and works offline on a phone.
 
 - **Live app:** https://macskasa.github.io/Shelp/
-- **Status:** the MVP is done. The next big step is moving games by hand. Phase A (Tony) moved the data to schema 2: games on games, bridges, which side is up, pizza games, the board, and undo. In Phase B the three parts move onto it (`docs/part-a3.md`, `docs/part-b2.md`, `docs/part-c2.md`).
+- **Status:** the MVP is done. Phase A (Tony) moved the data to schema 2: games on games, bridges, which side is up, pizza games, the board, and undo. Phase B moved the three parts onto it (Bruce's stack details and picker are the last open part). **Phase C is moving games by hand:** `docs/part-b3.md`, `docs/part-a4.md`, `docs/part-c3.md`.
 
 ## Contents
 
@@ -96,9 +96,9 @@ Each developer is a separate Claude chat with this repo attached. They don't see
 |---|---|---|---|
 | **Adam** | Product owner. Merges PRs. | – | – |
 | **Tony** | Lead and code reviewer. Owns the shared core, data and docs. | – | `js/core/`, `js/app.js`, `index.html`, `css/base.css`, `data/`, `docs/` |
-| **Stephen** | Part A – data in and out: BGG import, game panel, backup and restore. Round 2: rule checker, CSV export, add a game. Phase B: rules, export and pizza on schema 2 | [part-a](docs/part-a.md), [a2](docs/part-a2.md), [a3](docs/part-a3.md) | `js/io/`, `js/game/`, `js/rules/` |
-| **Bruce** | Part B – shelf map: model, drawing, stack details, special placements, cupboard. Phase B: the map and the picker on schema 2 | [part-b](docs/part-b.md), [b2](docs/part-b2.md) | `js/map/` |
-| **Peter** | Part C – catalog, search, app frame, offline. Phase B: search wording, the board, Undo | [part-c](docs/part-c.md), [c2](docs/part-c2.md) | `js/catalog/`, `js/shell/`, `sw.js`, `manifest.webmanifest`, `icons/` |
+| **Stephen** | Part A – data in and out: BGG import, game panel, backup and restore. Round 2: rule checker, CSV export, add a game. Phase B: rules, export and pizza on schema 2. Phase C: bracket rule per box, Move, suggest a spot (D4) | [part-a](docs/part-a.md), [a2](docs/part-a2.md), [a3](docs/part-a3.md), [a4](docs/part-a4.md) | `js/io/`, `js/game/`, `js/rules/` |
+| **Bruce** | Part B – shelf map: model, drawing, stack details, special placements, cupboard. Phase B: the map and the picker on schema 2. Phase C: moving by hand (pick up, placing mode, the board strip, stacks, drag and drop) | [part-b](docs/part-b.md), [b2](docs/part-b2.md), [b3](docs/part-b3.md) | `js/map/` |
+| **Peter** | Part C – catalog, search, app frame, offline. Phase B: search wording, the board, Undo. Phase C: saved versions (D6), compare, Move | [part-c](docs/part-c.md), [c2](docs/part-c2.md), [c3](docs/part-c3.md) | `js/catalog/`, `js/shell/`, `js/versions/`, `sw.js`, `manifest.webmanifest`, `icons/` |
 
 The three parts only meet through the contracts in `js/core/contracts.js` (`openGame`, `showOnMap`, `showStack`, `go`) and the store. Placeholders exist for each, so every part can start today and be merged in any order.
 
@@ -125,6 +125,7 @@ js/app.js                entry point: loads data, starts the parts (Tony)
 js/core/                 store, bus, contracts, shelves, categories, format, dom, schema, geometry, plan2 (Tony)
 js/shell/                router, navigation, service worker registration (Peter)
 js/catalog/              catalog list, search, where's my game (Peter)
+js/versions/             saved versions and compare (Peter)
 js/map/                  shelf model, drawing, stack details, cupboard (Bruce)
 js/io/                   BGG import, backup, restore, plan import (Stephen)
 js/game/                 game details panel (Stephen)
