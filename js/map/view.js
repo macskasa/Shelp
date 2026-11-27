@@ -3,6 +3,8 @@
 // It opens at the full width of the shelves, shows a hover title for the mouse and the S Pen,
 // highlights #/map?game=<id>, and opens a stack's details on a tap, on Enter / Space, or for
 // #/map?stack=<id>. A new highlight pans to it but keeps the zoom.
+// The Front row / Back row switch picks which row of the 2-deep stacks is drawn (issue #47);
+// ?game= for a back-row game opens the back view. Every mount starts in the front view.
 import { h, loadCss } from '../core/dom.js';
 import { on } from '../core/bus.js';
 import * as store from '../core/store.js';
@@ -14,6 +16,8 @@ import { drawScene } from './draw.js';
 import { legend } from './legend.js';
 import { TITLE_PX } from './labels.js';
 import { openStackPanel } from './stack-panel.js';
+import { deepStackIds, viewForLocation } from './rows.js';
+import { rowSwitch } from './row-switch.js';
 import { createPanZoom } from './pan-zoom.js';
 
 loadCss(new URL('./map.css', import.meta.url));
@@ -33,7 +37,8 @@ export function mountMap(el, params) {
     tool('Zoom in', '+', () => panZoom.zoomBy(ZOOM_STEP)),
     tool('Fit the width', '⤢', () => panZoom.fit()));
   const frame = h('div', { class: 'map-frame' }, stage, tools, tip);
-  const root = h('section', { class: 'map-view', 'aria-label': 'Shelves' }, caption, frame, legend());
+  const rows = rowSwitch((v) => setView(v));
+  const root = h('section', { class: 'map-view', 'aria-label': 'Shelves' }, caption, rows.el, frame, legend());
   el.append(root);
 
   const measure = textMeasurer(root);
@@ -41,20 +46,31 @@ export function mountMap(el, params) {
   let scene = null;
   let drawing = null;
   let selected = null; // id of the stack whose details panel is open
+  let view = 'front'; // which row of the 2-deep stacks is drawn
   let refitTimer = 0;
   let fittedK = 0; // the k the titles were last fitted for
 
   const panZoom = createPanZoom(stage, { onChange: onView });
 
   function render() {
-    scene = buildScene(store.getPlan2(), store.getGame);
+    const plan = store.getPlan2();
+    rows.set(view, deepStackIds(plan));
+    root.dataset.view = view;
+    scene = buildScene(plan, store.getGame, { view });
     drawing = drawScene(scene, store.getGame);
     drawing.svg.setAttribute('preserveAspectRatio', 'xMinYMin meet');
     stage.replaceChildren(drawing.svg);
     layoutFrame();
     fittedK = 0;
-    panZoom.attach(drawing.svg, scene);
+    panZoom.attach(drawing.svg, scene); // keeps the zoom and pan
     applyParams();
+  }
+
+  /** Switch rows (the buttons, or a ?game= in the other row). Keeps the zoom and focus. */
+  function setView(v) {
+    if (v === view) return;
+    view = v;
+    render();
   }
 
   /** Text stays the same screen size at every zoom (--k); which titles fit is refitted shortly after. */
@@ -139,6 +155,11 @@ export function mountMap(el, params) {
    * Only on a route change – never on a redraw, or every store change would open the panel again.
    */
   function afterRoute() {
+    const v = current.game ? viewForLocation(store.locate2(current.game)) : null;
+    if (v && v !== view) {
+      view = v;
+      render();
+    }
     if (current.stack && scene.stacks.some((x) => x.id === current.stack)) openDetails(current.stack);
     applyParams({ reveal: true });
   }

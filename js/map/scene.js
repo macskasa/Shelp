@@ -6,6 +6,7 @@
 // (its three parts side by side, bottom-aligned), then the narrow shelf (GROUPS order).
 import { ZONES, GROUPS, BRACKET } from '../core/shelves.js';
 import { layoutStack2 } from '../core/geometry.js';
+import { rowForView } from './rows.js';
 
 export const SPACING = Object.freeze({
   margin: 3,   // around the whole drawing
@@ -36,21 +37,25 @@ const bandLabel = (z) => `${z.label} · ${z.height} cm high`;
  * Lay out the whole drawing.
  * @param plan     store.getPlan2() (schema 2)
  * @param getGame  id → game
+ * @param view     'front' (default) or 'back': which row of the 2-deep stacks is drawn
  * @returns {{
  *   width, height,                          drawing size in cm
  *   labels: [{ text, x, y }],               band titles (y = text centre)
  *   zones:  [{ id, label, x, top, floor, length, height, overhang, approximate, brackets: [x] }],
  *   brackets: [{ zone, x, y, w, h }],       dark bars hanging from the shelf above
  *   easy:   [{ path, x0, x1 }],             dashed "easy to reach" outlines (SVG path data)
- *   stacks: [{ id, zone, x, w, h, top, floor, rows, back: [gameId], label: { x, y },
+ *   stacks: [{ id, zone, x, w, h, top, floor, rows, deep, back: [gameId], label: { x, y },
  *              boxes: [{ gameId, x, y, w, h, row, up, rot, on, vertical }],
+ *              ghosts: [{ gameId, x, y, w, h }],
  *              topper: null | { label, x, y, w, h }, layout, plan }]
  * }}
  * Box x/y is the top-left corner in the drawing; positions come from core layoutStack2 (gravity:
  * a box sits on the highest of its supports, bridges included). vertical: taller than wide, so its
- * title runs up the box. Only the FRONT row of a 2-row stack is drawn; the back row is in `back`.
+ * title runs up the box. `boxes` holds the row the view draws: the front row, or for a 2-deep stack
+ * in the back view its back row, with its front row in `ghosts` (faint outlines drawn in front).
+ * `back` always lists the back-row game ids.
  */
-export function buildScene(plan, getGame) {
+export function buildScene(plan, getGame, { view = 'front' } = {}) {
   const { margin, label, ids } = SPACING;
   const zones = new Map();
   const labels = [];
@@ -82,7 +87,7 @@ export function buildScene(plan, getGame) {
   for (const st of plan.stacks) {
     const z = zones.get(st.zone);
     if (!z) continue; // the schema check keeps unknown zones out; never crash the drawing
-    stacks.push(placeStack(st, z, getGame));
+    stacks.push(placeStack(st, z, getGame, rowForView(view)));
   }
 
   let right = 0;
@@ -103,20 +108,28 @@ export function buildScene(plan, getGame) {
   };
 }
 
-function placeStack(st, z, getGame) {
+function placeStack(st, z, getGame, row) {
   const lay = layoutStack2(st, getGame);
   const x = z.x + st.x;
-  const boxes = lay.boxes.filter((b) => b.row === 0).map((b) => ({
+  const deep = lay.boxes.some((b) => b.row > 0);
+  const shown = deep ? row : 0;
+  const place = (b) => ({
     gameId: b.gameId, x: cm(x + b.x), y: cm(z.floor - b.y - b.h), w: b.w, h: b.h,
     row: b.row, up: b.up, rot: b.rot, on: b.on, vertical: b.h > b.w,
-  }));
+  });
+  const boxes = lay.boxes.filter((b) => b.row === shown).map(place);
+  const ghosts = shown > 0
+    ? lay.boxes.filter((b) => b.row === 0).map((b) => { const p = place(b); return { gameId: p.gameId, x: p.x, y: p.y, w: p.w, h: p.h }; })
+    : [];
   const t = lay.topper;
   return {
     id: st.id, zone: st.zone, x: cm(x), w: lay.w, h: lay.h, top: cm(z.floor - lay.h), floor: z.floor,
     rows: lay.rows,
+    deep,
     back: lay.boxes.filter((b) => b.row > 0).map((b) => b.gameId),
     label: { x: cm(x + lay.w / 2), y: cm(z.floor + SPACING.ids * SPACING.idAt) },
     boxes,
+    ghosts,
     topper: t ? { label: t.label, x: cm(x + t.x), y: cm(z.floor - t.y - t.h), w: t.w, h: t.h } : null,
     layout: lay,
     plan: st, // the plan stack this was drawn from
@@ -173,12 +186,15 @@ function outline(run, pad) {
   return { path: parts.join(' '), x0: cm(x0), x1: cm(x1) };
 }
 
-/** Where a game is drawn: { stack, box } (box null for a back-row game), or null if not on a stack. */
+/**
+ * Where a game is drawn: { stack, box }, or null if not on a stack. box is null when the game is in
+ * the row this view doesn't draw (a back-row game in the front view, or the other way round).
+ */
 export function findInScene(scene, gameId) {
   for (const stack of scene.stacks) {
     const box = stack.boxes.find((b) => b.gameId === gameId);
     if (box) return { stack, box };
-    if (stack.back.includes(gameId)) return { stack, box: null };
+    if (stack.back.includes(gameId) || stack.ghosts.some((g) => g.gameId === gameId)) return { stack, box: null };
   }
   return null;
 }

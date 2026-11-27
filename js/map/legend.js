@@ -12,6 +12,6 @@ export function legend() {
     item(swatch('map-sw-striped', `--c1: var(${first.cssVar}); --c2: var(${second.cssVar})`), 'Striped = several'),
     item(swatch('map-sw-easy'), 'Easy to reach'),
     item(swatch('map-sw-bracket'), 'Bracket'),
-    item(swatch('map-sw-text', null, '×2'), '2 deep (front row drawn)'),
+    item(swatch('map-sw-text', null, '×2'), '2 deep (Back row shows the rest)'),
   );
 }
