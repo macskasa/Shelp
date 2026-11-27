@@ -201,7 +201,7 @@ test('seed: every game gets suggestions in under 200 ms, and nothing in the stor
   const plan = store.getPlan2();
   const games = store.getGames();
   const before = JSON.stringify(store.exportData().plan);
-  suggestSpots(plan, games, games[0].id); // warm up
+  for (const g of games.slice(0, 10)) suggestSpots(plan, games, g.id); // warm up the JIT: the first game measured used to look slow on CI
   const best = []; // each game's best of 3 runs: one noisy run (scheduling, garbage collection) cannot fail the test
   for (const g of games) {
     let min = Infinity;
