@@ -1,0 +1,64 @@
+/* Saved versions panel (D6). Owner: Peter (Part C). Classes are prefixed ver-. */
+
+.ver-panel {
+  /* top of the screen: the keyboard covers the lower part on a phone (see js/shell/viewport.js) */
+  --panel-vh: 100dvh;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: calc(env(safe-area-inset-top) + 8px) auto auto;
+  max-height: calc(var(--panel-vh) - 16px - env(safe-area-inset-top));
+  padding: 14px;
+  overflow: hidden;
+}
+.ver-head { display: flex; align-items: center; justify-content: space-between; gap: var(--gap); }
+.ver-head h2 { margin: 0; }
+.ver-head form { margin: 0; }
+.ver-close { min-height: 40px; }
+
+.ver-save-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.ver-input {
+  flex: 1 1 200px;
+  min-width: 0;
+  min-height: 44px;
+  font-size: 1rem; /* 16 px: Chrome does not zoom the page when the field gets focus */
+}
+.ver-save { min-height: 44px; }
+.ver-note, .ver-status { margin: 0; font-size: 0.9rem; }
+.ver-note[hidden] { display: none; }
+.ver-status:empty { display: none; }
+.ver-error { margin: 0; color: var(--danger); font-size: 0.9rem; }
+.ver-error[hidden] { display: none; }
+
+.ver-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  min-height: 0;
+}
+.ver-item {
+  display: grid;
+  gap: 4px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.ver-empty { padding: 4px 0; }
+.ver-name { font-weight: 600; overflow-wrap: anywhere; }
+.ver-meta { font-size: 0.9rem; }
+.ver-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+.ver-actions .btn { min-height: 40px; padding-inline: 10px; } /* three buttons share one row on a 384 px phone */
+
+/* the question panels (switch, delete) */
+.ver-confirm h2 { margin-top: 0; }
+.ver-check { display: grid; grid-template-columns: auto 1fr; gap: 4px 10px; align-items: center; margin: 0 0 12px; }
+.ver-check input { width: 22px; height: 22px; }
+.ver-check-note { grid-column: 2; margin: 0; font-size: 0.9rem; }
+
+@media (min-width: 1024px) {
+  .ver-panel { margin-top: 8vh; max-height: 84vh; }
+}

@@ -40,6 +40,12 @@ const SHAPES = {
     ['path', { d: 'M15 14l5-5-5-5' }],
     ['path', { d: 'M20 9H9.5a5.5 5.5 0 000 11H13' }],
   ],
+  // counter-clockwise arrow around a clock (header Versions)
+  versions: [
+    ['path', { d: 'M4 4.5V9h4.5' }],
+    ['path', { d: 'M4.6 9A8 8 0 1 1 4 12' }],
+    ['path', { d: 'M12 7.5V12l3 1.8' }],
+  ],
   // magnifying glass (header search, story C4)
   search: [
     ['circle', { cx: 11, cy: 11, r: 6 }],

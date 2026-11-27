@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import * as store from '../js/core/store.js';
 import { fold, searchKey, parseQuery, matchScore, matchesQuery, rankMatches } from '../js/catalog/search.js';
-import { whereText } from '../js/catalog/where-text.js';
+import { whereText, moveHint, NO_SIZE_HINT } from '../js/catalog/where-text.js';
 import { DEFAULT_STATE, makeEntry, matches } from '../js/catalog/filter.js';
 
 const seed = JSON.parse(readFileSync(new URL('../data/seed.json', import.meta.url), 'utf8'));
@@ -203,4 +203,14 @@ test('whereText with the real store: a bridge, boxes on top and the board', asyn
   // an expansion from the seed: Lairs: Box Zero lives inside Lairs
   const zero = idOf('Lairs: Box Zero');
   assert.match(whereText(store.locate2(zero), titleOf).sentence, /^Inside the Lairs box \(/);
+});
+
+test('moveHint: a game without a box size cannot be moved, the hint says what to do', async () => {
+  await load();
+  assert.equal(NO_SIZE_HINT, 'Add a box size first');
+  const withSize = store.getGames().find((g) => g.dims);
+  const without = store.getGames().find((g) => !g.dims);
+  assert.equal(moveHint(withSize), null);
+  assert.equal(moveHint(without), 'Add a box size first');
+  assert.ok(without, 'the seed has games without a size');
 });
