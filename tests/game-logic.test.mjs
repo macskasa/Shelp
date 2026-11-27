@@ -3,10 +3,10 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import * as store from '../js/core/store.js';
-import { describeLocation } from '../js/core/format.js';
+import { describeLocation2 } from '../js/core/format.js';
 import {
   findByBggId, parseBggId, parseGameForm, parseRange, cleanTitle, parseDecimal, parseDims, dimsToInputs, sameDims, textOrNull, sizeSources, toggleCategory,
-  gamesInside, hostChoices, takenOutReason, bggPage, bggVersions, bggSearch,
+  gamesInside, hostChoices, takenOutReason, bggPage, bggVersions, bggSearch, setPizza,
 } from '../js/game/logic.js';
 
 const seed = JSON.parse(readFileSync(new URL('../data/seed.json', import.meta.url), 'utf8'));
@@ -185,7 +185,42 @@ test('acceptance: Fantasy Fluxx is added unplaced with its size', async () => {
   const game = store.getGame(newId);
   assert.deepEqual(game.dims, [2.8, 9.4, 12.4]);
   assert.equal(game.inBgg, false);
-  assert.deepEqual(store.locate(newId), { kind: 'unplaced' });
-  assert.equal(describeLocation(store.locate(newId)), 'Not placed yet');
+  assert.equal(store.locate2(newId).kind, 'board');
+  assert.equal(describeLocation2(store.locate2(newId)), 'On the board');
   assert.ok(store.getGames().some((g) => g.title === 'Fantasy Fluxx'));
+});
+
+test('setPizza: a flat game can be switched both ways', async () => {
+  await store.init({ seed, storage: memoryStorage() });
+  const lairs = byTitle('Lairs'); // lies flat on a shelf, pizza from the start
+  assert.equal(lairs.pizza, true);
+  assert.deepEqual(setPizza(store, lairs.id, false), { ok: true });
+  assert.equal(store.getGame(lairs.id).pizza, false);
+  assert.deepEqual(setPizza(store, lairs.id, true), { ok: true });
+  assert.equal(store.getGame(lairs.id).pizza, true);
+});
+
+test('setPizza: the store refuses a game that stands or lies on its side, and its message is passed on', async () => {
+  await store.init({ seed, storage: memoryStorage() });
+  for (const title of ['Ice Cool', 'KLASK', 'Trio']) {
+    const g = byTitle(title);
+    assert.equal(g.pizza, false);
+    const r = setPizza(store, g.id, true);
+    assert.equal(r.ok, false);
+    assert.equal(r.pizza, false, 'what is really stored');
+    assert.match(r.message, /does not lie flat on the shelf/);
+    assert.match(r.message, new RegExp(title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+    assert.equal(store.getGame(g.id).pizza, false, 'nothing changed');
+  }
+});
+
+test('setPizza: a standing game on the board or in the cupboard may become pizza; switching it off is always fine', async () => {
+  await store.init({ seed, storage: memoryStorage() });
+  const klask = byTitle('KLASK');
+  store.moveToBoard(klask.id);
+  assert.deepEqual(setPizza(store, klask.id, true), { ok: true });
+  assert.equal(store.getGame(klask.id).pizza, true);
+  // …but then it cannot be stood up on a shelf again without switching pizza off
+  assert.deepEqual(setPizza(store, klask.id, false), { ok: true });
+  assert.equal(store.getGame(klask.id).pizza, false);
 });

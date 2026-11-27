@@ -6,7 +6,7 @@ import { CATEGORIES } from '../core/categories.js';
 import { formatDims } from '../core/format.js';
 import {
   cleanTitle, parseDims, dimsToInputs, sameDims, textOrNull, sizeSources, toggleCategory,
-  hostChoices, takenOutReason, bggVersions, bggSearch,
+  hostChoices, takenOutReason, bggVersions, bggSearch, setPizza,
 } from './logic.js';
 
 let uniq = 0;
@@ -139,6 +139,29 @@ export function categorySection(id, save) {
   };
 }
 
+// ---------------------------------------------------------------- pizza: may only lie flat
+
+export function pizzaSection(id) {
+  const inputId = nextId('pizza');
+  const hint = h('p', { class: 'game-hint is-error', role: 'status' });
+  const input = h('input', { type: 'checkbox', role: 'switch', id: inputId, onchange: toggle });
+
+  function toggle() {
+    const r = setPizza(store, id, input.checked);
+    hint.textContent = r.ok ? '' : r.message; // the store says why, e.g. the game stands on a shelf
+    if (!r.ok) input.checked = r.pizza;
+  }
+
+  return {
+    el: h('section', { class: 'game-sec' },
+      h('h3', {}, 'Pizza'),
+      h('label', { class: 'game-switch', for: inputId }, input, h('span', {}, 'Pizza – may only lie flat')),
+      h('p', { class: 'game-hint muted' }, 'A pizza game lies flat on its biggest side; a quarter turn is fine. It is never stood up on a shelf.'),
+      hint),
+    refresh: (g) => { input.checked = g.pizza === true; },
+  };
+}
+
 // ---------------------------------------------------------------- A5: inside another box
 
 export function insideSection(id, openOther) {
@@ -153,7 +176,7 @@ export function insideSection(id, openOther) {
     try {
       if (hostId) store.setInside(id, hostId);
       else {
-        const loc = store.locate(id);
+        const loc = store.locate2(id);
         if (loc.kind === 'inside') store.moveToCupboard(id, takenOutReason(title(loc.hostId)));
       }
     } catch (err) {
@@ -169,7 +192,7 @@ export function insideSection(id, openOther) {
       select, note, holds),
     refresh() {
       const games = store.getGames();
-      const plan = store.getPlan();
+      const plan = store.getPlan2();
       const choice = hostChoices(id, games, plan);
       clear(select).append(
         h('option', { value: '' }, 'Not inside another box'),

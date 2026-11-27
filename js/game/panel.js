@@ -3,9 +3,9 @@ import { h, loadCss, showPanel, toast } from '../core/dom.js';
 import { on } from '../core/bus.js';
 import * as store from '../core/store.js';
 import { openGame, showOnMap } from '../core/contracts.js';
-import { describeLocation, formatRange } from '../core/format.js';
+import { describeLocation2, formatRange } from '../core/format.js';
 import { bggPage, bggSearch } from './logic.js';
-import { categorySection, extLink, insideSection, notesSection, sizeSection, titleSection } from './fields.js';
+import { categorySection, extLink, insideSection, notesSection, pizzaSection, sizeSection, titleSection } from './fields.js';
 
 let uniq = 0;
 
@@ -31,7 +31,7 @@ export function openPanel(id) {
   const facts = h('dl', { class: 'game-facts' });
   const where = h('p', { class: 'game-where' });
   const nameSection = titleSection(id, save);
-  const sections = [nameSection, sizeSection(id, save), categorySection(id, save), insideSection(id, openGame), notesSection(id, save)];
+  const sections = [nameSection, sizeSection(id, save), categorySection(id, save), pizzaSection(id), insideSection(id, openGame), notesSection(id, save)];
 
   const dlg = h('dialog', { class: 'panel game-panel', 'aria-labelledby': titleId },
     h('header', { class: 'game-head' }, title,
@@ -55,7 +55,7 @@ export function openPanel(id) {
       ...row('Players', formatRange(g.players)),
       ...row('Play time', formatRange(g.time, 'min')),
       ...row('Age', g.age));
-    where.textContent = describeLocation(store.locate(id), (gid) => store.getGame(gid)?.title ?? gid);
+    where.textContent = describeLocation2(store.locate2(id), (gid) => store.getGame(gid)?.title ?? gid);
     for (const s of sections) s.refresh(g);
   }
 
