@@ -24,9 +24,16 @@ export function mountCatalog(el, params) {
   let state = stateFromParams(params);
   let filtersOpen = activeFilterCount(state) > 0; // phones: the filter panel is folded away until needed
   let entries = [];
+  let visible = []; // the entries on screen, in order: Enter opens the first one
   const rows = new Map();
 
   // ---- controls
+  const search = h('input', {
+    class: 'cat-search-input', type: 'search', placeholder: 'Search by title', 'aria-label': 'Search games',
+    enterkeyhint: 'search', autocapitalize: 'off', autocorrect: 'off', autocomplete: 'off', spellcheck: 'false',
+    oninput: () => setState({ q: search.value }),
+    onkeydown: onSearchKey,
+  });
   const toggle = h('button', { class: 'btn cat-filter-toggle', type: 'button', 'aria-controls': 'cat-filters',
     onclick: () => { filtersOpen = !filtersOpen; syncControls(); } });
   const count = h('p', { class: 'cat-count', role: 'status' });
@@ -60,11 +67,11 @@ export function mountCatalog(el, params) {
 
   const list = h('ul', { class: 'cat-list' });
   const emptyText = h('p', {});
-  const clearBtn = h('button', { class: 'btn', type: 'button', onclick: clearFilters }, 'Clear filters');
+  const clearBtn = h('button', { class: 'btn', type: 'button', onclick: clearAll }, 'Clear filters');
   const empty = h('div', { class: 'cat-empty card', hidden: true }, emptyText, clearBtn);
 
   el.append(h('section', { class: 'cat-screen' },
-    h('div', { class: 'cat-bar' }, toggle, count), panel, sortBar, list, empty));
+    h('div', { class: 'cat-bar' }, search, toggle, count), panel, sortBar, list, empty));
 
   // ---- state changes
   function setState(patch) {
@@ -73,6 +80,9 @@ export function mountCatalog(el, params) {
   }
   function clearFilters() {
     setState({ cats: [], players: null, time: null, where: 'any', sizeMissing: false });
+  }
+  function clearAll() {
+    setState({ q: '', cats: [], players: null, time: null, where: 'any', sizeMissing: false });
   }
   function sortBy(key) {
     setState(state.sort === key ? { dir: state.dir === 'asc' ? 'desc' : 'asc' } : { sort: key, dir: 'asc' });
@@ -87,13 +97,18 @@ export function mountCatalog(el, params) {
 
   function apply() {
     const shown = sortEntries(entries.filter((e) => matches(e, state)), state.sort, state.dir);
+    visible = shown;
     list.replaceChildren(...shown.map((e) => rows.get(e.game.id)));
     count.textContent = countLabel(shown.length);
     const none = shown.length === 0;
     empty.hidden = !none;
     list.hidden = none;
-    emptyText.textContent = activeFilterCount(state) ? 'No games match these filters.' : 'There are no games yet.';
-    clearBtn.hidden = !activeFilterCount(state);
+    const q = state.q.trim();
+    const filtered = activeFilterCount(state) > 0;
+    emptyText.textContent = q ? `No game matches “${q}”${filtered ? ' with these filters' : ''}.`
+      : filtered ? 'No games match these filters.' : 'There are no games yet.';
+    clearBtn.textContent = q ? (filtered ? 'Clear search and filters' : 'Clear search') : 'Clear filters';
+    clearBtn.hidden = !q && !filtered;
     syncControls();
     syncUrl();
   }
@@ -102,6 +117,7 @@ export function mountCatalog(el, params) {
     const n = activeFilterCount(state);
     toggle.textContent = n ? `Filters (${n})` : 'Filters';
     toggle.setAttribute('aria-expanded', String(filtersOpen));
+    if (search.value !== state.q) search.value = state.q; // Back or a link changed it
     panel.hidden = !filtersOpen;
     for (const [id, b] of catButtons) b.setAttribute('aria-pressed', String(state.cats.includes(id)));
     setValue(playersSel, state.players == null ? '' : String(state.players));
@@ -125,6 +141,28 @@ export function mountCatalog(el, params) {
     if (location.hash !== hash) history.replaceState(history.state, '', hash);
   }
 
+  const desktop = matchMedia('(min-width: 1024px)');
+
+  /** Enter: desktop opens the first match, a phone just hides the keyboard so the list is visible. */
+  function onSearchKey(e) {
+    if (e.key !== 'Enter' || e.isComposing) return;
+    e.preventDefault();
+    if (desktop.matches && visible.length) openGame(visible[0].game.id);
+    else search.blur();
+  }
+
+  /** Desktop: "/" jumps to the search field, unless you are typing somewhere or a panel is open. */
+  function onKeydown(e) {
+    if (e.key !== '/' || e.ctrlKey || e.metaKey || e.altKey || !desktop.matches) return;
+    const t = e.target;
+    if (t instanceof Element && t.closest('input, textarea, select, [contenteditable]')) return;
+    if (document.querySelector('dialog[open]')) return;
+    e.preventDefault();
+    search.focus();
+    search.select();
+  }
+  document.addEventListener('keydown', onKeydown);
+
   rebuild();
   apply();
   const off = on('store:changed', (d) => {
@@ -140,7 +178,10 @@ export function mountCatalog(el, params) {
       filtersOpen = filtersOpen || activeFilterCount(state) > 0;
       apply();
     },
-    destroy: off,
+    destroy() {
+      off();
+      document.removeEventListener('keydown', onKeydown);
+    },
   };
 }
 
