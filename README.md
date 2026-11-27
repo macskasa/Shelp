@@ -19,7 +19,7 @@
 
 ```sh
 python3 -m http.server 8000   # in the repo root, then open http://localhost:8000/?nosw
-node --test                   # run all tests (Node 20+)
+node --test --test-reporter=dot   # run all tests quietly (Node 20+); GitHub also runs them on every push
 ```
 
 There is no build step and nothing to install. Your data lives in the browser's localStorage. To start fresh, run `localStorage.clear()` in the browser console and reload.
@@ -107,8 +107,10 @@ The three parts only meet through the contracts in `js/core/contracts.js` (`open
 1. Each developer works on a branch named after them (`stephen/…`, `bruce/…`, `peter/…`) and changes **only their own folders**.
 2. They open a PR into `main` with the template, and Adam passes the PR number to Tony.
 3. Tony reviews: contracts kept, data handled through the store, works on a phone, tests pass. Adam merges.
-4. Changes to shared files (`js/core/`, `index.html`, `css/base.css`, the data format) go through Tony. Developers ask in their PR under **Requests for Tony**.
-5. When the shared context changes, Tony notes it under **Changes** in `docs/CONTEXT.md`, and developers re-read it.
+4. Tests run automatically on GitHub for every push (the "Tests" check on each PR).
+5. Changes to shared files (`js/core/`, `index.html`, `css/base.css`, the data format) go through Tony. Developers ask in their PR under **Requests for Tony**.
+6. When the shared context changes, Tony notes it under **Changes** in `docs/CONTEXT.md`, and developers read just that diff.
+7. Each phase can start in a fresh chat. The opening messages are in [docs/kickoff.md](docs/kickoff.md), and the lead's handover is [docs/LEAD.md](docs/LEAD.md).
 
 ## Repository layout
 

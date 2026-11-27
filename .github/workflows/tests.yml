@@ -1,0 +1,19 @@
+# Runs every test on every push, so nobody has to run the full suite by hand.
+# The result shows on the commit and on its pull request as the "Tests" check.
+name: Tests
+on:
+  push:
+    branches: ['**']
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node --test --test-reporter=spec
