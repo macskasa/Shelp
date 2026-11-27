@@ -1,0 +1,60 @@
+/* Data screen. Classes start with io-. Colours come from css/base.css. */
+
+.io-screen { display: flex; flex-direction: column; gap: var(--gap); max-width: 720px; margin: 0 auto; }
+.io-screen p { margin: 0; }
+.io-section { display: flex; flex-direction: column; gap: 10px; }
+.io-section h2 { margin: 0; }
+.io-label { font-weight: 600; }
+
+.io-section input[type='file'], .io-section select {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 44px;
+}
+
+.io-error { color: var(--danger); font-weight: 600; }
+.io-ok { padding: 8px 10px; border: 1px solid var(--accent); border-radius: var(--radius); }
+
+.io-out { display: flex; flex-direction: column; gap: 10px; }
+.io-out:empty { display: none; }
+.io-review { display: flex; flex-direction: column; gap: 12px; }
+
+.io-group { border: 1px solid var(--border); border-radius: var(--radius); padding: 10px; margin: 0; min-width: 0; }
+.io-group legend, .io-group summary { font-weight: 600; padding: 0 4px; }
+.io-group summary { cursor: pointer; min-height: 40px; display: flex; align-items: center; }
+.io-group > * + * { margin-top: 8px; }
+
+.io-changes { margin: 0; padding-left: 18px; }
+.io-changes li { margin: 4px 0; overflow-wrap: anywhere; }
+
+.io-list { display: flex; flex-direction: column; }
+.io-list[hidden] { display: none; }
+.io-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  padding: 4px 0;
+  border-bottom: 1px solid var(--border);
+}
+.io-row:last-child { border-bottom: 0; }
+.io-row input[type='checkbox'] { width: 22px; height: 22px; min-height: 0; flex: none; }
+.io-row-text { display: flex; flex-direction: column; flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.io-row select { width: 11.5em; flex: none; }
+.io-bulk { display: flex; flex-wrap: wrap; gap: 8px; }
+.io-section .btn { min-height: 44px; }
+
+/* Apply bar stays reachable above the tab bar while a long list scrolls */
+.io-actions {
+  position: sticky;
+  bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 0;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+}
+.io-buttons { display: flex; gap: 8px; justify-content: flex-end; }
+
+.io-confirm-list { margin: 0 0 12px; padding-left: 18px; max-height: 40vh; overflow-y: auto; }
