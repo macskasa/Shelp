@@ -135,15 +135,14 @@ export function mountMap(el, params) {
   }
 
   /**
-   * After the route changed: pan to the highlight and open the details for ?stack=.
-   * Runs one frame later, after the router has handled the hashchange (it closes panels and resets
-   * the scroll position). Never on a redraw, or every store change would open the panel again.
+   * After the route changed: open the details for ?stack= and pan to the highlight.
+   * Only on a route change – never on a redraw, or every store change would open the panel again.
    */
   function afterRoute() {
-    requestAnimationFrame(() => {
-      applyParams({ reveal: true });
-      if (current.stack && scene.stacks.some((x) => x.id === current.stack)) openDetails(current.stack);
-    });
+    if (current.stack && scene.stacks.some((x) => x.id === current.stack)) openDetails(current.stack);
+    // The router sets the window scroll right after update(), so pan and scroll one frame later.
+    // Drop this frame once Peter's router change lands.
+    requestAnimationFrame(() => applyParams({ reveal: true }));
   }
 
   /** Open a stack's details panel (one at a time). */
