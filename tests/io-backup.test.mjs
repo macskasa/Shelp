@@ -56,7 +56,7 @@ test('acceptance: a plan file made in chat imports and leaves the games alone', 
   const plan = structuredClone(seed.plan);
   plan.name = 'v6 – test';
   plan.cupboard = [];
-  const file = { app: 'shelp', schema: 1, plan };
+  const file = { app: 'shelp', schema: seed.schema, plan };
   assert.deepEqual(store.validate(file), []);
   assert.equal(importKind(file), 'plan');
   assert.equal(store.importData(file), 'plan');
@@ -125,7 +125,7 @@ test('review: the seed, a v2 backup and a v1 plan file all pass the shelf rules'
   const none = { blocks: [], warnings: [] };
   assert.deepEqual(reviewImport(seed, store.getGames()), none);
   assert.deepEqual(reviewImport(store.exportData(), store.getGames()), none);
-  assert.deepEqual(reviewImport({ app: 'shelp', schema: 1, plan: seed.plan }, store.getGames()), none);
+  assert.deepEqual(reviewImport({ app: 'shelp', schema: seed.schema, plan: seed.plan }, store.getGames()), none);
 });
 
 test('review: blocking problems are found, and store.validate alone would let them through', async () => {
