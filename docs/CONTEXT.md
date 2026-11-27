@@ -113,6 +113,8 @@ Don't add fields on your own. Ask Tony; the schema check (`js/core/schema.js`) a
 
 Every game is in **at most one** place: a stack, the cupboard or inside another box. A game in none of them is **unplaced** (for example just imported from BGG).
 
+**A game without a box size (`dims: null`) is never on a stack.** It can be unplaced, in the cupboard or inside another box. The store refuses `placeOnStack` for it, refuses to remove the size of a game that is on a stack, and plans or backups that break the rule fail validation. So the map and the rule checker never meet a missing size. The "Size missing" filter in the catalog shows what still needs measuring.
+
 ### Stack
 
 ```jsonc
@@ -190,7 +192,7 @@ Load your stylesheet once in your module: `loadCss(new URL('./map.css', import.m
 | catalog/search (C) → map (B) | `showOnMap(id)` → `#/map?game=id` | placeholder map already highlights the stack |
 | game panel (A) → map (B) | `showOnMap(id)` | – |
 | BGG import (A) → cupboard screen (B) | new games are added **unplaced**; Bruce lists unplaced games | test with `store.addGame({ title: 'Test' })` in the console |
-| rule checker (A) → shelf model (B) | `js/rules/` imports `footprint()` and `layoutStack()` from `js/map/model.js`, read-only. Bruce keeps those two signatures stable; changes go through Tony. | – |
+| Part A → shelf model (B) | `js/rules/` (rule checker) and `js/io/export.js` (CSV export) import `footprint()` and `layoutStack()` from `js/map/model.js`, read-only. Bruce keeps those two signatures stable; changes go through Tony. | in use |
 | map / stack details (B) → rule checker (A) | Bruce calls `checkStack(stack, getGame)` from `js/rules/` to show warnings | when D2 is merged |
 | everyone → offline (C) | Peter's service worker caches every same-origin file at runtime, so nobody maintains a file list | – |
 
@@ -243,3 +245,5 @@ The placeholder screens in your folders were written by Tony only to test the wi
 - 2026-11-27 – `--tabbar-h` token in `css/base.css` and the `#app-tools` header slot in `index.html` (requested by Peter). See section 5.
 - 2026-11-27 – `closePanels()` in `js/core/dom.js`; `go()` closes open panels before navigating, also when the target is the current screen.
 - 2026-11-27 – Stephen round 2 (`docs/part-a2.md`): new folder `js/rules/` (D2), which may import `footprint()` / `layoutStack()` from `js/map/model.js` read-only. Local testing: open the app with `?nosw` (section 8).
+- 2026-11-27 – **No missing sizes on shelves** (section 4): a game with `dims: null` can never be on a stack; the store and the schema check enforce it (Adam's decision).
+- 2026-11-27 – the CSV export (`js/io/export.js`) may also use `layoutStack()` read-only (section 6).

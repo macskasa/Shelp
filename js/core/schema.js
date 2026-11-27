@@ -41,8 +41,12 @@ function itemGames(item) {
   return item?.side ? item.side.map((x) => x?.game) : [item?.game];
 }
 
-/** Problems with a plan, checked against a set of known game ids. */
-export function validatePlan(plan, gameIds) {
+/**
+ * Problems with a plan, checked against a set of known game ids.
+ * sizeless: ids of games without a box size (dims: null). They may be in the cupboard or inside
+ * another box, but never on a stack – the map and the rule checker can rely on that.
+ */
+export function validatePlan(plan, gameIds, sizeless = new Set()) {
   const e = [];
   if (!isObj(plan)) return ['plan is missing'];
   if (!Array.isArray(plan.stacks)) return ['plan.stacks must be a list'];
@@ -72,7 +76,10 @@ export function validatePlan(plan, gameIds) {
           e.push(`stack ${sid}: a side-by-side group needs at least 2 games`);
         }
         if (item?.side && st.orientation !== 'flat') e.push(`stack ${sid}: side-by-side only works in flat stacks`);
-        for (const g of itemGames(item)) mark(g, `stack ${sid}`);
+        for (const g of itemGames(item)) {
+          mark(g, `stack ${sid}`);
+          if (sizeless.has(g)) e.push(`stack ${sid}: game "${g}" has no box size, so it cannot be on a shelf`);
+        }
         if (!item?.side && item?.rot != null && typeof item.rot !== 'boolean') e.push(`stack ${sid}: rot must be true/false`);
       });
     });
@@ -99,24 +106,27 @@ export function validatePlan(plan, gameIds) {
 /**
  * Check a full data file (seed / backup) or a plan-only file.
  * Full file:  { app: "shelp", schema: 1, games: [...], plan: {...} }
- * Plan only:  { app: "shelp", schema: 1, plan: {...} }  – checked against knownGameIds
+ * Plan only:  { app: "shelp", schema: 1, plan: {...} }  – checked against knownGameIds / knownSizeless
  */
-export function validateData(obj, knownGameIds = new Set()) {
+export function validateData(obj, knownGameIds = new Set(), knownSizeless = new Set()) {
   if (!isObj(obj)) return ['not a JSON object'];
   const e = [];
   if (obj.app !== APP) e.push(`"app" must be "${APP}"`);
   if (obj.schema !== SCHEMA) e.push(`"schema" must be ${SCHEMA} (got ${obj.schema})`);
   let ids = knownGameIds;
+  let sizeless = knownSizeless;
   if (obj.games != null) {
     if (!Array.isArray(obj.games)) return [...e, '"games" must be a list'];
     ids = new Set();
+    sizeless = new Set();
     for (const g of obj.games) {
       e.push(...validateGame(g));
       if (ids.has(g?.id)) e.push(`game id "${g?.id}" used twice`);
       ids.add(g?.id);
+      if (g && g.dims == null) sizeless.add(g.id);
     }
   }
   if (obj.plan == null && obj.games == null) e.push('file has neither "games" nor "plan"');
-  if (obj.plan != null) e.push(...validatePlan(obj.plan, ids));
+  if (obj.plan != null) e.push(...validatePlan(obj.plan, ids, sizeless));
   return e;
 }
