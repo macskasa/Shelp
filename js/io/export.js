@@ -40,8 +40,8 @@ const categoriesText = (game) => CATEGORIES.filter((c) => game.categories.includ
 
 // ---------------------------------------------------------------- catalog
 
-/** One row per game, in the order given (the store sorts by title). `locate` is store.locate2. */
-export function catalogRows(games, locate) {
+/** One row per game, in the order given (the store sorts by title). `locateGame` is store.locate2. */
+export function catalogRows(games, locateGame) {
   const title = new Map(games.map((g) => [g.id, g.title]));
   return [CATALOG_HEADER, ...games.map((g) => [
     g.title,
@@ -52,7 +52,7 @@ export function catalogRows(games, locate) {
     g.age ?? '',
     g.bggName ?? '',
     g.type === 'expansion' ? 'Expansion' : 'Base',
-    describeLocation2(locate(g.id), (id) => title.get(id) ?? id),
+    describeLocation2(locateGame(g.id), (id) => title.get(id) ?? id),
     g.sizeSource ?? '',
     g.inBgg ? 'Yes' : 'No',
     g.notes ?? '',

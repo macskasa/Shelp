@@ -60,7 +60,7 @@ test('acceptance: a plan file made in chat imports and leaves the games alone', 
   assert.deepEqual(store.validate(file), []);
   assert.equal(importKind(file), 'plan');
   assert.equal(store.importData(file), 'plan');
-  assert.equal(store.getPlan().name, 'v6 – test');
+  assert.equal(store.getPlan2().name, 'v6 – test');
   assert.deepEqual(store.getGames(), gamesBefore);
 });
 
@@ -85,7 +85,7 @@ test('problems: a bad file is rejected before anything changes, and the list can
 
 test('describeImport tells what will happen', async () => {
   await fresh();
-  const current = { games: 204, stacks: store.getPlan().stacks.length, planName: store.getPlan().name };
+  const current = { games: 204, stacks: store.getPlan2().stacks.length, planName: store.getPlan2().name };
 
   const full = describeImport({ ...structuredClone(seed), exportedAt: new Date(2026, 10, 27, 9, 5).toISOString() }, current);
   assert.equal(full.kind, 'all');
