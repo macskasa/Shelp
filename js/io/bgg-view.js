@@ -1,7 +1,7 @@
 // The BGG import section of the Data screen (story A1). Owner: Stephen (Part A).
 import { h, clear, toast } from '../core/dom.js';
 import * as store from '../core/store.js';
-import { parseBggCsv, planImport } from './bgg.js';
+import { afterImportHints, parseBggCsv, planImport } from './bgg.js';
 import { applyImport } from './apply.js';
 import { reviewView } from './bgg-review.js';
 import { confirmPanel } from './confirm.js';
@@ -65,7 +65,8 @@ export function bggSection() {
       }
       try {
         const r = applyImport(plan, choices);
-        done(r);
+        const added = [...plan.fresh, ...plan.ignored].filter((row) => choices.addIds.includes(row.bggId));
+        done({ ...r, hints: afterImportHints(added) });
       } catch (err) {
         toast(err.message, { error: true });
       }
@@ -75,7 +76,7 @@ export function bggSection() {
       refresh();
       clear(out).append(h('p', { class: 'io-ok' },
         `Imported: ${r.updated} updated · ${r.added} added · ${r.kept} kept · ${r.deleted} deleted.`,
-        r.added ? ' New games are not on a shelf yet.' : ''));
+        ...r.hints.map((t) => ` ${t}`)));
       toast('BGG import applied');
     }
 

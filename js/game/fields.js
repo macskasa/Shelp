@@ -5,7 +5,7 @@ import * as store from '../core/store.js';
 import { CATEGORIES } from '../core/categories.js';
 import { formatDims } from '../core/format.js';
 import {
-  parseDims, dimsToInputs, sameDims, textOrNull, sizeSources, toggleCategory,
+  cleanTitle, parseDims, dimsToInputs, sameDims, textOrNull, sizeSources, toggleCategory,
   hostChoices, takenOutReason, bggVersions, bggSearch,
 } from './logic.js';
 
@@ -19,6 +19,35 @@ const fill = (el, text) => {
 
 export const extLink = (href, text) =>
   h('a', { class: 'game-link', href, target: '_blank', rel: 'noopener noreferrer' }, text);
+
+// ---------------------------------------------------------------- name
+
+/** The name as printed on the box (often Hungarian). Games added from BGG start with the English BGG name. */
+export function titleSection(id, save) {
+  const inputId = nextId('title');
+  const hint = h('p', { class: 'game-hint is-error', role: 'status' });
+  const input = h('input', { type: 'text', id: inputId, autocomplete: 'off', onchange: commit, oninput: () => { hint.textContent = ''; } });
+
+  function commit() {
+    const next = cleanTitle(input.value);
+    if (!next) {
+      hint.textContent = 'A game needs a name.';
+      input.value = store.getGame(id).title;
+      return;
+    }
+    if (next !== store.getGame(id).title) save({ title: next });
+  }
+
+  return {
+    el: h('section', { class: 'game-sec' },
+      h('label', { class: 'game-label', for: inputId }, 'Name (as on the box)'), input, hint),
+    refresh: (g) => fill(input, g.title),
+    flush() {
+      const next = cleanTitle(input.value);
+      if (next && next !== store.getGame(id)?.title) save({ title: next });
+    },
+  };
+}
 
 // ---------------------------------------------------------------- A3: box size
 

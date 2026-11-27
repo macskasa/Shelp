@@ -129,3 +129,17 @@ export function newGameFields(row) {
     inBgg: true,
   };
 }
+
+/**
+ * Things to do after adding games from BGG, as short sentences for the "done" message.
+ * rows = the BGG rows that were added.
+ */
+export function afterImportHints(rows) {
+  if (!rows.length) return [];
+  const hints = ['They are not on a shelf yet and use the BGG name as title: open a game to rename it or set its size.'];
+  const expansions = rows.filter((r) => r.type === 'expansion').length;
+  if (expansions) {
+    hints.push(`${expansions === rows.length ? 'All' : expansions} of them ${expansions === 1 ? 'is an expansion' : 'are expansions'}: if one lives in its base game's box, open it and set “Stored inside”.`);
+  }
+  return hints;
+}

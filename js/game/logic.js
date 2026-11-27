@@ -55,6 +55,9 @@ export function sizeSources(games) {
   return [...count].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(([t]) => t);
 }
 
+/** A game's name as typed: trimmed, or null when blank (a game must have a name). */
+export const cleanTitle = (text) => String(text ?? '').trim() || null;
+
 // ---------------------------------------------------------------- categories (B1)
 
 /** Add or remove one category. Returns the new list in the fixed category order. */

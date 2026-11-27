@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import * as store from '../js/core/store.js';
 import {
-  parseDecimal, parseDims, dimsToInputs, sameDims, textOrNull, sizeSources, toggleCategory,
+  cleanTitle, parseDecimal, parseDims, dimsToInputs, sameDims, textOrNull, sizeSources, toggleCategory,
   gamesInside, hostChoices, takenOutReason, bggPage, bggVersions, bggSearch,
 } from '../js/game/logic.js';
 
@@ -113,4 +113,19 @@ test('taking a game out sends it to the cupboard with a reason', async () => {
   store.moveToCupboard(zero.id, takenOutReason('Lairs'));
   assert.deepEqual(store.locate(zero.id), { kind: 'cupboard', reason: 'Taken out of the Lairs box' });
   assert.deepEqual(gamesInside(store.getPlan(), byTitle('Lairs').id, store.getGames()), []);
+});
+
+test('cleanTitle trims and refuses blank names', () => {
+  assert.equal(cleanTitle('  Ethiq: Morális játszmák '), 'Ethiq: Morális játszmák');
+  assert.equal(cleanTitle('   '), null);
+  assert.equal(cleanTitle(null), null);
+});
+
+test('a game can be renamed through the store, and an empty name is refused', async () => {
+  await store.init({ seed, storage: memoryStorage() });
+  const g = byTitle('Fluxx');
+  store.updateGame(g.id, { title: cleanTitle(' Fluxx (magyar) ') });
+  assert.equal(store.getGame(g.id).title, 'Fluxx (magyar)');
+  assert.throws(() => store.updateGame(g.id, { title: '' }));
+  assert.equal(store.getGame(g.id).title, 'Fluxx (magyar)');
 });
