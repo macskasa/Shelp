@@ -78,7 +78,7 @@
   .shell-tab { flex-direction: row; justify-content: center; gap: 8px; }
 }
 
-/* ---- Header tools (#app-tools): the "Where's my game?" button ----------------------------- */
+/* ---- Header tools (#app-tools): Undo, Redo and the "Where's my game?" button ----------------------------- */
 .shell-tool {
   display: inline-flex;
   align-items: center;
@@ -111,4 +111,8 @@
 @media (min-width: 1024px) {
   .shell-tool { min-height: 40px; }
   .shell-tool-label { display: inline; }
+}
+.shell-tool[aria-disabled='true'] { opacity: 0.35; cursor: default; }
+@media (hover: hover) and (pointer: fine) {
+  .shell-tool[aria-disabled='true']:hover { background: none; }
 }

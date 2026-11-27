@@ -1,18 +1,18 @@
 // The words of "Where's my game?": where a game is and what has to be lifted off it first.
-// Plain functions, no DOM, tested in Node. Owner: Peter (Part C). Story C4.
-import { describeLocation } from '../core/format.js';
+// Plain functions, no DOM, tested in Node. Owner: Peter (Part C). Story C4 (schema 2).
+import { describeLocation2 } from '../core/format.js';
 
 /**
- * loc comes from store.locate(id); getTitle(id) turns a game id into its title.
+ * loc comes from store.locate2(id); getTitle(id) turns a game id into its title.
  * Returns { sentence, onTop } where
- *   sentence  one line from describeLocation: "Bottom shelf · stack B3 · 2nd from the bottom · 2 boxes on top"
- *             or "Inside the Lairs box (Bottom shelf · stack B4 · …)"
- *   onTop     a line naming what sits on top, nearest first, or null when that makes no sense
- *             (standing games, the cupboard, not placed). An expansion inside a box is reached through
- *             that box, so for it this is what sits on top of the box.
+ *   sentence  one line from describeLocation2: "Bottom shelf · stack B3 · on Takenokolor · 2 boxes on top",
+ *             "… · across Compile and Kontroll · nothing on top", "Inside the Lairs box (…)", "On the board"
+ *   onTop     a line naming every box resting on it, nearest first (with piles and bridges that can be
+ *             several), or null when nothing is on it or it is not on a stack. An expansion inside a box is
+ *             reached through that box, so for it this is what rests on the box.
  */
 export function whereText(loc, getTitle = (id) => id) {
-  return { sentence: describeLocation(loc, getTitle), onTop: onTopText(loc, getTitle) };
+  return { sentence: describeLocation2(loc, getTitle), onTop: onTopText(loc, getTitle) };
 }
 
 function onTopText(loc, getTitle) {
@@ -22,10 +22,9 @@ function onTopText(loc, getTitle) {
     hostId = spot.hostId;
     spot = spot.host;
   }
-  if (spot?.kind !== 'stack' || spot.orientation === 'standing') return null;
+  if (spot?.kind !== 'stack' || !spot.above?.length) return null;
   const names = spot.above.map(getTitle);
-  const what = hostId ? `the ${getTitle(hostId)} box` : '';
-  if (!names.length) return hostId ? `Nothing on top of ${what}` : 'Nothing on top';
-  if (names.length === 1) return `On top${what ? ` of ${what}` : ''}: ${names[0]}`;
-  return `On top${what ? ` of ${what}` : ''}, nearest first: ${names.join(', ')}`;
+  const of = hostId ? ` of the ${getTitle(hostId)} box` : '';
+  if (names.length === 1) return `On top${of}: ${names[0]}`;
+  return `On top${of}, nearest first: ${names.join(', ')}`;
 }

@@ -1,8 +1,8 @@
 // Catalog filtering and sorting: plain functions, no DOM, tested in Node. Owner: Peter (Part C). Story A6.
 //
 // An *entry* is one catalog row's data: { game, kind, where, key }
-//   kind:  'shelf' | 'cupboard' | 'inside' | 'unplaced'   (what the location filter looks at)
-//   where: short location text – "B3", "Cupboard", "In Lairs", "Not placed"
+//   kind:  'shelf' | 'cupboard' | 'inside' | 'board'   (what the location filter looks at; from store.locate2)
+//   where: short location text – "B3", "Cupboard", "In Lairs", "Board"
 //   key:   the folded title and BGG name the search looks at (search.js)
 // A *state* is the search text + filter + sort settings; it is saved in the URL, see stateFromParams / stateToParams.
 import { CATEGORY_IDS } from '../core/categories.js';
@@ -15,7 +15,7 @@ export const WHERE_OPTIONS = [
   ['shelf', 'On a shelf'],
   ['cupboard', 'In the cupboard'],
   ['inside', 'Inside a box'],
-  ['unplaced', 'Not placed'],
+  ['board', 'On the board'],
 ];
 export const SORT_KEYS = ['title', 'players', 'time', 'where'];
 
@@ -33,17 +33,17 @@ export function locationKind(loc) {
     case 'stack': return 'shelf';
     case 'cupboard': return 'cupboard';
     case 'inside': return 'inside';
-    default: return 'unplaced';
+    default: return 'board'; // a game with no place at all is on the board too
   }
 }
 
-/** "B3", "Cupboard", "In Lairs", "Not placed". getTitle(id) turns a game id into its title. */
+/** "B3", "Cupboard", "In Lairs", "Board". getTitle(id) turns a game id into its title. */
 export function shortLocation(loc, getTitle = (id) => id) {
   switch (loc?.kind) {
     case 'stack': return loc.stackId;
     case 'cupboard': return 'Cupboard';
     case 'inside': return `In ${getTitle(loc.hostId)}`;
-    default: return 'Not placed';
+    default: return 'Board';
   }
 }
 
@@ -55,6 +55,12 @@ export function makeEntry(game, loc, getTitle) {
 
 const asInt = (v) => (/^\d{1,3}$/.test(String(v ?? '')) ? Number(v) : null);
 
+/** The location filter from the URL. Old links said "unplaced"; those games are on the board now. */
+function whereFromParam(value) {
+  const id = value === 'unplaced' ? 'board' : value;
+  return WHERE_OPTIONS.some(([known]) => known === id) ? id : 'any';
+}
+
 /** URL params (strings) -> state. Anything invalid or missing falls back to the default. */
 export function stateFromParams(params = {}) {
   const wanted = new Set(String(params.cat ?? '').split(','));
@@ -65,7 +71,7 @@ export function stateFromParams(params = {}) {
     cats: CAT_FILTER_IDS.filter((id) => wanted.has(id)),
     players: players >= 1 ? players : null,
     time: TIME_STEPS.includes(time) ? time : null,
-    where: WHERE_OPTIONS.some(([id]) => id === params.where) ? params.where : 'any',
+    where: whereFromParam(params.where),
     sizeMissing: params.nosize === '1',
     sort: SORT_KEYS.includes(params.sort) ? params.sort : 'title',
     dir: params.dir === 'desc' ? 'desc' : 'asc',
