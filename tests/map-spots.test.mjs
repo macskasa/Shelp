@@ -100,3 +100,11 @@ test('under: the game takes the place and the boxes rest on it', () => {
   const onIt = b3.boxes.filter((b) => b.on.includes(id)).map((b) => getGame(b.game).title).sort();
   assert.deepEqual(onIt, ['Compile: Main 2', 'Kontroll']);
 });
+
+test('newProblems keys a family warning by its name, not its stack (it follows the first member)', () => {
+  const fam = (stackId) => ({ rule: 'family', family: 'Azul', stackId, stackIds: [stackId, 'B7'], gameId: null, otherStackId: null, severity: 'warn' });
+  const fake = (plan) => plan.warnings;
+  const np = newProblems({ warnings: [fam('B2')] }, { warnings: [fam('B1')] }, null, fake);
+  assert.deepEqual(np, { block: [], warn: [] }, 'the same family, now first on another stack: not new');
+  assert.equal(newProblems({ warnings: [] }, { warnings: [fam('B1')] }, null, fake).warn.length, 1);
+});
