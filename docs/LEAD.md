@@ -16,12 +16,15 @@ Tony is the lead and code reviewer.
 
 ## Where things stand (2026-11-27)
 
-- **Merged:** everything up to #76. Phase C has Pick up, Turn, Move, placing mode, the board strip and stacks (#75). B2 game families (#73 core, #76 Stephen) and D3 free space (#73 core, #74 Peter) are in. README "Releases and stories" is current. No PRs are open and no threads are running.
-- **Bruce:** item 6 (drag and drop) waits until Adam has tried moving games on his phone (placing mode, new stacks, Move stack). Optional nit from #75: a wider tap target for an empty stack.
-- **Next, not briefed yet** (ask Adam before starting): the map highlight of a family (Bruce, `#/map?family=<name>`) and a family filter in the catalog (Peter). Bruce may show the D3 numbers on the map after drag and drop.
-- **Small follow-ups for Peter's next brief** (#74 nits): the stack fill on the Free space screen uses `--cat-duo` (use a neutral token); "up to 0 cm on top of …" should read "No room on top".
-- **Open issues:** #48 (later).
-- **Later:** D7 moving checklist (on top of Peter's compare), #48 (fewer boxes on top counts as easier to reach: Stephen's rules and `suggestSpots`).
+- **Merged:** everything up to #77. Phase C has Pick up, Turn, Move, placing mode, the board strip and stacks (#75). B2 game families (#73 core, #76 Stephen) and D3 free space (#73 core, #74 Peter) are in. README "Releases and stories" is current.
+- **Tony's PR** (`ccr-96632897-bcu0g0`): the `showFamily(name)` contract and the briefs `docs/part-b4.md`, `docs/part-c5.md`, `docs/part-a6.md`. It merges first: the three threads start from it.
+- **Threads running** (each sends Tony one line when its PR is green):
+  - **Bruce**, `bruce/family-map`: `docs/part-b4.md` items 1–3 (a family on the map, the family chip in stack details, wider empty-stack tap target). Item 4 (reach in stack details) is a later thread, after Stephen's PR.
+  - **Peter**, `peter/family-filter`: `docs/part-c5.md` (Family filter, family in rows and search, Show on map, the two #74 nits).
+  - **Stephen**, `stephen/reach`: `docs/part-a6.md` (#48: `reachOf`, `suggestSpots` ranks by reach, the CSV column, Show on map from a family).
+- **Bruce, waiting:** `docs/part-b3.md` item 6 (drag and drop) waits until Adam has tried moving games on his phone.
+- **Open issues:** #48 (Stephen's `docs/part-a6.md`; close it when his PR is merged, with Bruce's stack-details text to follow).
+- **Later:** D7 moving checklist (on top of Peter's compare); Bruce may show the D3 numbers on the map after drag and drop.
 - **How the team runs:** a Claude Code project since 2026-11-27. The project conversation is Tony. Each piece of developer work is a thread (a new session from `create_session`, one PR each, Opus for Bruce, Sonnet for Stephen and Peter) whose prompt names the brief item, the branch (`outcome_branch`) and asks for a one-line `send_message` to Tony when the PR is green. A thread whose work needs an unmerged core PR starts from that PR's branch (`source_revision`) and still opens its PR into `main`. Tony verifies on GitHub, reviews, and tells Adam one line. The opening messages are in `docs/kickoff.md`.
 - **Tony's branch:** each Tony session has its own branch name from the session settings (this one: `ccr-96632897-bcu0g0`). Push only there; restart it from `main` after its PR merges.
 

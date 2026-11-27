@@ -4,6 +4,7 @@
 //   showOnMap(id)     go to the map and highlight a game – route #/map?game=<id>, handled by Part B (Bruce)
 //   showStack(id)     go to the map and select a stack   – route #/map?stack=<id>, handled by Part B (Bruce)
 //   pickUp(id)        go to the map in placing mode      – route #/map?pick=<id>, handled by Part B (Bruce)
+//   showFamily(name)  go to the map and highlight a family – route #/map?family=<name>, handled by Part B (Bruce)
 //   go(screen, params) navigate to any screen            – router, owned by Part C (Peter)
 import { go } from '../shell/router.js';
 import { getGame, locate2 } from './store.js';
@@ -36,6 +37,11 @@ export function showStack(stackId) {
 /** Start moving a game: the Shelves screen in placing mode (Phase C). */
 export function pickUp(gameId) {
   go('map', { pick: gameId });
+}
+
+/** Show a game family on the map (B2): every member is highlighted. `name` as in store.getFamilies(). */
+export function showFamily(name) {
+  go('map', { family: name });
 }
 
 // Minimal read-only panel used until Part A ships the real one.

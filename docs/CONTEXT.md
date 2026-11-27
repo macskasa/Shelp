@@ -56,7 +56,7 @@ All numbers are in `js/core/shelves.js` (`ZONES`, `GROUPS`, `BRACKET`). Don't co
 - The wall shelves are three units, 60 | 80 | 60 cm, so the **joints** are at x = 60 and x = 140.
 - **Brackets** hang from the shelf above. Seen from the front each is a 0.4 cm wide bar centred on the joint, 6 cm tall at the back, getting lower towards the front (0 cm at the front edge). A stack may cross a bracket only if it is low enough: `bracketLimit(zone, depth)` gives the allowed height. That's why stacks start at x = 0.2 or 60.2.
 - **Depth** of every shelf is 38 cm. A box deeper than that should be turned long side out (`rot: true`), or the rule checker warns.
-- **Easy to reach**: top shelf 0–44, the whole bottom shelf, under the stairs, the narrow shelf. `isEasy(zoneId, x, w)`.
+- **Easy to reach**: top shelf 0–44, the whole bottom shelf, under the stairs, the narrow shelf. `isEasy(zoneId, x, w)`. Within a stack, a box is easier to get the fewer boxes are on top of it, and in the front row (#48): Stephen's `reachOf` in `js/rules/` scores that (`docs/part-a6.md`).
 - The **cupboard** is not drawn. It is a list of games with a reason each.
 
 ### The rules (Adam's decisions, checked by the rule checker in `js/rules/`)
@@ -198,7 +198,7 @@ null   // unknown id
 | `space.js` | Free space (D3): `UNITS` (each wall shelf as left 60 \| middle 80 \| right 60, then the three parts under the stairs and the narrow shelf) and `freeSpace(plan, getGame) → Unit[]`: per unit the empty shelf floor (`free`, `widest`, `gaps: [{ x, w }]`), the stacks that reach into it with the height left above each (`room`), and the most room above any stack (`room: { stackId, h }`). Front view only, "at a glance": the rule checker decides. The comment at the top has the details. |
 | `plan2.js` | The upgrade from schema 1 and the edit operations behind the store. **Don't call it directly**; use the store. Two exceptions: `locations2(plan)` is a pure read that works on any plan (Peter's compare), and Stephen's `js/rules/suggest.js` may run `detach` / `insertOn` on its **own copy** of a plan. Never on store data. |
 | `bus.js` | `on(type, fn) → unsubscribe`, `emit(type, detail)`. Events: `store:changed` `{ games: id[] \| null, plan: bool }` (null = everything changed), `store:error` `{ message }` (app.js shows it), `route:changed` `{ id, params }`. |
-| `contracts.js` | `openGame(id)`, `showOnMap(gameId)`, `showStack(stackId)`, `pickUp(gameId)` (placing mode, `#/map?pick=<id>`), `go(screen, params)`, `provide(name, fn)`. |
+| `contracts.js` | `openGame(id)`, `showOnMap(gameId)`, `showStack(stackId)`, `pickUp(gameId)` (placing mode, `#/map?pick=<id>`), `showFamily(name)` (a family highlighted on the map, `#/map?family=<name>`), `go(screen, params)`, `provide(name, fn)`. |
 | `shelves.js` | `ZONES`, `GROUPS`, `BRACKET`, `STACK_TOLERANCE`, `bracketLimit(zone, depth)`, `isEasy(zoneId, x, w)`. |
 | `categories.js` | `CATEGORIES` (id, label, cssVar), `OTHER`, `CATEGORY_IDS`, `category(id)`, `colorsFor(game)` → list of CSS colours in fixed order. |
 | `format.js` | `formatDims(dims)` → "30.5 × 22.6 × 5.1 cm", `formatRange(r, unit)` → "2–4", `describeLocation2(loc, getTitle)` → "Bottom shelf · stack B3 · on Takenokolor · nothing on top" / "On the board". |
@@ -229,6 +229,7 @@ Load your stylesheet once in your module: `loadCss(new URL('./map.css', import.m
 | From → to | How | Status |
 |---|---|---|
 | anyone → placing mode (B) | `pickUp(id)` → `#/map?pick=id` | Phase C |
+| game panel, Data screen (A), catalog (C) → a family on the map (B) | `showFamily(name)` → `#/map?family=name` | `docs/part-b4.md` |
 | anyone → game panel (A) | `openGame(id)` | fallback panel in `contracts.js` until Stephen calls `provide('openGame', …)` |
 | catalog/search (C) → map (B) | `showOnMap(id)` → `#/map?game=id` | placeholder map already highlights the stack |
 | game panel (A) → map (B) | `showOnMap(id)` | – |
@@ -236,8 +237,9 @@ Load your stylesheet once in your module: `loadCss(new URL('./map.css', import.m
 | geometry (core) → everyone | `js/core/geometry.js` (`boxSize`, `layoutStack2`): the rule checker, the CSV export and the map all use it | in use |
 | map / stack details (B) → rule checker (A) | Bruce calls `checkStack2` / `checkPlan2` from `js/rules/` for warnings and previews, with `severity: 'block' \| 'warn'` | in use |
 | everyone → offline (C) | Peter's service worker caches every same-origin file at runtime, so nobody maintains a file list | – |
-| families (core) → rules, game panel (A) | `game.family`, `getFamilies()`, `renameFamily()`; Stephen's `family` warning in `checkPlan2` | B2 (`docs/part-a5.md`) |
-| free space (core) → Free space screen (C) | `freeSpace(plan, getGame)` from `js/core/space.js`; Bruce may show the same numbers on the map later | D3 (`docs/part-c4.md`) |
+| families (core) → rules, game panel (A) | `game.family`, `getFamilies()`, `renameFamily()`; Stephen's `family` warning in `checkPlan2` | in use (#76) |
+| reach (A) → suggestions (A), stack details (B) | `reachOf(plan, getGame, id)`, `reachAll(plan, getGame)` in `js/rules/reach.js` | #48 (`docs/part-a6.md`); stack details later |
+| free space (core) → Free space screen (C) | `freeSpace(plan, getGame)` from `js/core/space.js`; Bruce may show the same numbers on the map later | in use (#74) |
 
 ## 7. Who owns what
 
@@ -311,3 +313,4 @@ The placeholder screens in your folders were written by Tony only to test the wi
 - 2026-11-27 – **v1 removed from the core:** every part is on schema 2 (#57, #59, and Peter's #54), so the store no longer has `getPlan`, `getStack`, `locate` or `placeOnStack`, `format.js` no longer has `describeLocation`, and `plan2.js` no longer has `toV1Plan`. Use `getPlan2`, `getStack2`, `locate2`, the v2 writes and `describeLocation2`. Schema 1 **files** (old backups, plan files from chat, today's seed) are still accepted and upgraded. Section 4's v1 notes and the glossary's "Unplaced" are gone.
 - 2026-11-27 – **The seed is schema 2:** `data/seed.json` is now exactly what the store made of the v5 plan on first start: stacks with `boxes`, the `pizza` flag on every game, `board: []`. Nothing changes in the app. Tests that need a schema 1 file read `tests/fixtures/seed-v1.json` (Tony), and tests should read the plan through the store, not from the seed's raw shape (Peter's and Stephen's prep PRs did that for theirs).
 - 2026-11-27 – **Families and free space (core):** every game has `family` (B2, section 4): a name or null, cleaned by the store, letter case joins an existing family. New store read `getFamilies()` and write `renameFamily()`. New core module `js/core/space.js` (D3): `UNITS` and `freeSpace(plan, getGame)` (section 5). Peter owns the new `js/space/` and `tests/space*.test.mjs`; `app.js` already imports a placeholder `js/space/index.js` (section 7). Briefs: `docs/part-a5.md` (Stephen, B2), `docs/part-c4.md` (Peter, D3). Tests for the core get the `core-` prefix (`tests/core-space.test.mjs`).
+- 2026-11-27 – **Family on the map, reach (#48):** new contract `showFamily(name)` → `#/map?family=<name>` (sections 5 and 6). Briefs: `docs/part-b4.md` (Bruce: a family on the map), `docs/part-c5.md` (Peter: family filter in the catalog, Free space fixes), `docs/part-a6.md` (Stephen: `reachOf`, a reach score per box: easy zone, back row, boxes on top; used by `suggestSpots`). Section 3 mentions reach.

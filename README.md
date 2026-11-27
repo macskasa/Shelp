@@ -74,7 +74,7 @@ Size: S ≈ 1–2 points, M ≈ 3–5, L ≈ 8, XL ≈ 13.
 | ID | Story | Size | Owner | Status |
 |---|---|---|---|---|
 | A4 | Add games that aren't in my BGG list | S1 | Stephen | ✅ (and Delete game, #50) |
-| B2 | Game families (Azul, 7 Wonders, Mars…) | S2 | Tony (schema) · Stephen | 🚧 ✅ Family in the game panel, suggested families on the Data screen, the "spread out" warning, suggestions keep families together (#76); ⬜ the map highlight and a catalog filter |
+| B2 | Game families (Azul, 7 Wonders, Mars…) | S2 | Tony (schema) · Stephen · Bruce · Peter | 🚧 ✅ Family in the game panel, suggested families on the Data screen, the "spread out" warning, suggestions keep families together (#76); ⬜ a family on the map ([part-b4](docs/part-b4.md)) and a family filter in the catalog ([part-c5](docs/part-c5.md)) |
 | D1 | Move a game (drag on desktop, pick a spot on phone) | L8 | Bruce | 🚧 moving works from lists and by tapping the drawing, stacks too; drag and drop comes next (see below) |
 | D2 | Rule checker (1 cm overhang rule, heights, brackets, 2 deep only in easy spots…) | M5 | Stephen | ✅ (Data screen; behind every move) |
 | D3 | Free space at a glance | S2 | Tony (logic) · Peter (screen) | ✅ the Free space screen (#74) |
@@ -101,8 +101,8 @@ Size: S ≈ 1–2 points, M ≈ 3–5, L ≈ 8, XL ≈ 13.
 ### Not built yet
 
 - **Drag and drop on desktop** (D1, above).
-- **Being on top counts as easier to reach** (#48): parked for later.
-- A family highlighted on the map and a family filter in the catalog (B2), the moving checklist (D7), live BGG refresh (E4).
+- **Being on top and in the front row count as easier to reach** (#48): Stephen, [part-a6](docs/part-a6.md).
+- A family highlighted on the map and a family filter in the catalog (B2), in progress; the moving checklist (D7), live BGG refresh (E4).
 
 The full story texts are in the "App user stories" tab of the planning workbook and, for the MVP, in the part briefs.
 
@@ -114,9 +114,9 @@ Each developer is a separate Claude chat with this repo attached. They don't see
 |---|---|---|---|
 | **Adam** | Product owner. Merges PRs. | – | – |
 | **Tony** | Lead and code reviewer. Owns the shared core, data and docs. | – | `js/core/`, `js/app.js`, `index.html`, `css/base.css`, `data/`, `docs/` |
-| **Stephen** | Part A – data in and out: BGG import, game panel, backup and restore. Round 2: rule checker, CSV export, add a game. Phase B: rules, export and pizza on schema 2. Phase C: bracket rule per box, Move, suggest a spot (D4), game families (B2) | [part-a](docs/part-a.md), [a2](docs/part-a2.md), [a3](docs/part-a3.md), [a4](docs/part-a4.md), [a5](docs/part-a5.md) | `js/io/`, `js/game/`, `js/rules/` |
-| **Bruce** | Part B – shelf map: model, drawing, stack details, special placements, cupboard. Phase B: the map and the picker on schema 2. Phase C: moving by hand (pick up, placing mode, the board strip, stacks, drag and drop) | [part-b](docs/part-b.md), [b2](docs/part-b2.md), [b3](docs/part-b3.md) | `js/map/` |
-| **Peter** | Part C – catalog, search, app frame, offline. Phase B: search wording, the board, Undo. Phase C: saved versions (D6), compare, Move, free space (D3) | [part-c](docs/part-c.md), [c2](docs/part-c2.md), [c3](docs/part-c3.md), [c4](docs/part-c4.md) | `js/catalog/`, `js/shell/`, `js/versions/`, `js/space/`, `sw.js`, `manifest.webmanifest`, `icons/` |
+| **Stephen** | Part A – data in and out: BGG import, game panel, backup and restore. Round 2: rule checker, CSV export, add a game. Phase B: rules, export and pizza on schema 2. Phase C: bracket rule per box, Move, suggest a spot (D4), game families (B2), easy to reach (#48) | [part-a](docs/part-a.md), [a2](docs/part-a2.md), [a3](docs/part-a3.md), [a4](docs/part-a4.md), [a5](docs/part-a5.md), [a6](docs/part-a6.md) | `js/io/`, `js/game/`, `js/rules/` |
+| **Bruce** | Part B – shelf map: model, drawing, stack details, special placements, cupboard. Phase B: the map and the picker on schema 2. Phase C: moving by hand (pick up, placing mode, the board strip, stacks, drag and drop), a family on the map | [part-b](docs/part-b.md), [b2](docs/part-b2.md), [b3](docs/part-b3.md), [b4](docs/part-b4.md) | `js/map/` |
+| **Peter** | Part C – catalog, search, app frame, offline. Phase B: search wording, the board, Undo. Phase C: saved versions (D6), compare, Move, free space (D3), families in the catalog | [part-c](docs/part-c.md), [c2](docs/part-c2.md), [c3](docs/part-c3.md), [c4](docs/part-c4.md), [c5](docs/part-c5.md) | `js/catalog/`, `js/shell/`, `js/versions/`, `js/space/`, `sw.js`, `manifest.webmanifest`, `icons/` |
 
 The three parts only meet through the contracts in `js/core/contracts.js` (`openGame`, `showOnMap`, `showStack`, `go`) and the store. Placeholders exist for each, so every part can start today and be merged in any order.
 
