@@ -6,9 +6,10 @@ import { h, showPanel, toast } from '../core/dom.js';
 import { on } from '../core/bus.js';
 import * as store from '../core/store.js';
 import { openGame } from '../core/contracts.js';
-import { category } from '../core/categories.js';
 import { layoutStack } from './model.js';
 import { stackDetails } from './details.js';
+import { stackWarnings } from './cupboard.js';
+import { categoryChips, warningList } from './ui.js';
 
 let uniq = 0;
 
@@ -37,6 +38,7 @@ export function openStackPanel(stackId, { onClose } = {}) {
       return;
     }
     const d = stackDetails(st, layoutStack(st, store.getGame), store.getGame);
+    const warnings = stackWarnings(store.getPlan(), store.getGame, stackId);
     heading.textContent = `Stack ${d.id}`;
     // a wrapper built with h(), which skips nulls and flattens lists (replaceChildren does neither)
     body.replaceChildren(h('div', {},
@@ -44,6 +46,9 @@ export function openStackPanel(stackId, { onClose } = {}) {
         h('dt', {}, 'Shelf'), h('dd', {}, d.shelf),
         h('dt', {}, 'Size'), h('dd', {}, `${d.size} `, h('span', { class: 'muted' }, '(wide × high)')),
         h('dt', {}, 'Games'), h('dd', {}, String(d.count))),
+      warnings.length
+        ? h('section', { class: 'map-row', 'aria-label': 'Rule warnings' }, warningList(warnings))
+        : h('p', { class: 'map-ok' }, '✓ No rule problems.'),
       d.tags.length ? h('p', { class: 'map-tags' }, d.tags.map((t) => h('span', { class: 'map-tag' }, t))) : null,
       d.notes.length ? h('ul', { class: 'map-notes' }, d.notes.map((n) => h('li', {}, n))) : null,
       d.rows.map((row) => h('section', { class: 'map-row' },
@@ -68,10 +73,7 @@ function boxItem(b) {
   return h('li', { class: 'map-boxitem' },
     h('button', { type: 'button', class: 'map-boxitem-title', onclick: () => openGame(b.gameId) }, b.title),
     h('div', { class: 'map-boxitem-meta' },
-      b.categories.map((id) => {
-        const c = category(id);
-        return h('span', { class: 'chip', style: `background: var(${c.cssVar})` }, c.label);
-      }),
+      categoryChips(b.categories),
       h('span', {}, b.size),
       b.flags.map((f) => h('span', { class: 'map-flag' }, f))),
     h('button', {

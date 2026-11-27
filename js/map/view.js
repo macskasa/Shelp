@@ -140,9 +140,7 @@ export function mountMap(el, params) {
    */
   function afterRoute() {
     if (current.stack && scene.stacks.some((x) => x.id === current.stack)) openDetails(current.stack);
-    // The router sets the window scroll right after update(), so pan and scroll one frame later.
-    // Drop this frame once Peter's router change lands.
-    requestAnimationFrame(() => applyParams({ reveal: true }));
+    applyParams({ reveal: true });
   }
 
   /** Open a stack's details panel (one at a time). */
@@ -226,7 +224,6 @@ export function mountMap(el, params) {
   return {
     update(params) {
       current = params ?? {};
-      applyParams();
       afterRoute();
     },
     destroy() {
