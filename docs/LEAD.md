@@ -16,14 +16,12 @@ Tony is the lead and code reviewer.
 
 ## Where things stand (2026-11-27)
 
-- **Merged:** everything up to #83. Phase C has Pick up, Turn, Move, placing mode, the board strip and stacks. B2 game families, D3 free space and #48 (reach, closed by #83) are done. README "Releases and stories" is current.
-- **Adam tried moving on his phone (2026-11-27):** "looks good but a bit complicated". He chose: the spot sheet lists only spots that work, with a "Show N blocked spots" link (not dimming stacks on the map, not hiding ways in Turn). Drag and drop (`docs/part-b3.md` item 6): Adam wants it ("that will be the way to do it"), right after `docs/part-b5.md`.
-- **Tony's PR** (`ccr-96632897-bcu0g0`): `slots` in `js/core/space.js` (room on top with the air's width and the surface it rests on; Adam chose to show both widths) and the briefs `docs/part-c6.md`, `docs/part-a7.md`, `docs/part-b5.md`. Peter's thread starts from it.
+- **Merged:** everything up to #87. Phase C has Pick up, Turn, Move, placing mode, the board strip, stacks, and the spot sheet lists only working spots (#86 Stephen's `checkSpots`, #87 Bruce). B2, D3 (with the width of the room on top, #84/#85) and #48 are done. README "Releases and stories" is current.
+- **Tony's PR** (`ccr-96632897-bcu0g0`): standing spaces and tilt in `js/core/space.js` (#88, #89), checked on Adam's backup of 2026-11-28 (uploaded in chat, not in the repo), and `docs/part-c7.md`. Peter's thread starts from it.
 - **Threads running** (each sends Tony one line when its PR is green):
-  - **Peter**, `peter/room-width`: `docs/part-c6.md` (the widths on the Free space screen, the #79 nits).
-  - **Stephen**, `stephen/check-spots`: `docs/part-a7.md` (`checkSpots`, reach text with the real count).
-- **Next:** Bruce's `docs/part-b5.md` once Stephen's `checkSpots` is merged, then his drag and drop (`docs/part-b3.md` item 6) as a separate thread.
-- **Open issues:** none.
+  - **Bruce**, `bruce/drag-drop`: `docs/part-b3.md` item 6, drag and drop on desktop (Adam wants it).
+  - **Peter**, `peter/standing`: `docs/part-c7.md` (standing spaces, tilted surfaces; closes #88 and #89).
+- **Open issues:** #88, #89 (Peter's PR closes them).
 - **Later:** D7 moving checklist (on top of Peter's compare); Bruce may show the D3 numbers on the map after drag and drop.
 - **How the team runs:** a Claude Code project since 2026-11-27. The project conversation is Tony. Each piece of developer work is a thread (a new session from `create_session`, one PR each, Opus for Bruce, Sonnet for Stephen and Peter) whose prompt names the brief item, the branch (`outcome_branch`) and asks for a one-line `send_message` to Tony when the PR is green. A thread whose work needs an unmerged core PR starts from that PR's branch (`source_revision`) and still opens its PR into `main`. Tony verifies on GitHub, reviews, and tells Adam one line. The opening messages are in `docs/kickoff.md`.
 - **Tony's branch:** each Tony session has its own branch name from the session settings (this one: `ccr-96632897-bcu0g0`). Push only there; restart it from `main` after its PR merges.
