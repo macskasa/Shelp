@@ -106,7 +106,7 @@ test('a game without a BGG name, or with the same one, is searched by its title'
 
 test('catalog: the search text is one more filter next to the others', async () => {
   await load();
-  const all = store.getGames().map((g) => makeEntry(g, store.locate(g.id), titleOf));
+  const all = store.getGames().map((g) => makeEntry(g, store.locate2(g.id), titleOf));
   const count = (patch) => all.filter((e) => matches(e, { ...DEFAULT_STATE, ...patch })).length;
   assert.equal(count({ q: '' }), seed.games.length);
   assert.equal(count({ q: 'azul' }), seed.games.filter((g) => /azul/i.test(`${g.title} ${g.bggName}`)).length);
