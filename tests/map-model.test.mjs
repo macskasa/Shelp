@@ -9,11 +9,6 @@ import { footprint, isLongSideOut, layoutStack, layoutPlan, PLACEHOLDER_DIMS } f
 const seed = JSON.parse(readFileSync(new URL('../data/seed.json', import.meta.url), 'utf8'));
 const fixture = JSON.parse(readFileSync(new URL('./fixtures/v5-geometry.json', import.meta.url), 'utf8'));
 
-// L1 is not in the fixture yet (requested from Tony). Worked out by the same rules:
-// 11 card games standing in front (27.8 cm wide), 7 behind; depth front + back.
-// As soon as the fixture has L1, the fixture value is used instead.
-const EXTRA = { L1: { x: 0, w: 27.8, d: 28.8, h: 16.0 } };
-
 const TOL = 0.05;
 const near = (actual, expected, what) =>
   assert.ok(Math.abs(actual - expected) <= TOL, `${what}: got ${actual}, expected ${expected}`);
@@ -27,7 +22,7 @@ const stack = (id) => store.getStack(id);
 test('every v5 stack matches the expected geometry (w, d, h within 0.05 cm)', () => {
   const stacks = store.getPlan().stacks;
   for (const st of stacks) {
-    const want = fixture[st.id] ?? EXTRA[st.id];
+    const want = fixture[st.id];
     assert.ok(want, `no expected geometry for stack ${st.id}`);
     const got = layoutStack(st, getGame);
     near(got.w, want.w, `${st.id} w`);

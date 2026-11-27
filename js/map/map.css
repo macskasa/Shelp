@@ -1,0 +1,144 @@
+/* Part B – shelf map. Owner: Bruce.
+   Drawing units are cm. Text sizes are divided by --k (screen px per cm, set by view.js) and
+   outlines use non-scaling strokes, so both keep their screen size at any zoom. */
+
+.map-view {
+  --map-mix: 62%;              /* how much category colour goes into a box fill */
+  --map-line: color-mix(in srgb, var(--text) 45%, transparent);
+}
+@media (prefers-color-scheme: dark) {
+  .map-view { --map-mix: 48%; }
+}
+
+/* ---- frame: edge to edge on phones, so the wall shelves get the full width ---------------- */
+.map-frame { position: relative; }
+@media (max-width: 599px) {
+  .map-frame { margin-inline: calc(-1 * var(--gap)); }
+}
+.map-stage svg { display: block; width: 100%; height: auto; }
+
+/* ---- SVG ------------------------------------------------------------------------------------ */
+.map-svg { --k: 1.8; font-family: var(--font); user-select: none; -webkit-user-select: none; }
+
+.map-svg text {
+  font-size: calc(11px / var(--k));
+  fill: var(--text);
+  text-anchor: middle;
+  dominant-baseline: central;
+  pointer-events: none;
+}
+.map-svg .map-band { font-size: calc(13px / var(--k)); font-weight: 600; text-anchor: start; }
+.map-svg .map-stack-id { fill: var(--muted); }
+.map-svg .map-q { font-weight: 700; fill: var(--muted); }
+
+.map-zone, .map-overhang, .map-floor, .map-easy, .map-box-line, .map-bracket,
+.map-stack-ring, .map-topper rect {
+  vector-effect: non-scaling-stroke;
+}
+
+.map-zone { fill: none; stroke: var(--shelf-line); stroke-width: 1px; }
+.map-zone.map-approx { stroke-dasharray: 4 3; }
+.map-floor { stroke: var(--shelf-line); stroke-width: 2.5px; stroke-linecap: square; }
+.map-overhang { fill: none; stroke: var(--shelf-line); stroke-width: 1px; stroke-dasharray: 3 3; }
+.map-easy { fill: none; stroke: var(--easy-zone); stroke-width: 1.5px; stroke-dasharray: 6 4; }
+.map-bracket { fill: var(--bracket); stroke: var(--bracket); stroke-width: 1.5px; }
+
+.map-fill { fill: color-mix(in srgb, var(--c) var(--map-mix), var(--surface)); }
+.map-box-line { fill: none; stroke: var(--map-line); stroke-width: 0.75px; }
+.map-missing .map-box-line { stroke: var(--text); stroke-dasharray: 3 2; }
+
+.map-topper rect { fill: none; stroke: var(--muted); stroke-width: 1px; stroke-dasharray: 4 3; }
+.map-svg .map-topper-label {
+  fill: var(--muted);
+  /* a halo in the page colour, so the dashed outline never runs through the label */
+  paint-order: stroke;
+  stroke: var(--bg);
+  stroke-width: calc(3px / var(--k));
+  stroke-linejoin: round;
+}
+
+.map-stack-hit { fill: transparent; }
+.map-stack-ring { display: none; fill: none; stroke: var(--accent); stroke-width: 2.5px; }
+.map-stack.is-hl .map-stack-ring { display: inline; }
+.map-box.is-hl .map-box-line {
+  stroke: var(--accent);
+  stroke-width: 3px;
+  animation: map-pulse 1.2s ease-in-out 3;
+}
+@keyframes map-pulse { 50% { stroke-opacity: 0.25; } }
+@media (prefers-reduced-motion: reduce) {
+  .map-box.is-hl .map-box-line { animation: none; }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .map-box { cursor: pointer; }
+  .map-box:hover .map-box-line { stroke: var(--text); stroke-width: 1.5px; }
+}
+
+/* ---- hover title (mouse and S Pen) ------------------------------------------------------------ */
+.map-tip {
+  position: absolute;
+  z-index: 2;
+  max-width: 260px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: var(--text);
+  color: var(--bg);
+  font-size: 0.85rem;
+  line-height: 1.3;
+  pointer-events: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ---- caption for #/map?game=… and #/map?stack=… ---------------------------------------------- */
+.map-caption {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 8px;
+  padding: 4px 4px 4px 12px;
+  background: var(--surface);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius);
+}
+.map-caption[hidden] { display: none; }
+.map-caption p { margin: 0; flex: 1; }
+.map-caption-close { min-width: 40px; min-height: 40px; padding: 0; font-size: 1.3rem; line-height: 1; }
+
+/* ---- legend ----------------------------------------------------------------------------------- */
+.map-legend {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  margin: 12px 0 0;
+  padding: 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+.map-legend li { display: flex; align-items: center; gap: 6px; }
+.map-sw {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 18px;
+  height: 14px;
+  border-radius: 2px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text);
+}
+.map-sw-cat { background: color-mix(in srgb, var(--c) var(--map-mix), var(--surface)); border: 1px solid var(--map-line); }
+.map-sw-striped {
+  background: linear-gradient(90deg,
+    color-mix(in srgb, var(--c1) var(--map-mix), var(--surface)) 50%,
+    color-mix(in srgb, var(--c2) var(--map-mix), var(--surface)) 50%);
+  border: 1px solid var(--map-line);
+}
+.map-sw-easy { border: 1.5px dashed var(--easy-zone); border-radius: 4px; }
+.map-sw-bracket { width: 4px; margin-inline: 7px; background: var(--bracket); border-radius: 0; }
+.map-sw-missing { border: 1px dashed var(--text); color: var(--muted); }
+.map-sw-text { width: auto; color: var(--muted); }
