@@ -3,9 +3,17 @@
 
 .cat-screen { display: grid; gap: var(--gap); }
 
-.cat-bar { display: flex; align-items: center; justify-content: space-between; gap: var(--gap); }
-.cat-count { margin: 0; color: var(--muted); }
-.cat-filter-toggle { min-height: 40px; }
+.cat-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px var(--gap); }
+.cat-count { flex: 1 0 100%; margin: 0; color: var(--muted); }
+.cat-filter-toggle { min-height: 44px; }
+
+/* the search field, also used by the "Where's my game?" panel (where.css) */
+.cat-search-input {
+  flex: 1 1 180px;
+  min-width: 0;
+  min-height: 44px;
+  font-size: 1rem; /* 16 px: Chrome does not zoom the page when the field gets focus */
+}
 
 /* ---- filters ---------------------------------------------------------------------------- */
 .cat-filters {
@@ -113,7 +121,8 @@
 /* ---- desktop: filters in one row, the list as a table ------------------------------------- */
 @media (min-width: 1024px) {
   .cat-filter-toggle { display: none; }
-  .cat-bar { justify-content: flex-start; }
+  .cat-search-input { flex: 0 1 340px; min-height: 40px; }
+  .cat-count { flex: 0 0 auto; }
 
   .cat-filters, .cat-filters[hidden] {
     display: flex;

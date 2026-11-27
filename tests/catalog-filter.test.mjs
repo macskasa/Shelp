@@ -26,9 +26,9 @@ test('default state shows every game', async () => {
 });
 
 test('state <-> URL params: round trip, defaults left out, rubbish ignored', () => {
-  const state = { cats: ['party', 'other'], players: 4, time: 30, where: 'cupboard', sizeMissing: true, sort: 'time', dir: 'desc' };
+  const state = { q: 'föld és', cats: ['party', 'other'], players: 4, time: 30, where: 'cupboard', sizeMissing: true, sort: 'time', dir: 'desc' };
   const params = stateToParams(state);
-  assert.deepEqual(params, { cat: 'party,other', players: 4, time: 30, where: 'cupboard', nosize: '1', sort: 'time', dir: 'desc' });
+  assert.deepEqual(params, { q: 'föld és', cat: 'party,other', players: 4, time: 30, where: 'cupboard', nosize: '1', sort: 'time', dir: 'desc' });
   assert.deepEqual(stateFromParams(Object.fromEntries(Object.entries(params).map(([k, v]) => [k, String(v)]))), state);
   assert.deepEqual(stateToParams(DEFAULT_STATE), {});
   assert.deepEqual(stateFromParams({}), DEFAULT_STATE);
@@ -37,6 +37,9 @@ test('state <-> URL params: round trip, defaults left out, rubbish ignored', () 
     { ...DEFAULT_STATE, cats: ['party'] },
   );
   assert.equal(stateFromParams({ players: '0' }).players, null);
+  assert.equal(stateFromParams({ q: '  azul ' }).q, 'azul'); // surrounding spaces are dropped
+  assert.equal(stateFromParams({ q: 'x'.repeat(500) }).q.length, 80);
+  assert.equal(activeFilterCount({ ...DEFAULT_STATE, q: 'azul' }), 0); // the search field is not a filter
 });
 
 test('activeFilterCount counts switched-on filters, not the sort', () => {

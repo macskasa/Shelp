@@ -1,10 +1,12 @@
 // Catalog filtering and sorting: plain functions, no DOM, tested in Node. Owner: Peter (Part C). Story A6.
 //
-// An *entry* is one catalog row's data: { game, kind, where }
+// An *entry* is one catalog row's data: { game, kind, where, key }
 //   kind:  'shelf' | 'cupboard' | 'inside' | 'unplaced'   (what the location filter looks at)
 //   where: short location text – "B3", "Cupboard", "In Lairs", "Not placed"
-// A *state* is the filter + sort settings; it is saved in the URL, see stateFromParams / stateToParams.
+//   key:   the folded title and BGG name the search looks at (search.js)
+// A *state* is the search text + filter + sort settings; it is saved in the URL, see stateFromParams / stateToParams.
 import { CATEGORY_IDS } from '../core/categories.js';
+import { matchesQuery, parseQuery, searchKey } from './search.js';
 
 export const TIME_STEPS = [15, 30, 60, 120]; // "play time ≤ N min"
 export const CAT_FILTER_IDS = [...CATEGORY_IDS, 'other']; // 'other' = games without any category
@@ -17,8 +19,10 @@ export const WHERE_OPTIONS = [
 ];
 export const SORT_KEYS = ['title', 'players', 'time', 'where'];
 
+export const MAX_QUERY = 80;
+
 export const DEFAULT_STATE = Object.freeze({
-  cats: [], players: null, time: null, where: 'any', sizeMissing: false, sort: 'title', dir: 'asc',
+  q: '', cats: [], players: null, time: null, where: 'any', sizeMissing: false, sort: 'title', dir: 'asc',
 });
 
 // ---------------------------------------------------------------- entries
@@ -44,7 +48,7 @@ export function shortLocation(loc, getTitle = (id) => id) {
 }
 
 export function makeEntry(game, loc, getTitle) {
-  return { game, kind: locationKind(loc), where: shortLocation(loc, getTitle) };
+  return { game, kind: locationKind(loc), where: shortLocation(loc, getTitle), key: searchKey(game) };
 }
 
 // ---------------------------------------------------------------- state <-> URL params
@@ -57,6 +61,7 @@ export function stateFromParams(params = {}) {
   const players = asInt(params.players);
   const time = asInt(params.time);
   return {
+    q: String(params.q ?? '').trim().slice(0, MAX_QUERY),
     cats: CAT_FILTER_IDS.filter((id) => wanted.has(id)),
     players: players >= 1 ? players : null,
     time: TIME_STEPS.includes(time) ? time : null,
@@ -70,6 +75,7 @@ export function stateFromParams(params = {}) {
 /** state -> URL params. Settings that are at their default are left out. */
 export function stateToParams(state) {
   const p = {};
+  if (state.q) p.q = state.q;
   if (state.cats.length) p.cat = state.cats.join(',');
   if (state.players != null) p.players = state.players;
   if (state.time != null) p.time = state.time;
@@ -80,7 +86,7 @@ export function stateToParams(state) {
   return p;
 }
 
-/** How many filters are switched on (the sort does not count). */
+/** How many filters are switched on (the sort and the search text do not count: the search field is always visible). */
 export function activeFilterCount(state) {
   return (state.cats.length ? 1 : 0) + (state.players != null) + (state.time != null)
     + (state.where !== 'any') + (state.sizeMissing ? 1 : 0);
@@ -94,9 +100,24 @@ function hasCategory(game, wanted) {
   return wanted.some((id) => (id === 'other' ? !own.some((c) => CATEGORY_IDS.includes(c)) : own.includes(id)));
 }
 
-/** True if the entry passes every filter that is switched on. Games with unknown players or time never pass those two. */
+let lastText = null;
+let lastQuery = null;
+/** parseQuery for the same text is done once, not once per game. */
+function queryOf(text) {
+  if (text !== lastText) {
+    lastText = text;
+    lastQuery = parseQuery(text);
+  }
+  return lastQuery;
+}
+
+/**
+ * True if the entry matches the search text and passes every filter that is switched on.
+ * Games with unknown players or time never pass those two filters.
+ */
 export function matches(entry, state) {
   const g = entry.game;
+  if (state.q && !matchesQuery(entry.key ?? searchKey(g), queryOf(state.q))) return false;
   if (state.cats.length && !hasCategory(g, state.cats)) return false;
   if (state.players != null && !(g.players && g.players.min <= state.players && state.players <= g.players.max)) return false;
   if (state.time != null && !(g.time && g.time.max <= state.time)) return false; // the whole range fits

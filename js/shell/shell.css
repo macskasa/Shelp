@@ -77,3 +77,38 @@
   :root { --tabbar-h: 44px; }
   .shell-tab { flex-direction: row; justify-content: center; gap: 8px; }
 }
+
+/* ---- Header tools (#app-tools): the "Where's my game?" button ----------------------------- */
+.shell-tool {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 10px;
+  font: inherit;
+  color: var(--text);
+  background: none;
+  border: 0;
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+.shell-tool svg {
+  width: 24px;
+  height: 24px;
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.shell-tool-label { display: none; } /* phones: icon only, the name is in aria-label and title */
+@media (hover: hover) and (pointer: fine) {
+  .shell-tool:hover { background: var(--bg); }
+}
+@media (min-width: 1024px) {
+  .shell-tool { min-height: 40px; }
+  .shell-tool-label { display: inline; }
+}
