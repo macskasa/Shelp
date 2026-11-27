@@ -16,14 +16,14 @@ Tony is the lead and code reviewer.
 
 ## Where things stand (2026-11-27)
 
-- **Merged:** everything up to #77. Phase C has Pick up, Turn, Move, placing mode, the board strip and stacks (#75). B2 game families (#73 core, #76 Stephen) and D3 free space (#73 core, #74 Peter) are in. README "Releases and stories" is current.
-- **Tony's PR** (`ccr-96632897-bcu0g0`): the `showFamily(name)` contract and the briefs `docs/part-b4.md`, `docs/part-c5.md`, `docs/part-a6.md`. It merges first: the three threads start from it.
-- **Threads running** (each sends Tony one line when its PR is green):
-  - **Bruce**, `bruce/family-map`: `docs/part-b4.md` items 1–3 (a family on the map, the family chip in stack details, wider empty-stack tap target). Item 4 (reach in stack details) is a later thread, after Stephen's PR.
-  - **Peter**, `peter/family-filter`: `docs/part-c5.md` (Family filter, family in rows and search, Show on map, the two #74 nits).
-  - **Stephen**, `stephen/reach`: `docs/part-a6.md` (#48: `reachOf`, `suggestSpots` ranks by reach, the CSV column, Show on map from a family).
+- **Merged:** everything up to #81. Phase C has Pick up, Turn, Move, placing mode, the board strip and stacks (#75). B2 game families is done: the field (#73), editing and the rule (#76), the catalog filter (#79), the map highlight (#81). D3 free space (#74) and the reach score for #48 (#80) are in. README "Releases and stories" is current.
+- **Bruce's #83** (reach text in stack details, `view.js` split to 291 lines) is reviewed and closes #48. No thread is running.
+- **Nits for the next briefs:**
+  - Peter (#79): at 1024–1279 px the catalog's Family column leaves the title about 156 px; `family=Gone` stays in the URL after falling back to Any.
+  - Stephen (#83 review): the reach text caps the count at "3 boxes on top" while the `?game=` caption counts them all; cap the score, not the text.
+  - Bruce (#83): the " – " before the reach blends with titles that contain an en dash; " · " or a line break.
 - **Bruce, waiting:** `docs/part-b3.md` item 6 (drag and drop) waits until Adam has tried moving games on his phone.
-- **Open issues:** #48 (Stephen's `docs/part-a6.md`; close it when his PR is merged, with Bruce's stack-details text to follow).
+- **Open issues:** #48 (closes when #83 merges).
 - **Later:** D7 moving checklist (on top of Peter's compare); Bruce may show the D3 numbers on the map after drag and drop.
 - **How the team runs:** a Claude Code project since 2026-11-27. The project conversation is Tony. Each piece of developer work is a thread (a new session from `create_session`, one PR each, Opus for Bruce, Sonnet for Stephen and Peter) whose prompt names the brief item, the branch (`outcome_branch`) and asks for a one-line `send_message` to Tony when the PR is green. A thread whose work needs an unmerged core PR starts from that PR's branch (`source_revision`) and still opens its PR into `main`. Tony verifies on GitHub, reviews, and tells Adam one line. The opening messages are in `docs/kickoff.md`.
 - **Tony's branch:** each Tony session has its own branch name from the session settings (this one: `ccr-96632897-bcu0g0`). Push only there; restart it from `main` after its PR merges.
