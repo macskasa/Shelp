@@ -4,7 +4,7 @@
 // A tap that does not move stays a normal click, so tapping a stack still opens it; the click
 // after a drag or pinch is swallowed.
 // The maths is in viewport.js; this file only reads pointers and sets the SVG viewBox.
-import { clampView, fitWidth, zoomAt, panBy, pinchView, reveal, viewBox, wheelAction } from './viewport.js';
+import { clampView, fitWidth, zoomAt, panBy, pinchView, reveal, showRect, viewBox, wheelAction } from './viewport.js';
 
 const SLOP = { touch: 8, pen: 4, mouse: 4 }; // px a pointer must move before it is a drag
 const reducedMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -185,10 +185,10 @@ export function createPanZoom(stage, { onChange }) {
       animateTo(zoomAt(view, factor, fw / 2, fh / 2, scene, fw, fh));
     },
 
-    /** Pan (not zoom) so the rect, in cm, is visible. */
-    reveal(r, { animate = true } = {}) {
+    /** Pan (not zoom) so the rect, in cm, is visible; fit: zoom out too when it is bigger than the frame. */
+    reveal(r, { animate = true, fit = false } = {}) {
       if (!view) return;
-      const next = reveal(view, r, scene, fw, fh);
+      const next = (fit ? showRect : reveal)(view, r, scene, fw, fh);
       if (next === view) return;
       fitted = false;
       if (animate) animateTo(next);

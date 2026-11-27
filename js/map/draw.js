@@ -8,6 +8,7 @@ import { s } from '../core/dom.js';
 import { colorsFor } from '../core/categories.js';
 import { boxTitle, fitText, stackLabel, TITLE_PX } from './labels.js';
 import { stackAriaLabel } from './details.js';
+import { hitSpan } from './hit.js';
 
 const SEAM = 0.05; // cm; stripes overlap a little so no light seam shows between them
 const RING = 0.6; // cm; rings sit this far outside the stack or box
@@ -20,6 +21,7 @@ export function drawScene(scene, getGame) {
   const titles = []; // { node, box, title }
   const toppers = []; // { node, topper, room }
   const ids = []; // { node, stack }
+  const hits = []; // { node, stack }: empty stacks, whose tap target follows the zoom (part-b4 item 3)
   const stackNodes = new Map();
   const stackData = new Map();
   const boxNodes = new Map();
@@ -41,6 +43,7 @@ export function drawScene(scene, getGame) {
     },
     // tap target: the whole column of the stack, from the top of the shelf down to its id
     s('rect', { class: 'map-stack-hit', x: st.x, y: zone.top, width: Math.max(st.w, 2), height: st.label.y - zone.top + 3 }));
+    if (st.empty) hits.push({ node: g.firstChild, stack: st });
     // an empty stack: a thin dashed outline, so it can be seen and tapped (part-b3 item 5)
     if (st.empty) g.append(s('rect', { class: 'map-empty', x: st.x, y: st.top, width: st.w, height: st.h }));
     for (const b of st.boxes) {
@@ -80,6 +83,7 @@ export function drawScene(scene, getGame) {
   const stackRing = ring('map-ring-stack');
   const boxHalo = ring('map-ring-halo');
   const boxLine = ring('map-ring-box');
+  const family = s('g', { class: 'map-family-rings' }); // a family's boxes (part-b4 item 1)
 
   const svg = s('svg', {
     class: 'map-svg', viewBox: `0 0 ${scene.width} ${scene.height}`,
@@ -90,7 +94,7 @@ export function drawScene(scene, getGame) {
   s('g', { class: 'map-layer-stacks' }, stacks),
   s('g', { class: 'map-layer-brackets', 'aria-hidden': 'true' }, brackets),
   s('g', { class: 'map-layer-labels', 'aria-hidden': 'true' }, labels),
-  s('g', { class: 'map-layer-rings', 'aria-hidden': 'true' }, stackRing, boxHalo, boxLine, focusRing));
+  s('g', { class: 'map-layer-rings', 'aria-hidden': 'true' }, family, stackRing, boxHalo, boxLine, focusRing));
 
   // keyboard focus ring (only for keyboard focus, not after a tap)
   svg.addEventListener('focusin', (e) => {
@@ -113,6 +117,39 @@ export function drawScene(scene, getGame) {
       for (const { node, stack } of ids) {
         node.textContent = stackLabel(stack.id, stack.rows > 1, Math.max(stack.w * k, measure(stack.id)) + 4, measure);
       }
+      for (const { node, stack } of hits) {
+        const span = hitSpan(stack, k, measure(stack.id) + 4);
+        node.setAttribute('x', span.x);
+        node.setAttribute('width', span.w);
+      }
+    },
+
+    /**
+     * Mark a family (part-b4 item 1): an outline on each member box, a ring on each stack whose
+     * member is in the row not drawn, and the rest of the drawing dimmed. null clears it.
+     */
+    markFamily(focus) {
+      svg.classList.toggle('map-dim', !!focus);
+      for (const [id, node] of boxNodes) node.classList.toggle('is-member', !!focus?.boxIds.includes(id));
+      for (const [id, node] of stackNodes) node.classList.toggle('has-member', !!focus?.stackIds.includes(id));
+      const rings = [];
+      for (const id of focus?.boxIds ?? []) {
+        const b = boxData.get(id);
+        if (!b) continue;
+        for (const cls of ['map-ring-halo', 'map-ring-box']) {
+          const r = ring(cls);
+          rings.push(r);
+          place(r, b.x, b.y, b.w, b.h, 0.1);
+        }
+      }
+      for (const id of focus?.ringStackIds ?? []) {
+        const st = stackData.get(id);
+        if (!st) continue;
+        const r = ring('map-ring-stack');
+        rings.push(r);
+        place(r, st.x, st.top, st.w, st.h);
+      }
+      family.replaceChildren(...rings);
     },
 
     /**

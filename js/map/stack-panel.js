@@ -4,11 +4,12 @@
 // first, each with what it rests on; a title opens the game panel; Pick up opens the pick-up sheet
 // (move, turn, to the board or the cupboard, inside a box).
 // Warnings come from Stephen's v2 rule checker: block = red, warn = amber.
+// A box of a game with a family has a chip with its name: showFamily (part-b4 item 2; go() closes the panel).
 // Item 5: Move stack (stack-move-panel.js) and Remove stack (stack-confirm.js; asks first when it has games).
 import { h, showPanel, toast } from '../core/dom.js';
 import { on } from '../core/bus.js';
 import * as store from '../core/store.js';
-import { openGame } from '../core/contracts.js';
+import { openGame, showFamily } from '../core/contracts.js';
 import { layoutStack2 } from '../core/geometry.js';
 import { checkPlan2, forStack } from '../rules/index.js';
 import { stackDetails } from './details.js';
@@ -84,7 +85,11 @@ function boxItem(b) {
   return h('li', { class: 'map-boxitem' },
     h('button', { type: 'button', class: 'map-boxitem-title', onclick: () => openGame(b.gameId) }, b.title),
     h('p', { class: 'map-rests' }, b.rests, b.flags.length ? ` · ${b.flags.join(' · ')}` : null),
-    h('div', { class: 'map-boxitem-meta' }, categoryChips(b.categories), h('span', {}, b.size)),
+    h('div', { class: 'map-boxitem-meta' }, categoryChips(b.categories), h('span', {}, b.size),
+      b.family ? h('button', {
+        type: 'button', class: 'btn map-family-chip', 'aria-label': `Show the ${b.family} family on the map`,
+        onclick: () => showFamily(b.family),
+      }, `${b.family} family`) : null),
     h('div', { class: 'map-boxitem-moves' },
       h('button', {
         type: 'button', class: 'btn', 'aria-label': `Pick up ${b.title}`,

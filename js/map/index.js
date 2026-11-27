@@ -16,6 +16,8 @@
 //                   placing-bar.js, board-strip.js and stack-preview.js show them
 //   stacks.js       new stack x, move / remove / renumber stacks without DOM (item 5);
 //                   new-stack-panel.js, stack-move-panel.js and stack-confirm.js show them
+//   family.js       #/map?family=<name> without DOM (part-b4): members, view, caption; view-family.js reads the store
+//   hit.js          tap targets: an empty stack's grows to 40 px where its neighbours leave room
 import { mountMap } from './view.js';
 import { mountCupboard } from './cupboard-view.js';
 

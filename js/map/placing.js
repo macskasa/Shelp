@@ -8,6 +8,7 @@
 //   boardChips                the board strip's chips
 import { boxSize } from '../core/geometry.js';
 import { colorsFor } from '../core/categories.js';
+import { hitSpan } from './hit.js';
 
 /** How many suggestions the placing bar shows (part-b3 item 3). */
 export const SUGGESTIONS = 3;
@@ -45,17 +46,19 @@ export function toDrawing(view, px, py) {
 /**
  * What a tap at drawing point pt means, in a scene from scene.js.
  *   { kind: 'stack', stackId }  inside a stack's column (its tap area, as drawn: from the top of
- *                               the shelf down to its id, at least 2 cm wide)
+ *                               the shelf down to its id, at least 2 cm wide; an empty stack's is
+ *                               wider at k screen px per cm, hit.js)
  *   { kind: 'empty', zone, x }  on a shelf but not on a stack; x in cm from the zone's left end
  *   null                        anywhere else (band titles, margins)
  */
-export function tapTarget(scene, pt) {
+export function tapTarget(scene, pt, k = 0) {
   const zones = new Map(scene.zones.map((z) => [z.id, z]));
   for (const st of scene.stacks) {
     const z = zones.get(st.zone);
     if (!z) continue;
     const top = Math.min(z.top, st.top);
-    if (pt.x >= st.x && pt.x <= st.x + Math.max(st.w, 2) && pt.y >= top && pt.y <= st.label.y + 3) return { kind: 'stack', stackId: st.id };
+    const span = hitSpan(st, k);
+    if (pt.x >= span.x && pt.x <= span.x + span.w && pt.y >= top && pt.y <= st.label.y + 3) return { kind: 'stack', stackId: st.id };
   }
   for (const z of scene.zones) {
     if (pt.x >= z.x && pt.x <= z.x + z.length + z.overhang && pt.y >= z.top && pt.y <= z.floor) {

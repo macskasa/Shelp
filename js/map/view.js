@@ -9,14 +9,16 @@
 // takes the caption's room. Placing leaves on #/map?game=<id>, Cancel / Esc on #/map, both
 // replacing the ?pick entry, so Back and a reload never come back into placing mode.
 // The board strip (item 2) and Renumber (item 5) sit in the row-switch line.
+// #/map?family=<name> (showFamily, part-b4 item 1) marks every member and dims the rest
+// (view-family.js); Back, Esc and the × leave it, an unknown family toasts and goes to #/map.
 // Input (hover, tap, keys) is in view-input.js.
-import { h, loadCss } from '../core/dom.js';
+import { h, loadCss, toast } from '../core/dom.js';
 import { on } from '../core/bus.js';
 import * as store from '../core/store.js';
 import { ZONES } from '../core/shelves.js';
 import { go } from '../core/contracts.js';
 import { describeLocation2 } from '../core/format.js';
-import { buildScene, findInScene } from './scene.js';
+import { buildScene, findInScene, stackArea } from './scene.js';
 import { drawScene } from './draw.js';
 import { legend } from './legend.js';
 import { frameHeight } from './fit.js';
@@ -31,6 +33,7 @@ import { textMeasurer } from './measure.js';
 import { wireInput, ZOOM_STEP } from './view-input.js';
 import { createPlacing } from './view-placing.js';
 import { askRenumber } from './stack-confirm.js';
+import { lookupFamily, viewForFamily, familyShown } from './view-family.js';
 
 loadCss(new URL('./map.css', import.meta.url));
 
@@ -145,18 +148,15 @@ export function mountMap(el, params) {
     if (frame.style.height !== px) frame.style.height = px;
   }
 
-  /** The area of a stack in cm: its column from the top of the shelf down to its id. */
-  function stackRect(stackId) {
-    const st = scene.stacks.find((x) => x.id === stackId);
-    if (!st) return null;
-    const zone = scene.zones.find((z) => z.id === st.zone);
-    const y = Math.min(zone.top, st.top);
-    return { x: st.x, y, w: Math.max(st.w, 2), h: st.label.y + 3 - y };
-  }
+  const stackRect = (stackId) => stackArea(scene, stackId);
 
   function setCaption(title, text, link = null) {
+    showCaption(h('p', {}, title ? h('strong', {}, title) : null, title ? ' – ' : null, text, link ? [' ', link] : null));
+  }
+
+  function showCaption(...content) {
     caption.replaceChildren(
-      h('p', {}, title ? h('strong', {}, title) : null, title ? ' – ' : null, text, link ? [' ', link] : null),
+      h('div', { class: 'map-caption-text' }, content),
       h('button', { class: 'btn map-caption-close', 'aria-label': 'Clear the highlight', onclick: () => go('map') }, '×'),
     );
     caption.hidden = false;
@@ -168,6 +168,7 @@ export function mountMap(el, params) {
     root.classList.toggle('map-placing-on', !!placing.gameId);
     placing.showBar();
     let target = null;
+    let family = null;
     if (placing.gameId) {
       // placing mode: the bar replaces the caption; only the stack being placed on is marked
     } else if (current.game) {
@@ -187,12 +188,21 @@ export function mountMap(el, params) {
       } else {
         setCaption(null, `There is no stack ${current.stack} in this plan.`);
       }
+    } else if (current.family) {
+      const fam = lookupFamily(current.family);
+      family = fam ? familyShown(fam, scene, view) : null;
+      if (family) showCaption(...family.content);
     }
+    drawing.markFamily(family?.focus ?? null);
+    board.mark(family?.focus.boardIds ?? []);
     // while a stack's panel is open, that stack is the one marked
     if (selected) target = { stackId: selected, gameId: target?.stackId === selected ? target.gameId : null };
     drawing.highlight(target);
     layoutFrame(); // the caption takes room above the frame
-    if (target && reveal) {
+    if (reveal && family?.rect) {
+      frame.scrollIntoView({ block: 'nearest' });
+      panZoom.reveal(family.rect, { fit: true }); // a spread family: zoom out just enough
+    } else if (target && reveal) {
       frame.scrollIntoView({ block: 'nearest' });
       const r = stackRect(target.stackId);
       if (r) panZoom.reveal(r);
@@ -204,7 +214,16 @@ export function mountMap(el, params) {
    * Only on a route change – never on a redraw, or every store change would open the panel again.
    */
   function afterRoute() {
-    const v = current.game ? viewForLocation(store.locate2(current.game)) : null;
+    let v = current.game ? viewForLocation(store.locate2(current.game)) : null;
+    if (current.family) {
+      const fam = lookupFamily(current.family);
+      if (fam) v = viewForFamily(fam);
+      else {
+        toast(`No family “${current.family}” any more`);
+        history.replaceState(history.state, '', '#/map');
+        current = {};
+      }
+    }
     if (v && v !== view) {
       view = v;
       render();
@@ -275,16 +294,18 @@ export function mountMap(el, params) {
   const onWindow = () => requestAnimationFrame(layoutFrame);
   window.addEventListener('resize', onWindow);
   const off = on('store:changed', () => render());
-  // Esc leaves placing mode, once no panel is open (a panel's Esc closes the panel first)
+  // Esc leaves placing mode, or a family's highlight, once no panel is open (a panel's Esc closes the panel first)
   const onEscape = (e) => {
-    if (e.key !== 'Escape' || !placing.gameId || e.defaultPrevented || document.querySelector('dialog[open]')) return;
+    if (e.key !== 'Escape' || e.defaultPrevented || document.querySelector('dialog[open]')) return;
+    if (placing.gameId) leavePlacing('cancel');
+    else if (current.family) go('map');
+    else return;
     e.preventDefault();
-    leavePlacing('cancel');
   };
   document.addEventListener('keydown', onEscape);
 
   render();
-  if (current.game || current.stack || current.pick) afterRoute();
+  if (current.game || current.stack || current.pick || current.family) afterRoute();
 
   return {
     update(params) {

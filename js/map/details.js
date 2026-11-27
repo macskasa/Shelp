@@ -25,9 +25,9 @@ export function restsOn(on, getTitle) {
  * @param getGame  id → game
  * @returns {{ id, shelf, size, count, tags: string[], notes: string[],
  *   rows: [{ label: 'Front row' | 'Back row' | null,
- *            boxes: [{ gameId, title, categories, size, rests, flags: string[] }] }] }}
+ *            boxes: [{ gameId, title, family, categories, size, rests, flags: string[] }] }] }}
  * Boxes run top to bottom by height (y, where the box sits; same height: left to right, so
- * standing card games read like the shelf), front row first. flags: "standing" / "on its side" when not flat, and "long side out".
+ * standing card games read like the shelf), front row first. family: its family's name or null. flags: "standing" / "on its side" when not flat, and "long side out".
  */
 export function stackDetails(stack, layout, getGame) {
   const title = (id) => getGame(id)?.title ?? id;
@@ -46,7 +46,7 @@ export function stackDetails(stack, layout, getGame) {
         if (POSE[b.up]) flags.push(POSE[b.up]);
         if (b.rot) flags.push('long side out');
         return {
-          gameId: b.gameId, title: title(b.gameId), categories: game?.categories ?? [],
+          gameId: b.gameId, title: title(b.gameId), family: game?.family ?? null, categories: game?.categories ?? [],
           size: formatDims(game?.dims ?? null), rests: restsOn(b.on, title), flags,
         };
       });
