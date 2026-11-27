@@ -4,7 +4,8 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import * as store from '../js/core/store.js';
 import { layoutStack2 } from '../js/core/geometry.js';
-import { stackDetails, stackAriaLabel, restsOn } from '../js/map/details.js';
+import { stackDetails, stackAriaLabel, restsOn, boxLine } from '../js/map/details.js';
+import { reachAll } from '../js/rules/index.js';
 
 const seed = JSON.parse(readFileSync(new URL('../data/seed.json', import.meta.url), 'utf8'));
 const mem = new Map();
@@ -82,4 +83,29 @@ test('restsOn and the accessible name', () => {
   assert.equal(restsOn(['a', 'b'], t), 'across Alpha and Beta');
   assert.equal(stackAriaLabel('B3', 'bottom', 5), 'Stack B3, Bottom shelf, 5 games');
   assert.equal(stackAriaLabel('T9', 'top', 1), 'Stack T9, Top shelf, 1 game');
+});
+
+test('reach: each box gets its text from one reachAll, null without it (part-b4 item 4)', () => {
+  const plan = store.getPlan2();
+  const reach = reachAll(plan, getGame);
+  const st = plan.stacks.find((s) => s.id === 'B3');
+  const boxes = stackDetails(st, layoutStack2(st, getGame), getGame, reach).rows[0].boxes;
+  assert.deepEqual(boxes.map((b) => b.reach), boxes.map((b) => reach.get(b.gameId).text));
+  assert.equal(boxes[0].reach, reach.get(byTitle('Compile: Main 2')).text);
+  assert.match(boxes.at(-1).reach, /boxes on top/, 'the bottom box has boxes on it');
+  assert.ok(details('B3').rows[0].boxes.every((b) => b.reach === null));
+  const l1 = plan.stacks.find((s) => s.id === 'L1');
+  const back = stackDetails(l1, layoutStack2(l1, getGame), getGame, reach).rows[1];
+  assert.equal(back.label, 'Back row');
+  assert.ok(back.boxes.length && back.boxes.every((b) => b.reach.includes('Back row')));
+});
+
+test('boxLine: rests and flags, then the reach after a dash', () => {
+  assert.deepEqual(boxLine({ rests: 'on the shelf', flags: [], reach: 'Easy to reach' }),
+    { place: 'on the shelf', reach: 'Easy to reach', text: 'on the shelf – Easy to reach' });
+  assert.deepEqual(boxLine({ rests: 'on Alpha', flags: ['standing', 'long side out'], reach: 'Back row · 2 boxes on top' }),
+    { place: 'on Alpha · standing · long side out', reach: 'Back row · 2 boxes on top', text: 'on Alpha · standing · long side out – Back row · 2 boxes on top' });
+  assert.deepEqual(boxLine({ rests: 'across Alpha and Beta', flags: [], reach: null }),
+    { place: 'across Alpha and Beta', reach: null, text: 'across Alpha and Beta' });
+  assert.equal(boxLine({ rests: 'on the shelf' }).text, 'on the shelf');
 });

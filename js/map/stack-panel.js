@@ -5,14 +5,15 @@
 // (move, turn, to the board or the cupboard, inside a box).
 // Warnings come from Stephen's v2 rule checker: block = red, warn = amber.
 // A box of a game with a family has a chip with its name: showFamily (part-b4 item 2; go() closes the panel).
+// Each box line ends with its reach (part-b4 item 4, Stephen's reachAll) in the muted style.
 // Item 5: Move stack (stack-move-panel.js) and Remove stack (stack-confirm.js; asks first when it has games).
 import { h, showPanel, toast } from '../core/dom.js';
 import { on } from '../core/bus.js';
 import * as store from '../core/store.js';
 import { openGame, showFamily } from '../core/contracts.js';
 import { layoutStack2 } from '../core/geometry.js';
-import { checkPlan2, forStack } from '../rules/index.js';
-import { stackDetails } from './details.js';
+import { checkPlan2, forStack, reachAll } from '../rules/index.js';
+import { stackDetails, boxLine } from './details.js';
 import { categoryChips, warningList } from './ui.js';
 import { openPickUp } from './pickup-sheet.js';
 import { openStackMove } from './stack-move-panel.js';
@@ -44,9 +45,11 @@ export function openStackPanel(stackId, { onClose } = {}) {
       dlg.close(); // the plan was replaced and this stack is gone
       return;
     }
-    const d = stackDetails(st, layoutStack2(st, store.getGame), store.getGame);
+    const plan = store.getPlan2();
+    // reach of every box at once (part-b4 item 4), not reachOf per box
+    const d = stackDetails(st, layoutStack2(st, store.getGame), store.getGame, reachAll(plan, store.getGame));
     // overlaps are reported once per pair; forStack shows them on both stacks
-    const warnings = forStack(checkPlan2(store.getPlan2(), store.getGame), stackId)
+    const warnings = forStack(checkPlan2(plan, store.getGame), stackId)
       .sort((a, b) => (a.severity === 'block' ? 0 : 1) - (b.severity === 'block' ? 0 : 1));
     heading.textContent = `Stack ${d.id}`;
     // a wrapper built with h(), which skips nulls and flattens lists (replaceChildren does neither)
@@ -81,10 +84,17 @@ export function openStackPanel(stackId, { onClose } = {}) {
   return dlg;
 }
 
+/** "on Takenokolor · standing – Back row · 1 box on top": the reach wraps as a whole on a phone. */
+function restsLine(b) {
+  const line = boxLine(b);
+  return h('p', { class: 'map-rests' }, h('span', {}, line.place),
+    line.reach ? [' – ', h('span', { class: 'map-reach' }, line.reach)] : null);
+}
+
 function boxItem(b) {
   return h('li', { class: 'map-boxitem' },
     h('button', { type: 'button', class: 'map-boxitem-title', onclick: () => openGame(b.gameId) }, b.title),
-    h('p', { class: 'map-rests' }, b.rests, b.flags.length ? ` · ${b.flags.join(' · ')}` : null),
+    restsLine(b),
     h('div', { class: 'map-boxitem-meta' }, categoryChips(b.categories), h('span', {}, b.size),
       b.family ? h('button', {
         type: 'button', class: 'btn map-family-chip', 'aria-label': `Show the ${b.family} family on the map`,
