@@ -81,7 +81,7 @@ test('an empty stack has no boxes', () => {
 });
 
 test('accessible names count every game', () => {
-  assert.equal(stackAriaLabel(stack('B3')), 'Stack B3, Bottom shelf, 5 games');
-  assert.equal(stackAriaLabel(stack('T9')), 'Stack T9, Top shelf, 1 game');
+  assert.equal(stackAriaLabel('B3', 'bottom', gameCount(stack('B3'))), 'Stack B3, Bottom shelf, 5 games');
+  assert.equal(stackAriaLabel('T9', 'top', 1), 'Stack T9, Top shelf, 1 game');
   assert.equal(gameCount(stack('L1')), 18);
 });
