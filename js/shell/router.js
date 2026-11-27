@@ -1,22 +1,32 @@
-// Hash router. Starter version by Tony; owner from kickoff: Peter (Part C).
+// Hash router. Owner: Peter (Part C).
 // CONTRACT (keep these signatures): go(id, params), currentRoute(), startRouter(screens, el, opts), getScreens()
 //
 // A screen is: { id, title, order, mount(el, params) => cleanup?, update?(params) }
 //   - mount() renders into el and may return a cleanup function (unsubscribe, timers…)
 //   - update() is optional: if present it is called instead of a re-mount when only params change
 // URLs look like  #/map?game=g042  so they survive reloads and can be bookmarked.
+//
+// Back button: every screen change is one history step, so Back walks back through the screens you
+// visited and leaves the app from the first one. An unknown or empty address is rewritten to the
+// default screen *in place* (no extra step), so the first Back from the start screen leaves the app.
+// Panels (core/dom.js showPanel) add their own history steps; go() closes them before a screen changes.
 import { clear, closePanels } from '../core/dom.js';
 import { emit } from '../core/bus.js';
+import { toHash, resolveRoute, sortScreens } from './routes.js';
 
 let screens = [];
 let root = null;
 let fallback = null;
 let active = null; // { screen, cleanup }
+let forward = false; // true while go() is navigating to a screen; false when Back/Forward (or a plain link) returned to one
+const scrollOf = new Map(); // screen id -> scrollY when we left it, restored when Back returns to it
 
 export function startRouter(list, el, { defaultScreen } = {}) {
-  screens = [...list].sort((a, b) => (a.order ?? 99) - (b.order ?? 99));
+  screens = sortScreens(list);
   root = el;
   fallback = defaultScreen ?? screens[0]?.id;
+  history.scrollRestoration = 'manual'; // we put the scroll position back ourselves, after the screen has rendered
+  window.removeEventListener('hashchange', render);
   window.addEventListener('hashchange', render);
   render();
 }
@@ -28,39 +38,34 @@ export function getScreens() {
 /** Navigate: go('map', { game: 'g042' }) */
 export function go(id, params = {}) {
   const hash = toHash(id, params);
-  // Open panels are closed first and their history entries dropped, so Back from the new screen
-  // returns to the screen the panel was opened on (see core/dom.js closePanels).
+  // Close open panels first and drop their history steps (core/dom.js), then navigate.
   closePanels(() => {
+    forward = true;
     if (location.hash === hash) render();
     else location.hash = hash;
   });
 }
 
+/** The screen the address bar is on right now: { id, params }. Unknown addresses give the default screen. */
 export function currentRoute() {
-  return parse(location.hash);
-}
-
-function toHash(id, params) {
-  const q = new URLSearchParams(Object.entries(params).filter(([, v]) => v != null && v !== '')).toString();
-  return `#/${id}${q ? `?${q}` : ''}`;
-}
-
-function parse(hash) {
-  const [path, query = ''] = hash.replace(/^#\/?/, '').split('?');
-  return { id: path || fallback, params: Object.fromEntries(new URLSearchParams(query)) };
+  const { id, params } = resolveRoute(screens, location.hash, fallback);
+  return { id, params };
 }
 
 function render() {
-  let { id, params } = parse(location.hash);
-  let screen = screens.find((s) => s.id === id);
-  if (!screen) {
-    screen = screens.find((s) => s.id === fallback);
-    id = screen?.id;
-    params = {};
-  }
+  const { screen, id, params, redirected } = resolveRoute(screens, location.hash, fallback);
   if (!screen) return;
+  if (redirected) history.replaceState(history.state, '', toHash(id)); // fix the address, no new step, no hashchange
+  const restore = !forward;
+  forward = false;
+  if (active) scrollOf.set(active.screen.id, window.scrollY);
+
   if (active?.screen === screen && screen.update) {
-    screen.update(params);
+    try {
+      screen.update(params);
+    } catch (err) {
+      console.error(`[router] screen "${id}" failed to update`, err);
+    }
   } else {
     try {
       active?.cleanup?.();
@@ -77,6 +82,7 @@ function render() {
     }
     active = { screen, cleanup };
   }
+  window.scrollTo(0, restore ? (scrollOf.get(id) ?? 0) : 0);
   document.title = `${screen.title} · Shelp`;
   emit('route:changed', { id, params });
 }
