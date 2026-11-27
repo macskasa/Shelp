@@ -5,7 +5,7 @@ import { readFileSync } from 'node:fs';
 import * as store from '../js/core/store.js';
 import {
   DEFAULT_STATE, stateFromParams, stateToParams, activeFilterCount, makeEntry, matches, sortEntries,
-  shortLocation, locationKind, countLabel,
+  shortLocation, locationKind, countLabel, sortTitle,
 } from '../js/catalog/filter.js';
 
 const seed = JSON.parse(readFileSync(new URL('../data/seed.json', import.meta.url), 'utf8'));
@@ -123,11 +123,30 @@ test('filters combine (all must hold)', async () => {
   assert.deepEqual(ids(filter(all, { players: 2, time: 30, cats: ['duo'] })), want);
 });
 
-test('sorting: title keeps the Hungarian order, direction flips it', async () => {
+test('sortTitle ignores a leading A / Az / The, only when more text follows', () => {
+  assert.equal(sortTitle('A jelszó: Vérfarkas'), 'jelszó: Vérfarkas');
+  assert.equal(sortTitle('Az erdő'), 'erdő');
+  assert.equal(sortTitle('The Crew: A mélytengeri küldetés'), 'Crew: A mélytengeri küldetés');
+  assert.equal(sortTitle('the fox experiment'), 'fox experiment');
+  assert.equal(sortTitle('A'), 'A');
+  assert.equal(sortTitle('Azul'), 'Azul');
+  assert.equal(sortTitle('Avalon'), 'Avalon');
+  assert.equal(sortTitle('A-Z játék'), 'A-Z játék');
+  assert.equal(sortTitle('7 Csoda'), '7 Csoda');
+});
+
+test('sorting: titles sort without their leading article, direction flips it', async () => {
   const all = await entries();
+  const collator = new Intl.Collator('hu', { sensitivity: 'base', numeric: true });
+  const want = all.map((e) => e.game.title).sort((a, b) => collator.compare(sortTitle(a), sortTitle(b)));
   const asc = sortEntries(all, 'title', 'asc').map((e) => e.game.title);
-  assert.deepEqual(asc, all.map((e) => e.game.title)); // the store already sorts by title
+  assert.deepEqual(asc, want);
   assert.deepEqual(sortEntries(all, 'title', 'desc').map((e) => e.game.title), [...asc].reverse());
+  // the point of it: "A jelszó: Vérfarkas" sits among the J titles, not among the A titles
+  const at = (t) => asc.indexOf(t);
+  assert.ok(at('A jelszó: Vérfarkas') > at('Avalon'));
+  assert.ok(at('A jelszó: Vérfarkas') > at('Hitster Christmas'));
+  assert.ok(at('Az erdő') > at('Brick Like This!')); // "Az erdő" sorts under E
 });
 
 test('sorting: unknown players and times always come last, in both directions', async () => {
