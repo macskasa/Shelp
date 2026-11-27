@@ -34,7 +34,7 @@ It works on other screens too (down to 360 px), but these are the ones it is tun
 ## How it's built
 
 - **Plain JavaScript ES modules, SVG and CSS.** No framework, no npm packages, no CDNs. GitHub Pages serves the files as they are.
-- **Data:** `data/seed.json` holds the 204 games and the shelf plan "v5 – brackets" worked out in the planning chat. On first start the app copies it into localStorage and upgrades it to schema 2 (boxes with positions; a box can rest on the floor, on one box, or across two). After that all changes stay in the browser, and every change can be undone. Backups are the same JSON format.
+- **Data:** `data/seed.json` holds the 204 games and the shelf plan "v5 – brackets" worked out in the planning chat. It is in schema 2 (boxes with positions; a box can rest on the floor, on one box, or across two), and on first start the app copies it into localStorage. After that all changes stay in the browser, and every change can be undone. Backups are the same JSON format.
 - **Shelves are hard-coded** in `js/core/shelves.js`: three 200 cm wall shelves (units 60 | 80 | 60, 8 cm overhang at the wall end, BOAXEL brackets under the top two levels), the 80 cm unit under the stairs with three heights, and the narrow 8 cm shelf. There is no settings screen.
 - **BGG integration is offline:** Adam exports his collection as CSV on BoardGameGeek and imports the file. (Browsers can't call BGG directly. A live refresh would need a small server, story E4.)
 - **Offline:** a service worker caches the app, so it works without internet once it has been opened, and it can be added to the home screen.

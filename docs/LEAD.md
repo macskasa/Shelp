@@ -5,7 +5,7 @@ For a fresh Tony chat. Read this, `docs/CONTEXT.md` and `README.md`, and nothing
 ## Role
 
 Tony is the lead and code reviewer.
-- **Owns:** `js/core/`, `js/app.js`, `index.html`, `css/base.css`, `data/`, `docs/`, `tests/store.test.mjs`, `tests/plan2.test.mjs`, `tests/fixtures/v5-geometry.json` and `.github/`.
+- **Owns:** `js/core/`, `js/app.js`, `index.html`, `css/base.css`, `data/`, `docs/`, `tests/store.test.mjs`, `tests/plan2.test.mjs`, `tests/fixtures/v5-geometry.json`, `tests/fixtures/seed-v1.json` and `.github/`.
 - **Never edits the developers' files.** Changes they need go to them as review notes.
 - **Team:**
   - Adam: product owner, merges PRs.
@@ -22,7 +22,7 @@ Tony is the lead and code reviewer.
   - **Peter** (`docs/part-c3.md`): brief done.
 - **Open issues:** #48 (later) and #62 (the "Stored inside" picker needs a search that also matches BGG names: Stephen, `js/game/fields.js` `insideSection`). README "Releases and stories" says what's built and what isn't; keep it current after each merge.
 - **Tony next:**
-  - convert `data/seed.json` to schema 2. Two developer tests read the seed's raw v1 shape: Peter's `tests/catalog-filter.test.mjs` (line 58, `rows[0][0]`) and Stephen's `tests/io-backup.test.mjs` (lines 56–59 and 128, a `schema: 1` file made from `seed.plan`). Have them read the plan through the store first, or put the exact change in the PR body for them to push to Tony's branch. Keep a schema 1 fixture for the upgrade tests in `tests/plan2.test.mjs` and `tests/store.test.mjs`;
+  - the seed is schema 2 once Tony's seed PR is merged; it waits for Peter's and Stephen's seed-agnostic test changes (see the PR body);
   - review the PRs as they come.
 - **Later:** B2 game families (Stephen; Tony adds the schema field first), D7 moving checklist (on top of Peter's compare), issue #48 (fewer boxes on top counts as easier to reach: Stephen's rules and `suggestSpots`), the next briefs for Stephen and Peter.
 - **How the team runs:** a Claude Code project since 2026-11-27. The project conversation is Tony. Each piece of developer work is a thread (a new session from `create_session`, one PR each, Opus for Bruce, Sonnet for Stephen and Peter) whose prompt names the brief item, the branch (`outcome_branch`) and asks for a one-line `send_message` to Tony when the PR is green. Tony verifies on GitHub, reviews, and tells Adam one line. The opening messages are in `docs/kickoff.md`.

@@ -74,7 +74,7 @@ The store itself refuses the first two (missing size, pizza not flat), whatever 
 
 ## 4. Data model (schema 2)
 
-One file format is used for the seed (`data/seed.json`), for backups and for plan imports. **Schema 2** is current. Schema 1 files (old backups, plan files from the planning chat, today's seed) are still accepted: the store upgrades them on load or import (`js/core/plan2.js`).
+One file format is used for the seed (`data/seed.json`), for backups and for plan imports. **Schema 2** is current. The seed is schema 2. Schema 1 files (old backups, plan files from the planning chat) are still accepted: the store upgrades them on load or import (`js/core/plan2.js`). `tests/fixtures/seed-v1.json` is the v5 plan as schema 1, for the upgrade tests.
 
 ```jsonc
 {
@@ -158,7 +158,7 @@ Every game is in **at most one** place: a stack, the cupboard, inside another bo
 - **One structure covers everything:** piles, several boxes side by side on one box, standing card games (boxes with `up: "l"` on the floor), and bridges.
 - **Bridges** rest on exactly two boxes in the same row, side by side, seen from the front only (no bridges between the front and back row).
 
-`tests/fixtures/v5-geometry.json` has the expected `x, w, d, h` of every v5 stack. The upgraded seed gives exactly these through `layoutStack2`.
+`tests/fixtures/v5-geometry.json` has the expected `x, w, d, h` of every v5 stack. The seed gives exactly these through `layoutStack2`.
 
 ### Location (from `store.locate2(id)`)
 
@@ -191,7 +191,7 @@ null   // unknown id
 |---|---|
 | `store.js` | `init()`. **Reads (v2):** `getGames()` (sorted by title), `getGame(id)`, `getPlan2()`, `getStack2(id)`, `locate2(id)`, `getBoard()`, `getMeta()`, `exportData()`, `validate(obj)`, `canUndo()`, `canRedo()`. **Writes:** `updateGame(id, patch)`, `addGame(fields) → id`, `removeGame(id)`, `moveToBoard(id)`, `moveToCupboard(id, reason)`, `setInside(id, hostId)`, `placeBox(id, { stackId, row, on, index, up, rot })`, `placeUnder(id, targetIds, { up, rot })`, `turnBox(id, { up, rot })`, `createStack(zone, { x }) → id`, `moveStack(id, x)`, `removeStack(id)` (games go to the board), `renumberStacks() → { old: new }`, `undo()`, `redo()`, `preview(fn) → { plan, games, error }` (try writes without keeping them), `replacePlan(plan)`, `importData(obj) → 'all' \| 'plan'`, `resetToSeed()`, `setMeta(key, value)`, `batch(fn)`. **Saved versions:** `listVersions()` (newest first, `{ id, name, savedAt, games, stacks }` with counts), `getVersion(id)`, `saveVersion(name) → id` (1–60 characters, at most `MAX_VERSIONS` = 10), `restoreVersion(id)` (one undo step), `renameVersion(id, name)`, `deleteVersion(id)`. Saving, renaming and deleting fire `store:changed` with `versions: true`, aren't undo steps, and are refused inside `preview` / `batch`. Every write except `setMeta` and those three is one undo step (a `batch` is one step, up to 30 kept). Writes throw an `Error` with a readable message (and `err.problems`, a list, when there are several). |
 | `geometry.js` | `boxSize(dims, up, rot) → { w, d, h }`, `layoutStack2(stack, getGame) → { w, d, h, pileH, rows, boxes, topper }`. The geometry of schema 2, shared by everyone. |
-| `plan2.js` | The upgrade from schema 1, the v1 view and the edit operations behind the store. **Don't call it directly**; use the store. Two exceptions: `locations2(plan)` is a pure read that works on any plan (Peter's compare), and Stephen's `js/rules/suggest.js` may run `detach` / `insertOn` on its **own copy** of a plan. Never on store data. |
+| `plan2.js` | The upgrade from schema 1 and the edit operations behind the store. **Don't call it directly**; use the store. Two exceptions: `locations2(plan)` is a pure read that works on any plan (Peter's compare), and Stephen's `js/rules/suggest.js` may run `detach` / `insertOn` on its **own copy** of a plan. Never on store data. |
 | `bus.js` | `on(type, fn) → unsubscribe`, `emit(type, detail)`. Events: `store:changed` `{ games: id[] \| null, plan: bool }` (null = everything changed), `store:error` `{ message }` (app.js shows it), `route:changed` `{ id, params }`. |
 | `contracts.js` | `openGame(id)`, `showOnMap(gameId)`, `showStack(stackId)`, `pickUp(gameId)` (placing mode, `#/map?pick=<id>`), `go(screen, params)`, `provide(name, fn)`. |
 | `shelves.js` | `ZONES`, `GROUPS`, `BRACKET`, `STACK_TOLERANCE`, `bracketLimit(zone, depth)`, `isEasy(zoneId, x, w)`. |
@@ -236,7 +236,7 @@ Load your stylesheet once in your module: `loadCss(new URL('./map.css', import.m
 
 | Path | Owner |
 |---|---|
-| `index.html`, `js/app.js`, `js/core/**`, `css/base.css`, `data/**`, `docs/**`, `README.md`, `.github/**`, `tests/store.test.mjs`, `tests/plan2.test.mjs`, `tests/fixtures/v5-geometry.json` | **Tony** (lead) |
+| `index.html`, `js/app.js`, `js/core/**`, `css/base.css`, `data/**`, `docs/**`, `README.md`, `.github/**`, `tests/store.test.mjs`, `tests/plan2.test.mjs`, `tests/fixtures/v5-geometry.json`, `tests/fixtures/seed-v1.json` | **Tony** (lead) |
 | `js/io/**`, `js/game/**`, `js/rules/**`, `tests/io*.test.mjs`, `tests/game*.test.mjs`, `tests/rules*.test.mjs`, `tests/fixtures/bgg-*` | **Stephen** (Part A) |
 | `js/map/**`, `tests/map*.test.mjs` | **Bruce** (Part B) |
 | `js/catalog/**`, `js/shell/**`, `js/versions/**`, `sw.js`, `manifest.webmanifest`, `icons/**`, `tests/catalog*.test.mjs`, `tests/shell*.test.mjs`, `tests/versions*.test.mjs` | **Peter** (Part C) |
@@ -302,3 +302,4 @@ The placeholder screens in your folders were written by Tony only to test the wi
 - 2026-11-27 – **v1 leftovers:** nothing in the app uses v1 since #40. Each developer removes their own v1 code and tests (Stephen `part-a4.md` item 6, Bruce `part-b3.md` item 9, Peter `part-c3.md` item 5); then Tony removes the store's v1 functions and converts the seed to schema 2. `docs/kickoff.md` now also has opening messages for a Claude Code project.
 - 2026-11-27 – **Topper centring (issue #45):** `layoutStack2` centres a topper on the box (or the boxes side by side) at the top of the pile, not on the whole stack. The Bonsai in M3 now sits over Tokaido Duo. The matching assertion in `tests/map-scene.test.mjs` (Bruce) lands in the same PR.
 - 2026-11-27 – **v1 removed from the core:** every part is on schema 2 (#57, #59, and Peter's #54), so the store no longer has `getPlan`, `getStack`, `locate` or `placeOnStack`, `format.js` no longer has `describeLocation`, and `plan2.js` no longer has `toV1Plan`. Use `getPlan2`, `getStack2`, `locate2`, the v2 writes and `describeLocation2`. Schema 1 **files** (old backups, plan files from chat, today's seed) are still accepted and upgraded. Section 4's v1 notes and the glossary's "Unplaced" are gone.
+- 2026-11-27 – **The seed is schema 2:** `data/seed.json` is now exactly what the store made of the v5 plan on first start: stacks with `boxes`, the `pizza` flag on every game, `board: []`. Nothing changes in the app. Tests that need a schema 1 file read `tests/fixtures/seed-v1.json` (Tony), and tests should read the plan through the store, not from the seed's raw shape (Peter's and Stephen's prep PRs did that for theirs).

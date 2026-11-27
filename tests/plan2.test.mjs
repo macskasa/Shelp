@@ -8,7 +8,8 @@ import { migrateDataV1 } from '../js/core/plan2.js';
 import { checkData, knownFrom } from '../js/core/schema.js';
 import { describeLocation2 } from '../js/core/format.js';
 
-const seed = JSON.parse(readFileSync(new URL('../data/seed.json', import.meta.url), 'utf8'));
+const seed = JSON.parse(readFileSync(new URL('../data/seed.json', import.meta.url), 'utf8')); // schema 2
+const seedV1 = JSON.parse(readFileSync(new URL('./fixtures/seed-v1.json', import.meta.url), 'utf8')); // the same data as schema 1, as planned in chat
 const fixture = JSON.parse(readFileSync(new URL('./fixtures/v5-geometry.json', import.meta.url), 'utf8'));
 const TOL = 0.05;
 const near = (a, b, what) => assert.ok(Math.abs(a - b) <= TOL, `${what}: got ${a}, expected ${b}`);
@@ -57,19 +58,27 @@ test('boxSize: up and rot', () => {
 });
 
 test('upgrade: v1 → v2 keeps every stack, every game in its stack and row, the cupboard and the boxes inside', () => {
-  const up = migrateDataV1(structuredClone(seed));
+  const up = migrateDataV1(structuredClone(seedV1));
   assert.equal(up.schema, 2);
   const v1Games = (st) => st.rows.flatMap((row, r) => row.flatMap((it) => (it.side ?? [it]).map((x) => `${x.game}@${r}`))).sort();
   const v2Games = (st) => st.boxes.map((b) => `${b.game}@${b.row ?? 0}`).sort();
-  assert.deepEqual(up.plan.stacks.map((s) => [s.id, s.zone, s.x]), seed.plan.stacks.map((s) => [s.id, s.zone, s.x]));
-  seed.plan.stacks.forEach((st, i) => assert.deepEqual(v2Games(up.plan.stacks[i]), v1Games(st), st.id));
-  assert.deepEqual(up.plan.cupboard, seed.plan.cupboard);
-  assert.deepEqual(up.plan.inside, seed.plan.inside);
+  assert.deepEqual(up.plan.stacks.map((s) => [s.id, s.zone, s.x]), seedV1.plan.stacks.map((s) => [s.id, s.zone, s.x]));
+  seedV1.plan.stacks.forEach((st, i) => assert.deepEqual(v2Games(up.plan.stacks[i]), v1Games(st), st.id));
+  assert.deepEqual(up.plan.cupboard, seedV1.plan.cupboard);
+  assert.deepEqual(up.plan.inside, seedV1.plan.inside);
   assert.deepEqual(up.plan.board, []);
 });
 
+test('the seed is schema 2 and is exactly the upgrade of the v5 plan from chat', () => {
+  assert.equal(seed.schema, 2);
+  assert.deepEqual(checkData(seed).problems, []);
+  const up = migrateDataV1(structuredClone(seedV1));
+  assert.deepEqual(seed.games, up.games);
+  assert.deepEqual(seed.plan, up.plan);
+});
+
 test('upgrade: every v5 stack keeps its size (geometry fixture)', () => {
-  const up = migrateDataV1(structuredClone(seed));
+  const up = migrateDataV1(structuredClone(seedV1));
   const byId = new Map(up.games.map((g) => [g.id, g]));
   for (const st of up.plan.stacks) {
     const want = fixture[st.id];
@@ -83,11 +92,11 @@ test('upgrade: every v5 stack keeps its size (geometry fixture)', () => {
 });
 
 test('upgrade: pizza is off exactly for the 20 games that stood in v5', () => {
-  const up = migrateDataV1(structuredClone(seed));
+  const up = migrateDataV1(structuredClone(seedV1));
   const notPizza = up.games.filter((g) => !g.pizza).map((g) => g.title);
   assert.equal(notPizza.length, 20);
   assert.ok(notPizza.includes('KLASK') && notPizza.includes('Ice Cool') && notPizza.includes('Fluxx'));
-  assert.deepEqual(checkData(seed).problems, []);
+  assert.deepEqual(checkData(seedV1).problems, []);
 });
 
 // ---------------------------------------------------------------- reads
@@ -267,7 +276,7 @@ test('files: v2 backup round trip, v1 backup upgrade, v2 plan replace', async ()
   await fresh();
   assert.equal(store.importData(backup), 'all');
   assert.equal(store.locate2(id('Azul')).kind, 'board');
-  assert.equal(store.importData(structuredClone(seed)), 'all'); // an old v1 backup
+  assert.equal(store.importData(structuredClone(seedV1)), 'all'); // an old v1 backup
   assert.equal(store.locate2(id('Azul')).stackId, 'B2');
   const plan = structuredClone(store.getPlan2());
   plan.stacks = plan.stacks.filter((s) => s.id !== 'N5');
