@@ -229,7 +229,7 @@ Load your stylesheet once in your module: `loadCss(new URL('./map.css', import.m
 | From → to | How | Status |
 |---|---|---|
 | anyone → placing mode (B) | `pickUp(id)` → `#/map?pick=id` | Phase C |
-| game panel, Data screen (A), catalog (C) → a family on the map (B) | `showFamily(name)` → `#/map?family=name` | `docs/part-b4.md` |
+| game panel, Data screen (A), catalog (C) → a family on the map (B) | `showFamily(name)` → `#/map?family=name` | in use (#79, #80, #81) |
 | anyone → game panel (A) | `openGame(id)` | fallback panel in `contracts.js` until Stephen calls `provide('openGame', …)` |
 | catalog/search (C) → map (B) | `showOnMap(id)` → `#/map?game=id` | placeholder map already highlights the stack |
 | game panel (A) → map (B) | `showOnMap(id)` | – |
@@ -238,7 +238,7 @@ Load your stylesheet once in your module: `loadCss(new URL('./map.css', import.m
 | map / stack details (B) → rule checker (A) | Bruce calls `checkStack2` / `checkPlan2` from `js/rules/` for warnings and previews, with `severity: 'block' \| 'warn'` | in use |
 | everyone → offline (C) | Peter's service worker caches every same-origin file at runtime, so nobody maintains a file list | – |
 | families (core) → rules, game panel (A) | `game.family`, `getFamilies()`, `renameFamily()`; Stephen's `family` warning in `checkPlan2` | in use (#76) |
-| reach (A) → suggestions (A), stack details (B) | `reachOf(plan, getGame, id)`, `reachAll(plan, getGame)` in `js/rules/reach.js` | #48 (`docs/part-a6.md`); stack details later |
+| reach (A) → suggestions (A), stack details (B) | `reachOf(plan, getGame, id)`, `reachAll(plan, getGame)` (and `reachFrom`, `reachInStack`, `REACH`) in `js/rules/reach.js`: `{ score, parts, text }` | suggestions and the plan CSV (#80); stack details: `docs/part-b4.md` item 4 |
 | free space (core) → Free space screen (C) | `freeSpace(plan, getGame)` from `js/core/space.js`; Bruce may show the same numbers on the map later | in use (#74) |
 
 ## 7. Who owns what
@@ -314,3 +314,4 @@ The placeholder screens in your folders were written by Tony only to test the wi
 - 2026-11-27 – **The seed is schema 2:** `data/seed.json` is now exactly what the store made of the v5 plan on first start: stacks with `boxes`, the `pizza` flag on every game, `board: []`. Nothing changes in the app. Tests that need a schema 1 file read `tests/fixtures/seed-v1.json` (Tony), and tests should read the plan through the store, not from the seed's raw shape (Peter's and Stephen's prep PRs did that for theirs).
 - 2026-11-27 – **Families and free space (core):** every game has `family` (B2, section 4): a name or null, cleaned by the store, letter case joins an existing family. New store read `getFamilies()` and write `renameFamily()`. New core module `js/core/space.js` (D3): `UNITS` and `freeSpace(plan, getGame)` (section 5). Peter owns the new `js/space/` and `tests/space*.test.mjs`; `app.js` already imports a placeholder `js/space/index.js` (section 7). Briefs: `docs/part-a5.md` (Stephen, B2), `docs/part-c4.md` (Peter, D3). Tests for the core get the `core-` prefix (`tests/core-space.test.mjs`).
 - 2026-11-27 – **Family on the map, reach (#48):** new contract `showFamily(name)` → `#/map?family=<name>` (sections 5 and 6). Briefs: `docs/part-b4.md` (Bruce: a family on the map), `docs/part-c5.md` (Peter: family filter in the catalog, Free space fixes), `docs/part-a6.md` (Stephen: `reachOf`, a reach score per box: easy zone, back row, boxes on top; used by `suggestSpots`). Section 3 mentions reach.
+- 2026-11-27 – **Reach (#48, Stephen #80):** `reachOf(plan, getGame, id)` / `reachAll(plan, getGame)` in `js/rules/reach.js` give `{ score, parts, text }` (+4 hard spot, +2 back row, +1 per box on top up to 3; a topper counts as one; a game inside a box counts as its host). `suggestSpots` ranks by it, and the plan CSV's "Spot" column shows its text. Families are on the map (`#/map?family=`, #81) and in the catalog (`?family=`, #79).
