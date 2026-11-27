@@ -31,12 +31,13 @@ export function fitText(text, maxPx, measure, minChars = 3) {
 
 /**
  * Title for a drawn box, or null if the box is too small at this zoom.
- * Flat boxes get a horizontal title; standing boxes (like books) a vertical one along their height.
- * @param box  { w, h, standing } in cm
+ * A box wider than tall gets a horizontal title; a taller one (standing like a book, on its side)
+ * a vertical one along its height.
+ * @param box  { w, h, vertical } in cm
  */
 export function boxTitle(box, title, k, measure) {
-  const across = (box.standing ? box.w : box.h) * k; // room for the line height
-  const along = (box.standing ? box.h : box.w) * k - 2 * PAD_PX;
+  const across = (box.vertical ? box.w : box.h) * k; // room for the line height
+  const along = (box.vertical ? box.h : box.w) * k - 2 * PAD_PX;
   if (across < TITLE_PX + 2) return null;
   return fitText(title, along, measure, MIN_TITLE_CHARS);
 }

@@ -10,9 +10,8 @@ export function gameCount(stack) {
 }
 
 /** Accessible name of a stack on the map: "Stack B3, Bottom shelf, 5 games". */
-export function stackAriaLabel(stack) {
-  const n = gameCount(stack);
-  return `Stack ${stack.id}, ${ZONES[stack.zone]?.label ?? stack.zone}, ${n} game${n === 1 ? '' : 's'}`;
+export function stackAriaLabel(id, zone, count) {
+  return `Stack ${id}, ${ZONES[zone]?.label ?? zone}, ${count} game${count === 1 ? '' : 's'}`;
 }
 
 /**

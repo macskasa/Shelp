@@ -2,14 +2,20 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import * as store from '../js/core/store.js';
 import { ZONES } from '../js/core/shelves.js';
+import { layoutStack2 } from '../js/core/geometry.js';
+import { layoutStack } from '../js/map/model.js';
 import { buildScene, findInScene, SPACING } from '../js/map/scene.js';
 import { fitText, boxTitle, stackLabel, TITLE_PX } from '../js/map/labels.js';
 
 const seed = JSON.parse(readFileSync(new URL('../data/seed.json', import.meta.url), 'utf8'));
-const games = new Map(seed.games.map((g) => [g.id, g]));
-const getGame = (id) => games.get(id);
-const scene = buildScene(seed.plan, getGame);
+const fixture = JSON.parse(readFileSync(new URL('./fixtures/v5-geometry.json', import.meta.url), 'utf8'));
+const mem = new Map();
+await store.init({ seed, storage: { getItem: (k) => mem.get(k) ?? null, setItem: (k, v) => mem.set(k, v), removeItem: (k) => mem.delete(k) } });
+const getGame = store.getGame;
+const plan2 = store.getPlan2();
+const scene = buildScene(plan2, getGame);
 const zone = (id) => scene.zones.find((z) => z.id === id);
 const stack = (id) => scene.stacks.find((s) => s.id === id);
 const byTitle = (t) => seed.games.find((g) => g.title === t).id;
@@ -72,7 +78,7 @@ test('easy to reach: top 0–44, the whole bottom shelf, one stepped outline und
 test('every placed game is drawn once (front row) or listed as back row', () => {
   const drawn = scene.stacks.flatMap((s) => s.boxes.map((b) => b.gameId));
   const back = scene.stacks.flatMap((s) => s.back);
-  const onStacks = seed.plan.stacks.flatMap((s) => s.rows.flat().flatMap((it) => (it.side ? it.side : [it]).map((x) => x.game)));
+  const onStacks = plan2.stacks.flatMap((s) => s.boxes.map((b) => b.game));
   assert.equal(new Set([...drawn, ...back]).size, drawn.length + back.length, 'no duplicates');
   assert.deepEqual([...drawn, ...back].sort(), onStacks.sort());
   assert.equal(stack('T1').back.length, 6);
@@ -95,7 +101,8 @@ test('boxes stand on the floor and on each other', () => {
 test('special placements are where the plan says (C5)', () => {
   // KLASK stands at the wall end and sticks out 8 cm past x = 200
   const klask = stack('T9').boxes[0];
-  assert.equal(klask.standing, true);
+  assert.equal(klask.up, 'm', 'KLASK is on its side: 46 cm on end would not fit under 38');
+  assert.equal(klask.vertical, true, 'so its title runs up the box');
   near(klask.x + klask.w, zone('top').x + 208, 'KLASK right edge');
   // Ice Cool stands upright in the tall gap
   const ice = stack('S1').boxes[0];
@@ -119,6 +126,45 @@ test('special placements are where the plan says (C5)', () => {
   for (const id of ['T1', 'B5', 'B6', 'L1']) assert.equal(stack(id).rows, 2, id);
 });
 
+test('the fixture: every v5 stack has the expected x, w, d, h through core layoutStack2', () => {
+  for (const st of plan2.stacks) {
+    const want = fixture[st.id];
+    assert.ok(want, `no fixture for ${st.id}`);
+    const got = layoutStack2(st, getGame);
+    for (const k of ['w', 'd', 'h']) assert.ok(Math.abs(got[k] - want[k]) <= 0.05, `${st.id} ${k}: ${got[k]} vs ${want[k]}`);
+    assert.ok(Math.abs(st.x - want.x) <= 0.05, `${st.id} x`);
+  }
+  assert.equal(plan2.stacks.length, Object.keys(fixture).length);
+});
+
+test('the v5 drawing is unchanged: every box sits where the v1 model put it', () => {
+  for (const st of plan2.stacks) {
+    const v1 = new Map(layoutStack(store.getStack(st.id), getGame).boxes.map((b) => [b.gameId, b]));
+    for (const b of layoutStack2(st, getGame).boxes) {
+      const old = v1.get(b.gameId);
+      assert.ok(old, `${b.gameId} missing in v1 ${st.id}`);
+      for (const k of ['x', 'y', 'w', 'h', 'row']) assert.ok(Math.abs(b[k] - old[k]) <= 0.01, `${st.id} ${b.gameId} ${k}: ${b[k]} vs ${old[k]}`);
+    }
+    assert.equal(v1.size, st.boxes.length, `${st.id} box count`);
+  }
+});
+
+test('a bridge across Compile and Kontroll on B3 is drawn across both (store.preview, nothing saved)', () => {
+  const [compile, kontroll] = ['Compile: Main 2', 'Kontroll'].map(byTitle);
+  const bridgeId = byTitle('T.I.M.E Stories: Lumen Fidei');
+  const { plan, error } = store.preview(() => store.placeBox(bridgeId, { stackId: 'B3', on: [compile, kontroll] }));
+  assert.equal(error ?? null, null);
+  const b3 = buildScene(plan, getGame).stacks.find((s) => s.id === 'B3');
+  const at = (id) => b3.boxes.find((b) => b.gameId === id);
+  const [c, k, bridge] = [at(compile), at(kontroll), at(bridgeId)];
+  assert.ok(bridge, 'the bridge is drawn');
+  assert.deepEqual(bridge.on, [compile, kontroll]);
+  const near2 = (a, b, what) => assert.ok(Math.abs(a - b) < 0.01, `${what}: ${a} vs ${b}`);
+  near2(bridge.y + bridge.h, Math.min(c.y, k.y), 'rests on the higher of its two supports');
+  assert.ok(bridge.x < c.x + c.w && bridge.x + bridge.w > k.x, 'spans the joint between them');
+  assert.equal(store.locate2(bridgeId).kind, 'cupboard', 'the store is unchanged');
+});
+
 test('findInScene: front row box, back row stack, not on a stack', () => {
   const ark = findInScene(scene, byTitle('Ark Nova'));
   assert.equal(ark.stack.id, 'M4');
@@ -129,7 +175,7 @@ test('findInScene: front row box, back row stack, not on a stack', () => {
 });
 
 test('an empty plan still draws all zones', () => {
-  const empty = buildScene({ stacks: [], cupboard: [], inside: {} }, getGame);
+  const empty = buildScene({ stacks: [], cupboard: [], inside: {}, board: [] }, getGame);
   assert.equal(empty.zones.length, Object.keys(ZONES).length);
   assert.equal(empty.stacks.length, 0);
   assert.ok(empty.width > 208);
@@ -150,10 +196,10 @@ test('fitText: whole text, cut with an ellipsis, or nothing', () => {
 });
 
 test('boxTitle: hidden below 11 px, horizontal for flat boxes, along the height for standing ones', () => {
-  const flat = { w: 30, h: 7, standing: false };
+  const flat = { w: 30, h: 7, vertical: false };
   assert.equal(boxTitle(flat, 'Ark Nova', 1.8, measure), null, `7 cm at 1.8 px/cm is under ${TITLE_PX} px + 2`);
   assert.equal(boxTitle(flat, 'Ark Nova', 4, measure), 'Ark Nova', 'readable at 4 px/cm');
-  const book = { w: 2.5, h: 12.5, standing: true };
+  const book = { w: 2.5, h: 12.5, vertical: true };
   assert.equal(boxTitle(book, 'Love Letter', 4, measure), null, '10 px thin');
   assert.equal(boxTitle(book, 'Love Letter', 6, measure), 'Love Letter', 'vertical along 75 px');
 });

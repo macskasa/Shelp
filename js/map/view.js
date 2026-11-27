@@ -8,7 +8,7 @@ import { on } from '../core/bus.js';
 import * as store from '../core/store.js';
 import { ZONES } from '../core/shelves.js';
 import { go } from '../core/contracts.js';
-import { describeLocation } from '../core/format.js';
+import { describeLocation2 } from '../core/format.js';
 import { buildScene, findInScene } from './scene.js';
 import { drawScene } from './draw.js';
 import { legend } from './legend.js';
@@ -47,7 +47,7 @@ export function mountMap(el, params) {
   const panZoom = createPanZoom(stage, { onChange: onView });
 
   function render() {
-    scene = buildScene(store.getPlan(), store.getGame);
+    scene = buildScene(store.getPlan2(), store.getGame);
     drawing = drawScene(scene, store.getGame);
     drawing.svg.setAttribute('preserveAspectRatio', 'xMinYMin meet');
     stage.replaceChildren(drawing.svg);
@@ -106,14 +106,14 @@ export function mountMap(el, params) {
     caption.hidden = true;
     let target = null;
     if (current.game) {
-      const loc = store.locate(current.game);
+      const loc = store.locate2(current.game);
       // a box stored inside another box: show the host box
       const shownId = loc?.kind === 'inside' ? loc.hostId : current.game;
       const found = findInScene(scene, shownId);
       if (found) target = { stackId: found.stack.id, gameId: found.box ? shownId : null };
-      const offShelf = loc?.kind === 'cupboard' || loc?.kind === 'unplaced';
-      const link = offShelf ? h('a', { href: '#/cupboard' }, 'Open the cupboard list') : null;
-      setCaption(store.getGame(current.game)?.title ?? null, describeLocation(loc, titleOf), link);
+      // the cupboard screen lists the cupboard and the board
+      const link = loc?.kind === 'cupboard' || loc?.kind === 'board' ? h('a', { href: '#/cupboard' }, 'Open the cupboard list') : null;
+      setCaption(store.getGame(current.game)?.title ?? null, describeLocation2(loc, titleOf), link);
     } else if (current.stack) {
       const st = scene.stacks.find((x) => x.id === current.stack);
       if (st) {

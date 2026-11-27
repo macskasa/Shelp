@@ -5,7 +5,7 @@
 // The drawing is a column of bands: top, middle and bottom wall shelf, then under the stairs
 // (its three parts side by side, bottom-aligned), then the narrow shelf (GROUPS order).
 import { ZONES, GROUPS, BRACKET } from '../core/shelves.js';
-import { layoutStack } from './model.js';
+import { layoutStack2 } from '../core/geometry.js';
 
 export const SPACING = Object.freeze({
   margin: 3,   // around the whole drawing
@@ -34,7 +34,7 @@ const bandLabel = (z) => `${z.label} · ${z.height} cm high`;
 
 /**
  * Lay out the whole drawing.
- * @param plan     store.getPlan()
+ * @param plan     store.getPlan2() (schema 2)
  * @param getGame  id → game
  * @returns {{
  *   width, height,                          drawing size in cm
@@ -42,12 +42,13 @@ const bandLabel = (z) => `${z.label} · ${z.height} cm high`;
  *   zones:  [{ id, label, x, top, floor, length, height, overhang, approximate, brackets: [x] }],
  *   brackets: [{ zone, x, y, w, h }],       dark bars hanging from the shelf above
  *   easy:   [{ path, x0, x1 }],             dashed "easy to reach" outlines (SVG path data)
- *   stacks: [{ id, zone, x, w, h, top, floor, standing, rows, back: [gameId], label: { x, y },
- *              boxes: [{ gameId, x, y, w, h, row, index, side, rot, missing, standing }],
+ *   stacks: [{ id, zone, x, w, h, top, floor, rows, back: [gameId], label: { x, y },
+ *              boxes: [{ gameId, x, y, w, h, row, up, rot, on, vertical }],
  *              topper: null | { label, x, y, w, h }, layout, plan }]
  * }}
- * Box x/y is the top-left corner in the drawing. Only the FRONT row of a 2-row stack is drawn;
- * the back row's game ids are in `back`.
+ * Box x/y is the top-left corner in the drawing; positions come from core layoutStack2 (gravity:
+ * a box sits on the highest of its supports, bridges included). vertical: taller than wide, so its
+ * title runs up the box. Only the FRONT row of a 2-row stack is drawn; the back row is in `back`.
  */
 export function buildScene(plan, getGame) {
   const { margin, label, ids } = SPACING;
@@ -103,17 +104,16 @@ export function buildScene(plan, getGame) {
 }
 
 function placeStack(st, z, getGame) {
-  const lay = layoutStack(st, getGame);
+  const lay = layoutStack2(st, getGame);
   const x = z.x + st.x;
-  const standing = st.orientation === 'standing';
   const boxes = lay.boxes.filter((b) => b.row === 0).map((b) => ({
     gameId: b.gameId, x: cm(x + b.x), y: cm(z.floor - b.y - b.h), w: b.w, h: b.h,
-    row: b.row, index: b.index, side: b.side, rot: b.rot, missing: b.missing, standing,
+    row: b.row, up: b.up, rot: b.rot, on: b.on, vertical: b.h > b.w,
   }));
   const t = lay.topper;
   return {
     id: st.id, zone: st.zone, x: cm(x), w: lay.w, h: lay.h, top: cm(z.floor - lay.h), floor: z.floor,
-    standing, rows: st.rows.length,
+    rows: lay.rows,
     back: lay.boxes.filter((b) => b.row > 0).map((b) => b.gameId),
     label: { x: cm(x + lay.w / 2), y: cm(z.floor + SPACING.ids * SPACING.idAt) },
     boxes,

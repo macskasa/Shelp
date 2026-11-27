@@ -37,7 +37,7 @@ export function drawScene(scene, getGame) {
   const stacks = scene.stacks.map((st) => {
     const zone = zoneById.get(st.zone);
     const g = s('g', {
-      class: 'map-stack', 'data-stack': st.id, tabindex: '0', role: 'button', 'aria-label': stackAriaLabel(st.plan),
+      class: 'map-stack', 'data-stack': st.id, tabindex: '0', role: 'button', 'aria-label': stackAriaLabel(st.id, st.zone, st.layout.boxes.length),
     },
     // tap target: the whole column of the stack, from the top of the shelf down to its id
     s('rect', { class: 'map-stack-hit', x: st.x, y: zone.top, width: Math.max(st.w, 2), height: st.label.y - zone.top + 3 }));
@@ -146,7 +146,7 @@ function hide(rect) {
 function drawBox(b, game, titles) {
   const title = game?.title ?? b.gameId;
   const colors = game ? colorsFor(game) : ['var(--cat-other)'];
-  const g = s('g', { class: `map-box${b.missing ? ' map-missing' : ''}`, 'data-game': b.gameId });
+  const g = s('g', { class: 'map-box', 'data-game': b.gameId });
   const n = colors.length;
   colors.forEach((c, i) => {
     const w = b.w / n + (i < n - 1 ? SEAM : 0);
@@ -155,12 +155,8 @@ function drawBox(b, game, titles) {
   g.append(s('rect', { class: 'map-box-line', x: b.x, y: b.y, width: b.w, height: b.h }));
   const cx = b.x + b.w / 2;
   const cy = b.y + b.h / 2;
-  if (b.missing) {
-    // drawn at box scale (not screen px), so the mark is there at every zoom
-    g.append(s('text', { class: 'map-q', x: cx, y: cy, style: `font-size: ${Math.min(b.w, b.h) * 0.8}px` }, '?'));
-  }
-  const t = s('text', { class: 'map-title', x: cx, y: cy, transform: b.standing ? `rotate(-90 ${cx} ${cy})` : null });
-  titles.push({ node: t, box: b, title: b.missing ? `? ${title}` : title });
+  const t = s('text', { class: 'map-title', x: cx, y: cy, transform: b.vertical ? `rotate(-90 ${cx} ${cy})` : null });
+  titles.push({ node: t, box: b, title });
   g.append(t);
   return g;
 }

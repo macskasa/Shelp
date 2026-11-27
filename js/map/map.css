@@ -57,7 +57,6 @@
 }
 .map-svg .map-band { font-size: calc(13px / var(--k)); font-weight: 600; text-anchor: start; }
 .map-svg .map-stack-id { fill: var(--muted); }
-.map-svg .map-q { font-weight: 700; fill: var(--muted); }
 
 .map-zone, .map-overhang, .map-floor, .map-easy, .map-box-line, .map-bracket,
 .map-topper rect, .map-layer-rings rect {
@@ -73,7 +72,6 @@
 
 .map-fill { fill: color-mix(in srgb, var(--c) var(--map-mix), var(--surface)); }
 .map-box-line { fill: none; stroke: var(--map-line); stroke-width: 0.75px; }
-.map-missing .map-box-line { stroke: var(--text); stroke-dasharray: 3 2; }
 
 .map-topper rect { fill: none; stroke: var(--muted); stroke-width: 1px; stroke-dasharray: 4 3; }
 .map-svg .map-topper-label {
@@ -256,7 +254,6 @@ dialog.panel.map-sheet {
 }
 .map-sw-easy { border: 1.5px dashed var(--easy-zone); border-radius: 4px; }
 .map-sw-bracket { width: 4px; margin-inline: 7px; background: var(--bracket); border-radius: 0; }
-.map-sw-missing { border: 1px dashed var(--text); color: var(--muted); }
 .map-sw-text { width: auto; color: var(--muted); }
 
 /* ---- rule warnings (stack details, placement preview) ----------------------------------------- */
