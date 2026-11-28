@@ -70,6 +70,11 @@ test('a plan like Adam\'s: after joining M1 and M2 the spot sheet offers the bri
   const best = checked[spots.indexOf(spot)].best;
   assert.ok(best, 'Port Royal fits across: checkSpots gives a best way');
   assert.equal(best.block.length, 0);
+  // placed there, it sits on the open strip, right of Műgyűjtők társasága (Tony's insertOn fix, #95)
+  const p = store.preview(() => store.placeBox(royal, { ...spot.run.target, up: best.up, rot: best.rot }));
+  const placed = p.plan.stacks.find((s) => s.id === 'M1').boxes.find((b) => b.game === royal);
+  const art = store.getStack2('M1').boxes.find((b) => b.game === byTitle('Műgyűjtők társasága'));
+  assert.ok(placed.x >= art.x + 26.9 - 0.01, `starts at ${placed.x}`);
 
   store.undo();
   assert.equal(JSON.stringify(store.exportData().plan), before, 'Undo restores the plan exactly');
