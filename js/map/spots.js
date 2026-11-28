@@ -2,9 +2,12 @@
 // (Phase B item 3; Phase C reuses it for the spot sheet and the turn chooser). Pure, no DOM. Owner: Bruce.
 import { boxSize, layoutStack2 } from '../core/geometry.js';
 import { checkPlan2 } from '../rules/index.js';
+import { MIN_REST } from '../core/space.js';
 
 /** Bridge supports may differ by this much in height (CONTEXT section 3); more and it would tilt. */
 export const BRIDGE_LEVEL = 0.5;
+/** Two tops "meet" when the right box starts within this many cm of where the left one ends (part-b6). */
+export const EDGE_GAP = 0.5;
 
 const UP = { s: 'Flat', m: 'On its side', l: 'Standing' };
 const n1 = (n) => String(Math.round(n * 10) / 10);
@@ -79,6 +82,7 @@ export function spotChoices(stack, getGame, { row = 0 } = {}) {
   for (const group of surfaces.values()) for (let i = 1; i < group.length; i++) consider(group[i - 1], group[i]);
   const free = boxes.filter((b) => !boxes.some((o) => o.on.includes(b.gameId)));
   for (let i = 1; i < free.length; i++) consider(free[i - 1], free[i]);
+  for (const [a, b] of openEdgePairs(boxes)) consider(a, b); // part-b6: two tops whose open edges meet
   out.push(...pairs.values());
 
   // under a box, or under a side-by-side level
@@ -87,6 +91,31 @@ export function spotChoices(stack, getGame, { row = 0 } = {}) {
     if (group.length < 2) continue;
     const ids = group.map((b) => b.gameId);
     out.push({ key: `under:${ids.join('+')}`, kind: 'under', label: `Under ${ids.map(title).join(' + ')}`, run: { fn: 'placeUnder', targets: ids } });
+  }
+  return out;
+}
+
+/**
+ * Pairs of boxes of one row whose open top edges meet (part-b6 item 2), left one first: B starts within
+ * EDGE_GAP of where A ends, their tops are within BRIDGE_LEVEL, and the strip of each top next to the
+ * other (MIN_REST wide, as the Free space screen counts open strips) has no box over it higher up.
+ * Like Csúcstámadás (with Műgyűjtők társasága on its left part) and SETI: Space Agencies after joining M1 and M2.
+ * @param boxes  layoutStack2(...).boxes of one row
+ */
+export function openEdgePairs(boxes) {
+  const eps = 1e-6;
+  const top = (b) => b.y + b.h;
+  const covered = (box, lo, hi) => boxes.some((o) => o !== box && o.y >= top(box) - BRIDGE_LEVEL - eps
+    && o.x < hi - eps && o.x + o.w > lo + eps);
+  const out = [];
+  for (const a of boxes) {
+    const end = a.x + a.w;
+    for (const b of boxes) {
+      if (b === a || b.x < end - eps || b.x > end + EDGE_GAP + eps) continue;
+      if (Math.abs(top(a) - top(b)) > BRIDGE_LEVEL + eps) continue;
+      if (covered(a, end - MIN_REST, end) || covered(b, b.x, b.x + MIN_REST)) continue;
+      out.push([a, b]);
+    }
   }
   return out;
 }

@@ -35,6 +35,7 @@ import { createDrag } from './view-drag.js';
 import { askRenumber } from './stack-confirm.js';
 import { lookupFamily, viewForFamily } from './view-family.js';
 import { createCaption } from './view-caption.js';
+import { onHighlight } from './highlight.js';
 
 loadCss(new URL('./map.css', import.meta.url));
 
@@ -265,6 +266,12 @@ export function mountMap(el, params) {
   const onWindow = () => requestAnimationFrame(layoutFrame);
   window.addEventListener('resize', onWindow);
   const off = on('store:changed', () => render());
+  // after Join (part-b6): mark the joined stack, #/map?stack=<id>, without opening its panel over the toast
+  const offHighlight = onHighlight((id) => {
+    history.replaceState(history.state, '', `#/map?stack=${encodeURIComponent(id)}`);
+    current = { stack: id };
+    applyParams({ reveal: true });
+  });
   // Esc leaves placing mode, or a family's highlight, once no panel is open (a panel's Esc closes the panel first)
   const onEscape = (e) => {
     if (e.key !== 'Escape' || e.defaultPrevented || document.querySelector('dialog[open]')) return;
@@ -285,6 +292,7 @@ export function mountMap(el, params) {
     },
     destroy() {
       off();
+      offHighlight();
       drag.destroy();
       clearTimeout(refitTimer);
       widthWatch.disconnect();
