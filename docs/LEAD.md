@@ -16,9 +16,11 @@ Tony is the lead and code reviewer.
 
 ## Where things stand (2026-11-28)
 
-- **Merged:** everything up to #91. Phase C has Pick up, Turn, Move, placing mode, the board strip, stacks, and only working spots in the sheet. B2, D3 (room on top with widths, standing spaces, tilt: #84/#85/#90/#91, closing #88/#89) and #48 are done. README "Releases and stories" is current.
-- **Bruce:** drag and drop on desktop is #92 (thread `bruce/drag-drop`, waiting for its "green"). Next: `docs/part-b6.md`, the "Join with …" action, as a new thread once #92 is merged.
-- **Tony's PR** (`ccr-96632897-bcu0g0`): `store.joinStacks` (core) and `docs/part-b6.md`.
+- **Merged:** everything up to #94. D1 is done apart from joining stacks: lists, tapping (phone), drag and drop (desktop, #92), stacks, only working spots. B2, D3 (widths, standing spaces, tilt) and #48 are done. `store.joinStacks` is in (#94). README "Releases and stories" is current.
+- **Tony's PR** (`ccr-96632897-bcu0g0`): the bridge placement fix in `insertOn` (Bruce found a bridge landing inside a box on its left support) and `docs/part-a8.md`.
+- **Threads running** (each sends Tony one line when its PR is green):
+  - **Bruce**, `bruce/join-stacks`: `docs/part-b6.md` ("Join with …", across pairs). He merges Tony's branch for the `insertOn` fix.
+  - **Stephen**, `stephen/box-overlap`: `docs/part-a8.md` (block rule `box-overlap`).
 - **Open issues:** #93 (free space: the room behind shallow boxes, depth; Tony's core, then Peter; about M3; not scheduled).
 - **Later:** D7 moving checklist (on top of Peter's compare); Bruce may show the D3 numbers on the map after drag and drop.
 - **How the team runs:** a Claude Code project since 2026-11-27. The project conversation is Tony. Each piece of developer work is a thread (a new session from `create_session`, one PR each, Opus for Bruce, Sonnet for Stephen and Peter) whose prompt names the brief item, the branch (`outcome_branch`) and asks for a one-line `send_message` to Tony when the PR is green. A thread whose work needs an unmerged core PR starts from that PR's branch (`source_revision`) and still opens its PR into `main`. Tony verifies on GitHub, reviews, and tells Adam one line. The opening messages are in `docs/kickoff.md`.
