@@ -71,7 +71,7 @@ Tony is the lead and code reviewer.
   1. As few games as possible in the cupboard, then as many as possible in the front row. Back rows spare the cupboard: easy-to-reach spots first, then elsewhere too (the two-rows warning is accepted there).
   2. Popular games in easy-to-reach spots, in the front row and near the top of their stacks (low reach score).
   3. Categories kept together, then families inside them. "Together" is the B2 rule for both: on one stack, or on one shelf with no other stack between.
-  Blocks are never allowed (the plan import refuses them). Output a plan file Adam imports; the moving checklist (#101) gives the steps. Open: a game with several categories counts under the first in `CATEGORIES` order, unless Adam says otherwise.
+  Blocks are never allowed (the plan import refuses them). Output a plan file Adam imports; the moving checklist (#101) gives the steps. A game with several categories goes with the strongest: popular, then party or duo (equal; party if it has both), then coop. Adam confirmed: the cupboard counts before the front row, so a back row outside an easy spot beats the cupboard.
 - **Join stacks (2026-11-28):** "Join with the next stack" is how a box comes to rest across two stacks. Depth is issue #93, for later.
 
 ## How to review a PR
