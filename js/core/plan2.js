@@ -276,4 +276,35 @@ export function renumber(plan) {
   return changed;
 }
 
+/**
+ * Join two neighbouring stacks of one shelf into one: the left one keeps its id and x, the right one's
+ * boxes move into it at the same places on the shelf (their x grows by the distance between the two),
+ * and the right stack is gone. Then a box can rest across the tops of both (a bridge), which only works
+ * within one stack. Returns the joined stack's id.
+ * Refused: another shelf, a stack between them (even an empty one), stacks that overlap, a topper on either.
+ */
+export function joinStacks(plan, getGame, aId, bId) {
+  const a0 = plan.stacks.find((s) => s.id === aId);
+  const b0 = plan.stacks.find((s) => s.id === bId);
+  if (!a0 || !b0) throw new Error(`No stack ${a0 ? bId : aId}`);
+  if (a0 === b0) throw new Error('A stack cannot be joined with itself');
+  if (a0.zone !== b0.zone) throw new Error(`Stacks ${aId} and ${bId} are on different shelves`);
+  const [left, right] = a0.x <= b0.x ? [a0, b0] : [b0, a0];
+  const between = plan.stacks.find((s) => s !== left && s !== right && s.zone === left.zone && s.x > left.x && s.x < right.x);
+  if (between) throw new Error(`Stack ${between.id} is between ${left.id} and ${right.id}`);
+  for (const st of [left, right]) {
+    if (st.topper) throw new Error(`Stack ${st.id} has a topper (${st.topper.label}), so it cannot be joined`);
+  }
+  const end = left.x + Math.max(0, ...left.boxes.map((b) => {
+    const dims = getGame(b.game)?.dims;
+    return (b.x ?? 0) + (dims ? boxSize(dims, b.up, b.rot).w : 0);
+  }));
+  if (end > right.x + 0.01) throw new Error(`Stacks ${left.id} and ${right.id} overlap; move them apart first`);
+  const dx = right.x - left.x;
+  for (const b of right.boxes) left.boxes.push({ ...b, x: round((b.x ?? 0) + dx), on: [...b.on] });
+  if (right.notes?.length) left.notes = [...(left.notes ?? []), ...right.notes];
+  plan.stacks = plan.stacks.filter((s) => s !== right);
+  return left.id;
+}
+
 export { sameSet };

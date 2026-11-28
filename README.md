@@ -89,7 +89,7 @@ Size: S ≈ 1–2 points, M ≈ 3–5, L ≈ 8, XL ≈ 13.
 - ✅ **The board strip** on the Shelves screen: "Board (n)" and a chip per game; a chip opens the pick-up sheet.
 - ✅ **Stacks** (#75): tap empty shelf in placing mode for **New stack here** (it slides into the gap if the box would run into the next stack); **Move stack** and **Remove stack** in stack details; empty stacks show as a dashed outline; **Renumber** left to right.
 - ✅ **Only working spots** (#87): the spot sheet lists only spots that work, best first, with "Show N blocked spots".
-- ⬜ Next (Bruce): drag and drop on desktop.
+- ⬜ Next (Bruce): drag and drop on desktop (#92), then **Join with the next stack** ([part-b6](docs/part-b6.md)), so a box can rest across two stacks' tops.
 
 ### Later
 
@@ -103,7 +103,7 @@ Size: S ≈ 1–2 points, M ≈ 3–5, L ≈ 8, XL ≈ 13.
 
 - **Drag and drop on desktop** (D1, above).
 - **Easy to reach in stack details** (#48): the reach score is in (suggestions rank by it, the plan CSV shows it, #80); Bruce shows it in stack details next.
-- The moving checklist (D7), live BGG refresh (E4).
+- Counting the room behind shallow boxes in free space (#93), the moving checklist (D7), live BGG refresh (E4).
 
 The full story texts are in the "App user stories" tab of the planning workbook and, for the MVP, in the part briefs.
 
@@ -116,7 +116,7 @@ Each developer is a separate Claude chat with this repo attached. They don't see
 | **Adam** | Product owner. Merges PRs. | – | – |
 | **Tony** | Lead and code reviewer. Owns the shared core, data and docs. | – | `js/core/`, `js/app.js`, `index.html`, `css/base.css`, `data/`, `docs/` |
 | **Stephen** | Part A – data in and out: BGG import, game panel, backup and restore. Round 2: rule checker, CSV export, add a game. Phase B: rules, export and pizza on schema 2. Phase C: bracket rule per box, Move, suggest a spot (D4), game families (B2), easy to reach (#48), checking every spot on a stack | [part-a](docs/part-a.md), [a2](docs/part-a2.md), [a3](docs/part-a3.md), [a4](docs/part-a4.md), [a5](docs/part-a5.md), [a6](docs/part-a6.md), [a7](docs/part-a7.md) | `js/io/`, `js/game/`, `js/rules/` |
-| **Bruce** | Part B – shelf map: model, drawing, stack details, special placements, cupboard. Phase B: the map and the picker on schema 2. Phase C: moving by hand (pick up, placing mode, the board strip, stacks, drag and drop), a family on the map, only working spots | [part-b](docs/part-b.md), [b2](docs/part-b2.md), [b3](docs/part-b3.md), [b4](docs/part-b4.md), [b5](docs/part-b5.md) | `js/map/` |
+| **Bruce** | Part B – shelf map: model, drawing, stack details, special placements, cupboard. Phase B: the map and the picker on schema 2. Phase C: moving by hand (pick up, placing mode, the board strip, stacks, drag and drop), a family on the map, only working spots, joining stacks | [part-b](docs/part-b.md), [b2](docs/part-b2.md), [b3](docs/part-b3.md), [b4](docs/part-b4.md), [b5](docs/part-b5.md), [b6](docs/part-b6.md) | `js/map/` |
 | **Peter** | Part C – catalog, search, app frame, offline. Phase B: search wording, the board, Undo. Phase C: saved versions (D6), compare, Move, free space (D3), families in the catalog, room on top with its width, standing spaces | [part-c](docs/part-c.md), [c2](docs/part-c2.md), [c3](docs/part-c3.md), [c4](docs/part-c4.md), [c5](docs/part-c5.md), [c6](docs/part-c6.md), [c7](docs/part-c7.md) | `js/catalog/`, `js/shell/`, `js/versions/`, `js/space/`, `sw.js`, `manifest.webmanifest`, `icons/` |
 
 The three parts only meet through the contracts in `js/core/contracts.js` (`openGame`, `showOnMap`, `showStack`, `go`) and the store. Placeholders exist for each, so every part can start today and be merged in any order.
