@@ -75,7 +75,7 @@ Size: S ≈ 1–2 points, M ≈ 3–5, L ≈ 8, XL ≈ 13.
 |---|---|---|---|---|
 | A4 | Add games that aren't in my BGG list | S1 | Stephen | ✅ (and Delete game, #50) |
 | B2 | Game families (Azul, 7 Wonders, Mars…) | S2 | Tony (schema) · Stephen · Bruce · Peter | ✅ Family in the game panel and suggested families on the Data screen, the "spread out" warning, suggestions keep families together (#76); a family highlighted on the map (#81); a Family filter, family in the rows and in search (#79) |
-| D1 | Move a game (drag on desktop, pick a spot on phone) | L8 | Bruce | 🚧 moving works from lists and by tapping the drawing, stacks too; next: the spot sheet lists only spots that work ([part-a7](docs/part-a7.md), [part-b5](docs/part-b5.md)), then drag and drop |
+| D1 | Move a game (drag on desktop, pick a spot on phone) | L8 | Bruce | ✅ from lists, by tapping the drawing (phone) and by drag and drop (desktop), with stacks and only working spots; 🚧 joining two stacks ([part-b6](docs/part-b6.md)) |
 | D2 | Rule checker (1 cm overhang rule, heights, brackets, 2 deep only in easy spots…) | M5 | Stephen | ✅ (Data screen; behind every move) |
 | D3 | Free space at a glance | S2 | Tony (logic) · Peter (screen) | ✅ the Free space screen (#74), with the width of the room on top (#85); 🚧 standing spaces and tilted surfaces (#88, #89, [part-c7](docs/part-c7.md)) |
 | D4 | Suggest a spot for a new game | L8 | Stephen (logic) · Bruce (screen) | ✅ placing mode shows three suggestions, on a stack or as a new stack |
@@ -89,7 +89,8 @@ Size: S ≈ 1–2 points, M ≈ 3–5, L ≈ 8, XL ≈ 13.
 - ✅ **The board strip** on the Shelves screen: "Board (n)" and a chip per game; a chip opens the pick-up sheet.
 - ✅ **Stacks** (#75): tap empty shelf in placing mode for **New stack here** (it slides into the gap if the box would run into the next stack); **Move stack** and **Remove stack** in stack details; empty stacks show as a dashed outline; **Renumber** left to right.
 - ✅ **Only working spots** (#87): the spot sheet lists only spots that work, best first, with "Show N blocked spots".
-- ⬜ Next (Bruce): drag and drop on desktop (#92), then **Join with the next stack** ([part-b6](docs/part-b6.md)), so a box can rest across two stacks' tops.
+- ✅ **Drag and drop on desktop** (#92): drag a box or a board chip onto a stack or empty shelf; the outline shows where it would sit (red with the reason when blocked); dropping opens the spot sheet with that spot chosen. Touch keeps tapping.
+- ⬜ Next (Bruce): **Join with the next stack** ([part-b6](docs/part-b6.md)), so a box can rest across two stacks' tops.
 
 ### Later
 
@@ -101,7 +102,6 @@ Size: S ≈ 1–2 points, M ≈ 3–5, L ≈ 8, XL ≈ 13.
 
 ### Not built yet
 
-- **Drag and drop on desktop** (D1, above).
 - **Easy to reach in stack details** (#48): the reach score is in (suggestions rank by it, the plan CSV shows it, #80); Bruce shows it in stack details next.
 - Counting the room behind shallow boxes in free space (#93), the moving checklist (D7), live BGG refresh (E4).
 
@@ -115,7 +115,7 @@ Each developer is a separate Claude chat with this repo attached. They don't see
 |---|---|---|---|
 | **Adam** | Product owner. Merges PRs. | – | – |
 | **Tony** | Lead and code reviewer. Owns the shared core, data and docs. | – | `js/core/`, `js/app.js`, `index.html`, `css/base.css`, `data/`, `docs/` |
-| **Stephen** | Part A – data in and out: BGG import, game panel, backup and restore. Round 2: rule checker, CSV export, add a game. Phase B: rules, export and pizza on schema 2. Phase C: bracket rule per box, Move, suggest a spot (D4), game families (B2), easy to reach (#48), checking every spot on a stack | [part-a](docs/part-a.md), [a2](docs/part-a2.md), [a3](docs/part-a3.md), [a4](docs/part-a4.md), [a5](docs/part-a5.md), [a6](docs/part-a6.md), [a7](docs/part-a7.md) | `js/io/`, `js/game/`, `js/rules/` |
+| **Stephen** | Part A – data in and out: BGG import, game panel, backup and restore. Round 2: rule checker, CSV export, add a game. Phase B: rules, export and pizza on schema 2. Phase C: bracket rule per box, Move, suggest a spot (D4), game families (B2), easy to reach (#48), checking every spot on a stack, boxes overlapping in a stack | [part-a](docs/part-a.md), [a2](docs/part-a2.md), [a3](docs/part-a3.md), [a4](docs/part-a4.md), [a5](docs/part-a5.md), [a6](docs/part-a6.md), [a7](docs/part-a7.md), [a8](docs/part-a8.md) | `js/io/`, `js/game/`, `js/rules/` |
 | **Bruce** | Part B – shelf map: model, drawing, stack details, special placements, cupboard. Phase B: the map and the picker on schema 2. Phase C: moving by hand (pick up, placing mode, the board strip, stacks, drag and drop), a family on the map, only working spots, joining stacks | [part-b](docs/part-b.md), [b2](docs/part-b2.md), [b3](docs/part-b3.md), [b4](docs/part-b4.md), [b5](docs/part-b5.md), [b6](docs/part-b6.md) | `js/map/` |
 | **Peter** | Part C – catalog, search, app frame, offline. Phase B: search wording, the board, Undo. Phase C: saved versions (D6), compare, Move, free space (D3), families in the catalog, room on top with its width, standing spaces | [part-c](docs/part-c.md), [c2](docs/part-c2.md), [c3](docs/part-c3.md), [c4](docs/part-c4.md), [c5](docs/part-c5.md), [c6](docs/part-c6.md), [c7](docs/part-c7.md) | `js/catalog/`, `js/shell/`, `js/versions/`, `js/space/`, `sw.js`, `manifest.webmanifest`, `icons/` |
 

@@ -415,3 +415,23 @@ test('joinStacks: two neighbours become one, every box stays put; one undo step;
   assert.equal(p.plan.stacks.some((s) => s.id === 'M2'), false);
   assert.equal(JSON.stringify(store.exportData().plan), before);
 });
+
+test('a bridge across two joined stacks starts right of the boxes on its left support', async () => {
+  await fresh();
+  const { layoutStack2 } = await import('../js/core/geometry.js');
+  // like Adam's plan: M1's pile ends just before M2, Csúcstámadás with Műgyűjtők társasága on it, SETI: Space Agencies open
+  store.moveStack('M1', 10.2);
+  store.moveToBoard(id('Port Royal'));
+  const csucs = id('Csúcstámadás (Peaks)');
+  const mugy = id('Műgyűjtők társasága');
+  const seti = id('SETI: Space Agencies');
+  store.joinStacks('M1', 'M2');
+  const game = id('Halmazállapot'); // 12.7 × 12.7, flat
+  store.placeBox(game, { stackId: 'M1', on: [csucs, seti], up: 's', rot: false });
+  const lay = layoutStack2(store.getStack2('M1'), store.getGame);
+  const at = (g) => lay.boxes.find((b) => b.gameId === g);
+  assert.ok(at(game).x >= at(mugy).x + at(mugy).w - 1e-6, 'starts right of Műgyűjtők társasága');
+  assert.ok(at(game).x < at(csucs).x + at(csucs).w, 'still rests on Csúcstámadás');
+  assert.ok(at(game).x + at(game).w > at(seti).x, 'and reaches SETI: Space Agencies');
+  assert.equal(at(game).y, Math.max(at(csucs).y + at(csucs).h, at(seti).y + at(seti).h), 'on the higher of the two');
+});
