@@ -20,6 +20,7 @@ import {
   APP, MAX_VERSIONS, SCHEMA, VERSION_NAME_MAX, checkData, checkVersions, cleanFamily, knownFrom, validateGame,
 } from './schema.js';
 import { ZONES } from './shelves.js';
+import { wallPush } from './space.js';
 import {
   detach as detach2, findBox, insertOn, insertUnder, joinStacks as join2, locations2, nextStackId, renumber,
   turnBox as turn2,
@@ -335,6 +336,18 @@ export function moveStack(stackId, x) {
   if (!(Number.isFinite(x) && x >= 0)) throw new Error('x must be a number ≥ 0');
   st.x = Math.round(x * 100) / 100;
   changed({ games: [], plan: true });
+}
+
+/**
+ * v2: push the stacks of a wall shelf's wall-end unit to the wall (#100), using the 8 cm overhang:
+ * see wallPush() in space.js. One undo step. Returns the Push; throws when nothing would move.
+ */
+export function pushToWall(zoneId) {
+  const push = wallPush(data.plan, rawGame, zoneId);
+  if (!push) throw new Error(`The stacks on the ${(ZONES[zoneId]?.label ?? zoneId).toLowerCase()} are as close to the wall as they can go`);
+  for (const m of push.moves) mustStack(m.stackId).x = m.to;
+  changed({ games: [], plan: true });
+  return push;
 }
 
 /** v2: remove a stack. Its games go to the board (bottom first). */
