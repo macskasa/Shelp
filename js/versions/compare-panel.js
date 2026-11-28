@@ -7,6 +7,7 @@ import { openGame } from '../core/contracts.js';
 import { fitToVisualViewport } from '../shell/viewport.js';
 import { formatSaved } from './logic.js';
 import { compareVersions, summarize } from './compare.js';
+import { openChecklist } from './checklist-panel.js';
 
 loadCss(new URL('./versions.css', import.meta.url));
 
@@ -14,9 +15,9 @@ const NOW = 'now';
 
 /** One side of the comparison, or null when that version is gone. */
 function sideOf(id) {
-  if (id === NOW) return { label: 'now', games: store.getGames(), plan: store.getPlan2() };
+  if (id === NOW) return { label: 'now', name: 'now', games: store.getGames(), plan: store.getPlan2() };
   const v = store.getVersion(id);
-  return v ? { label: `“${v.name}”`, games: v.games, plan: v.plan } : null;
+  return v ? { label: `“${v.name}”`, name: v.name, games: v.games, plan: v.plan } : null;
 }
 
 /** One line: the title in bold, then what changed. It opens the game when the game still exists. */
@@ -48,6 +49,7 @@ export function openCompare({ from = null, to = NOW } = {}) {
   const toSel = h('select', { class: 'ver-select', id: 'ver-to' });
   const swap = h('button', { class: 'btn ver-swap', type: 'button', 'aria-label': 'Swap the two', onclick: () => { [fromId, toId] = [toId, fromId]; render(); } }, '⇅ Swap');
   const status = h('p', { class: 'ver-summary', role: 'status' });
+  const check = h('button', { class: 'btn', type: 'button', hidden: true, onclick: () => openChecklist({ from: fromId, to: toId, sideOf }) }, 'Moving checklist');
   const results = h('div', { class: 'ver-results' });
 
   const dlg = h('dialog', { class: 'panel ver-panel ver-compare', 'aria-label': 'Compare versions' },
@@ -58,7 +60,7 @@ export function openCompare({ from = null, to = NOW } = {}) {
       h('label', { for: 'ver-from' }, h('span', { class: 'muted' }, 'From'), fromSel),
       h('label', { for: 'ver-to' }, h('span', { class: 'muted' }, 'To'), toSel),
       swap),
-    status, results);
+    status, check, results);
 
   fromSel.addEventListener('change', () => { fromId = fromSel.value; render(); });
   toSel.addEventListener('change', () => { toId = toSel.value; render(); });
@@ -87,6 +89,7 @@ export function openCompare({ from = null, to = NOW } = {}) {
 
     if (fromId === toId) {
       status.textContent = 'Pick two different ones to compare.';
+      check.hidden = true;
       results.replaceChildren();
       return;
     }
@@ -94,6 +97,7 @@ export function openCompare({ from = null, to = NOW } = {}) {
     const b = sideOf(toId);
     const diff = compareVersions(a, b);
     status.textContent = `From ${a.label} to ${b.label}: ${summarize(diff)}`;
+    check.hidden = diff.identical;
     results.replaceChildren(...[
       group('Moved', diff.moved),
       group('Turned', diff.turned),
@@ -106,7 +110,7 @@ export function openCompare({ from = null, to = NOW } = {}) {
     ].filter(Boolean));
   }
 
-  const off = on('store:changed', render);
+  const off = on('store:changed', (e) => { if (!e?.meta) render(); });
   dlg.addEventListener('close', off, { once: true });
   render();
   fitToVisualViewport(dlg);

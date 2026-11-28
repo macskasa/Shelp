@@ -97,3 +97,12 @@ button.ver-line:active { background: color-mix(in srgb, currentColor 10%, transp
   .ver-actions { grid-template-columns: repeat(4, auto); justify-content: start; }
   .ver-compare { width: min(640px, 92vw); }
 }
+
+/* moving checklist */
+.ver-todo-tools { display: flex; flex-wrap: wrap; gap: 8px; }
+.ver-todo-tools .btn { min-height: 40px; }
+.ver-todo-row { display: flex; align-items: center; gap: 12px; box-sizing: border-box; min-height: 48px; padding: 6px 12px; cursor: pointer; overflow-wrap: anywhere; }
+.ver-todo-row input { flex: none; width: 22px; height: 22px; margin: 0; }
+.ver-todo-row.is-done > span { color: var(--muted); text-decoration: line-through; }
+.ver-todo-open { display: inline; text-align: left; min-height: 40px; padding: 0 2px; border: 0; background: none; color: var(--accent); font: inherit; font-weight: 600; text-decoration: underline; cursor: pointer; }
+.ver-compare .btn[hidden] { display: none; }
