@@ -65,7 +65,7 @@ test('slots: the air above a stack top reaches over lower neighbours, up to a ta
   const portRoyal = seed.games.find((g) => g.title === 'Port Royal').id;
   // M2 (40.2–59.8, 31.4 high): from M1's narrower top box (ends at 27.1) to the bracket at 60 cm
   assert.deepEqual(unit(list, 'middle-1').room, {
-    kind: 'top', stackId: 'M2', stackIds: ['M2'], y: 31.4, h: 4.1, x: 27.1, w: 32.7, rest: { x: 40.2, w: 12.7 }, tilt: 0, on: [portRoyal],
+    kind: 'top', stackId: 'M2', stackIds: ['M2'], y: 31.4, h: 4.1, x: 27.1, w: 32.7, d: 38, row: null, rest: { x: 40.2, w: 12.7, d: 17.7 }, tilt: 0, on: [portRoyal],
   });
   assert.deepEqual(unit(list, 'middle-1').stacks.find((s) => s.id === 'M2').slot, unit(list, 'middle-1').room);
   assert.equal(unit(list, 'middle-1').stacks.find((s) => s.id === 'M1').slot, null, 'M1 reaches the usable height');
@@ -84,7 +84,9 @@ test('slots: the air above a stack top reaches over lower neighbours, up to a ta
       assert.ok(s.h >= 1 && s.y + s.h <= u.height + 1e-9, `${u.id} ${s.stackId}`);
       assert.ok(s.tilt >= 0 && s.tilt <= TILT + 1e-9 && s.stackIds.includes(s.stackId), `${u.id} ${s.stackId}`);
     }
-    assert.deepEqual(u.slots.map((s) => s.h), [...u.slots.map((s) => s.h)].sort((a, b) => b - a), `${u.id}: most height first`);
+    const open = u.slots.filter((s) => s.row !== 0);
+    assert.deepEqual(open.map((s) => s.h), [...open.map((s) => s.h)].sort((a, b) => b - a), `${u.id}: most height first`);
+    assert.deepEqual(u.slots.slice(0, open.length), open, `${u.id}: open front-row tops come last`);
     assert.equal(u.room, u.slots[0] ?? null, `${u.id}: room is the best top slot`);
   }
 });
@@ -108,7 +110,7 @@ test('tilt (#89): neighbouring surfaces within 0.5 cm make one, never across a b
   // Adam's M1 / M2: an open edge of 2.8 cm at 28.1, then 0.5 cm air, then M2's top at 27.7
   const pieces = [box('M1', 'a', 10, 39.7, 28.1), box('M1', 'b', 10, 36.9, 35.5), box('M2', 'c', 40.2, 58.6, 27.7)];
   const [s] = zoneSlots(middle, pieces);
-  assert.deepEqual([s.kind, s.stackId, s.stackIds, s.y, s.tilt, s.rest, s.x, s.w], ['top', 'M2', ['M1', 'M2'], 28.1, 0.4, { x: 36.9, w: 21.7 }, 36.9, 22.9]);
+  assert.deepEqual([s.kind, s.stackId, s.stackIds, s.y, s.tilt, s.rest, s.x, s.w], ['top', 'M2', ['M1', 'M2'], 28.1, 0.4, { x: 36.9, w: 21.7, d: 38 }, 36.9, 22.9]);
   assert.deepEqual(s.on, ['a', 'c']);
   // 0.6 cm apart: two surfaces, and the higher one is a wall for the lower one
   const apart = zoneSlots(middle, [box('M1', 'a', 10, 39.7, 28.3), box('M1', 'b', 10, 36.9, 35.5), box('M2', 'c', 40.2, 58.6, 27.7)]);

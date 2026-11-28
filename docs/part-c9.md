@@ -6,7 +6,7 @@ Adam's issue #93: the Free space screen only sees the shelves from the front. It
 
 Tony's core now finds both (`js/core/space.js`). You show them. Your PR closes #93.
 
-**Start** from Tony's core PR for #93: branch from `main` once it is merged (check that `freeSpace` units have `behind`), or from its branch while it is still open. Either way your PR goes into `main`. **One PR** for the whole brief.
+**Start** from Tony's core PR for #93: branch from `main` once it is merged (check that `freeSpace` units have `behind`), or from its branch `claude/exciting-meitner-2o66gb` while it is still open. Either way your PR goes into `main`. **One PR** for the whole brief.
 
 ## What you get ready made (core)
 
@@ -17,7 +17,7 @@ Tony's core now finds both (`js/core/space.js`). You show them. Your PR closes #
   - `easy`: false outside an easy-to-reach spot, where a second row gets the "two rows" warning.
   - Easy ones come first, then most depth. Stacks with two rows have none (there is no third row).
 - **Every slot** (`slots`, `standing`) gets `d`: the depth of the air at that height. That's the shelf depth, or less when a taller back-row box stands behind. `rest` gets `d` too: how deep the surface is.
-- **Front-row boxes in front of a taller back row** now have their own slots, with `row: 0` and `d` up to the back-row box. On the seed: a_way in B6 (1.3 cm below the back row) and the front card games in L1. Other slots keep `row: null`.
+- **Front-row boxes in front of a taller back row** now have their own slots, with `row: 0` and `d` up to the back-row box. They come after the other slots in `slots`, so `room` stays the front view's room. On the seed: a_way in B6 (a `top` slot, 10 cm high, 16 cm deep up to the back row, `rest.d` 8) and the front card games in L1 (`standing`, 10.8 cm deep). Other slots keep `row: null` and `d` is the shelf depth.
 - `unit.approximate` is still true on the narrow shelf (its depth isn't measured).
 - **Push to the wall (#100, already in #99):** `unit.push` on `top-3`, `middle-3`, `bottom-3`: `{ zone, moves: [{ stackId, from, to }], gap: { x, w }, gain }`, or null. The shelves may stick out 8 cm past the wall end, and pushing the stacks there collects the floor in one gap on the left. `store.pushToWall(zone)` does it (one undo step).
 

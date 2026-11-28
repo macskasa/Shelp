@@ -31,7 +31,7 @@ Tony is the lead and code reviewer.
   - D7 moving checklist, on top of Peter's compare;
   - Bruce shows the D3 numbers on the map;
   - E4 live BGG refresh (needs a server);
-  - D5 full re-plan (in chat; no planner in the repo).
+  - D5 full re-plan: goals decided (see Adam's decisions); after the #93 round, in a fresh budget, with Adam's backup.
 - **Small leftovers, for a later brief:**
   - Ties in the spot sheet keep the spotChoices order; Stephen could return `best`'s rank (reach, height) from `checkSpots` for Bruce to sort by.
   - In free space, "standing" means "below the top of the pile", so wide ledges land there too.
@@ -67,6 +67,11 @@ Tony is the lead and code reviewer.
 - **Free space:** the room on top shows both widths, the air and the box it rests on. Surfaces within 0.5 cm side by side count as one (tilt), also across two stacks but never across a bracket. Standing spaces count (#88, #89).
 - **#48 reach:** brief it (2026-11-27). Tony's score, which Adam didn't object to: +4 outside an easy zone, +2 back row (on every shelf, not only the bottom ones), +1 per box on top, counting at most 3. The text shows the real count.
 - **Moving (2026-11-27):** the spot sheet lists only spots that work, with a "Show N blocked spots" link. Stacks on the map are not dimmed, and Turn keeps all its ways. Drag and drop on desktop is "the way to do it" there; the phone keeps tapping.
+- **D5 re-plan, goals (2026-11-28):** Tony's planner, first version, no limit on moves (Adam won't re-plan often). Use Adam's real backup (expansions inside boxes and families are only there); keep every `inside` as it is. In order:
+  1. As few games as possible in the cupboard, then as many as possible in the front row. Back rows spare the cupboard: easy-to-reach spots first, then elsewhere too (the two-rows warning is accepted there).
+  2. Popular games in easy-to-reach spots, in the front row and near the top of their stacks (low reach score).
+  3. Categories kept together, then families inside them. "Together" is the B2 rule for both: on one stack, or on one shelf with no other stack between.
+  Blocks are never allowed (the plan import refuses them). Output a plan file Adam imports; the moving checklist (#101) gives the steps. A game with several categories goes with the strongest: popular, then party or duo (equal; party if it has both), then coop. Adam confirmed: the cupboard counts before the front row, so a back row outside an easy spot beats the cupboard. **Left out of planning:** games inside other boxes (they go with their host) and both Canvas games (showcased; in Adam's real data they are in the cupboard: leave them there, and don't count them against the cupboard goal). **Baseline** (Adam's backup of 2026-11-28 02:21 UTC, uploaded to the Tony chat; ask again in a new session): 202 games, 151 in a front row, 26 in a back row, 15 in the cupboard (2 of them the Canvas games, 10 "can go to the cupboard", 3 "no room"), 10 inside, 0 on the board; 29 of 32 popular games on shelves in easy spots; warnings: 1 height, 2 stacking, 2 family. **The 10 "can go to the cupboard" games:** try to fit them; if not everything fits, they go to the cupboard first, before any other game, in this order: the 4 T.I.M.E Stories boxes, Ticket to Ride: Rails & Sails, Robot művek (Adam's message was cut there: ask about the rest). **The 10 "can go to the cupboard" games:** try to fit them; if not everything fits, they go to the cupboard first, before any other game, in this order: the 4 T.I.M.E Stories boxes, Ticket to Ride: Rails & Sails, Get on Board, Bad Company, Robot művek, 3000 Bandita, Endeavor. **KLASK stays pinned** at the right end of the top shelf, using the overhang (T9, x 193 to 208 in the seed); the depth rule already lets a stack of one standing box stick out. Pinned games are planned around and don't count in the goals.
 - **Join stacks (2026-11-28):** "Join with the next stack" is how a box comes to rest across two stacks. Depth is issue #93, for later.
 
 ## How to review a PR
