@@ -382,3 +382,36 @@ test('renameFamily: one undo step, merges, case fix, null unlinks', async () => 
   assert.deepEqual(store.getFamilies(), []);
   assert.throws(() => store.renameFamily('Nope', 'X'), /No game is in the family/);
 });
+
+test('joinStacks: two neighbours become one, every box stays put; one undo step; refusals', async () => {
+  await fresh();
+  const { layoutStack2 } = await import('../js/core/geometry.js');
+  const where = (st) => {
+    const lay = layoutStack2(st, store.getGame);
+    return new Map(lay.boxes.map((b) => [b.gameId, [Math.round((st.x + b.x) * 100) / 100, b.y, b.row]]));
+  };
+  const before = JSON.stringify(store.exportData().plan);
+  const placed = new Map([...where(store.getStack2('M1')), ...where(store.getStack2('M2'))]);
+  const notes = [...(store.getStack2('M1').notes ?? []), ...(store.getStack2('M2').notes ?? [])];
+  assert.equal(store.joinStacks('M2', 'M1'), 'M1', 'the left one keeps its id, in either order');
+  assert.equal(store.getStack2('M2'), undefined);
+  const joined = store.getStack2('M1');
+  assert.equal(joined.x, 0.2);
+  assert.deepEqual(where(joined), placed, 'every box keeps its place on the shelf, height and row');
+  assert.deepEqual(joined.notes ?? [], notes);
+  assert.equal(store.locate2(id('Port Royal')).stackId, 'M1');
+  store.undo();
+  assert.equal(JSON.stringify(store.exportData().plan), before, 'one undo step');
+  assert.throws(() => store.joinStacks('M1', 'M3'), /M2 is between M1 and M3/);
+  assert.throws(() => store.joinStacks('M3', 'M4'), /topper/);
+  assert.throws(() => store.joinStacks('M7', 'B1'), /different shelves/);
+  assert.throws(() => store.joinStacks('M1', 'M1'), /itself/);
+  store.moveStack('M2', 20);
+  assert.throws(() => store.joinStacks('M1', 'M2'), /overlap/);
+  // it works inside preview too (Bruce's confirmation)
+  store.undo();
+  const p = store.preview(() => store.joinStacks('M1', 'M2'));
+  assert.equal(p.error, null);
+  assert.equal(p.plan.stacks.some((s) => s.id === 'M2'), false);
+  assert.equal(JSON.stringify(store.exportData().plan), before);
+});

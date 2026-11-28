@@ -21,7 +21,7 @@ import {
 } from './schema.js';
 import { ZONES } from './shelves.js';
 import {
-  detach as detach2, findBox, insertOn, insertUnder, locations2, nextStackId, renumber,
+  detach as detach2, findBox, insertOn, insertUnder, joinStacks as join2, locations2, nextStackId, renumber,
   turnBox as turn2,
 } from './plan2.js';
 
@@ -344,6 +344,17 @@ export function removeStack(stackId) {
   data.plan.stacks = data.plan.stacks.filter((s) => s !== st);
   for (const id of ids) data.plan.board.push({ game: id });
   changed({ games: ids, plan: true });
+}
+
+/**
+ * v2: join two neighbouring stacks of one shelf into one, every box staying where it is on the shelf.
+ * The left one keeps its id; the right one is gone. Then a box can rest across the tops of both.
+ * Refused: another shelf, a stack between them, stacks that overlap, a topper on either. Returns the id.
+ */
+export function joinStacks(aId, bId) {
+  const id = join2(data.plan, rawGame, aId, bId);
+  changed({ games: [], plan: true });
+  return id;
 }
 
 /** v2: rename every shelf's stacks left to right (T1, T2, …). Returns { oldId: newId } for those that changed. */

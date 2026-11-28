@@ -14,14 +14,12 @@ Tony is the lead and code reviewer.
   - Bruce: Part B, the map (Opus).
   - Peter: Part C, catalog, search, frame and offline (Sonnet).
 
-## Where things stand (2026-11-27)
+## Where things stand (2026-11-28)
 
-- **Merged:** everything up to #87. Phase C has Pick up, Turn, Move, placing mode, the board strip, stacks, and the spot sheet lists only working spots (#86 Stephen's `checkSpots`, #87 Bruce). B2, D3 (with the width of the room on top, #84/#85) and #48 are done. README "Releases and stories" is current.
-- **Tony's PR** (`ccr-96632897-bcu0g0`): standing spaces and tilt in `js/core/space.js` (#88, #89), checked on Adam's backup of 2026-11-28 (uploaded in chat, not in the repo), and `docs/part-c7.md`. Peter's thread starts from it.
-- **Threads running** (each sends Tony one line when its PR is green):
-  - **Bruce**, `bruce/drag-drop`: `docs/part-b3.md` item 6, drag and drop on desktop (Adam wants it).
-  - **Peter**, `peter/standing`: `docs/part-c7.md` (standing spaces, tilted surfaces; closes #88 and #89).
-- **Open issues:** #88, #89 (Peter's PR closes them).
+- **Merged:** everything up to #91. Phase C has Pick up, Turn, Move, placing mode, the board strip, stacks, and only working spots in the sheet. B2, D3 (room on top with widths, standing spaces, tilt: #84/#85/#90/#91, closing #88/#89) and #48 are done. README "Releases and stories" is current.
+- **Bruce:** drag and drop on desktop is #92 (thread `bruce/drag-drop`, waiting for its "green"). Next: `docs/part-b6.md`, the "Join with …" action, as a new thread once #92 is merged.
+- **Tony's PR** (`ccr-96632897-bcu0g0`): `store.joinStacks` (core) and `docs/part-b6.md`.
+- **Open issues:** #93 (free space: the room behind shallow boxes, depth; Tony's core, then Peter; about M3; not scheduled).
 - **Later:** D7 moving checklist (on top of Peter's compare); Bruce may show the D3 numbers on the map after drag and drop.
 - **How the team runs:** a Claude Code project since 2026-11-27. The project conversation is Tony. Each piece of developer work is a thread (a new session from `create_session`, one PR each, Opus for Bruce, Sonnet for Stephen and Peter) whose prompt names the brief item, the branch (`outcome_branch`) and asks for a one-line `send_message` to Tony when the PR is green. A thread whose work needs an unmerged core PR starts from that PR's branch (`source_revision`) and still opens its PR into `main`. Tony verifies on GitHub, reviews, and tells Adam one line. The opening messages are in `docs/kickoff.md`.
 - **Tony's branch:** each Tony session has its own branch name from the session settings (this one: `ccr-96632897-bcu0g0`). Push only there; restart it from `main` after its PR merges.
@@ -38,7 +36,8 @@ Tony is the lead and code reviewer.
 - **Thunder Road: Vendetta:** the BGG id in the workbook is a typo (8807105); the seed uses 342070.
 - **Lean workflow:** see CONTEXT sections 8 and 9.
 - **Moving (2026-11-27):** the spot sheet lists only spots that work, with a "Show N blocked spots" link; stacks on the map are not dimmed and Turn keeps its ways. Drag and drop on desktop is the way to move there.
-- **Free space:** the room on top shows both widths, the air and the box it rests on.
+- **Free space:** the room on top shows both widths, the air and the box it rests on. Surfaces within 0.5 cm count as one (tilt), also across two stacks; standing spaces count (#88, #89).
+- **Join stacks (2026-11-28):** "Join with the next stack" is how a box comes to rest across two stacks. Depth (room behind shallow boxes) is issue #93, for later.
 - **B2 "far apart":** a family warns unless its boxes on shelves are on one stack, or on one shelf with no other stack between them. The board and the cupboard don't count; a box inside another counts where its host is. 0 warnings on today's plan.
 - **D3, where it shows:** Tony's core `js/core/space.js`, and Peter's Free space screen in `js/space/`. Bruce may show the numbers on the map later.
 
