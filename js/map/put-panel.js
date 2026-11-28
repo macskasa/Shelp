@@ -8,6 +8,8 @@
 // part-b5: Stephen's checkSpots checks every spot × way up of the stack at once; the sheet lists only
 // the spots that work, best first and preselected, and only the ways up without a block. The rest
 // hide behind "Show N blocked spots", greyed out with a reason. The final check stays store.preview.
+// part-b3 item 6: a drop (drag and drop on desktop) chooses its spot when it works; otherwise the
+// sheet chooses the best one and says why the dropped spot doesn't work, with the blocked list open.
 import { h, showPanel, closePanels, toast } from '../core/dom.js';
 import { on } from '../core/bus.js';
 import * as store from '../core/store.js';
@@ -19,6 +21,7 @@ import { spotChoices, orientationChoices, moveFn, newProblems } from './spots.js
 import { sortSpots, workingWays, blockedLinkText, nothingFitsText } from './working.js';
 import { warningList } from './ui.js';
 import { presetFor } from './placing.js';
+import { dropChoice } from './drag.js';
 import { stackPicture } from './stack-preview.js';
 
 const num = (n) => (Math.round(n * 10) / 10).toLocaleString('en', { maximumFractionDigits: 1 });
@@ -28,8 +31,9 @@ let uniq = 0;
  * Open the picker for a game. stackId: preselect that stack. preset: { target, label }, a
  * suggestion (suggestSpots) to preselect: its stack, row, spot and way up. onPlaced(stackId) runs
  * after the move, once the panels are closed and before the toast; onClose once the panel is gone.
+ * drop: { key, row }, the spot a drag ended on (spotChoices key, on stackId).
  */
-export function openPutPanel(gameId, { stackId = '', preset = null, onPlaced = null, onClose } = {}) {
+export function openPutPanel(gameId, { stackId = '', preset = null, drop = null, onPlaced = null, onClose } = {}) {
   if (preset) stackId = preset.target.stackId;
   const game = store.getGame(gameId);
   if (!game) return null;
@@ -49,6 +53,7 @@ export function openPutPanel(gameId, { stackId = '', preset = null, onPlaced = n
   const spotSel = h('select', { name: 'spot' });
   const spotField = field('Where', spotSel, { hidden: true });
   const nothing = h('p', { class: 'map-put-error map-nothing', hidden: true });
+  const dropNote = h('p', { class: 'map-drop-note', hidden: true });
   const blockedList = h('ul', { class: 'map-blocked', hidden: true });
   const blockedLink = h('button', { type: 'button', class: 'map-link', hidden: true, 'aria-expanded': 'false', onclick: () => toggleBlocked() });
   const orients = orientationChoices(game);
@@ -64,7 +69,7 @@ export function openPutPanel(gameId, { stackId = '', preset = null, onPlaced = n
     h('form', { onsubmit: (e) => { e.preventDefault(); place(); } },
       h('h2', { id: titleId }, 'Put on a stack'),
       h('p', {}, h('strong', {}, game.title), h('span', { class: 'muted' }, ` · ${formatDims(game.dims)}`)),
-      field('Stack', stackSel), rowField, spotField, nothing, blockedLink, blockedList, upField, preview,
+      field('Stack', stackSel), rowField, dropNote, spotField, nothing, blockedLink, blockedList, upField, preview,
       h('div', { class: 'panel-actions' },
         h('button', { type: 'button', class: 'btn', onclick: () => dlg.close() }, 'Cancel'),
         submit)));
@@ -73,6 +78,7 @@ export function openPutPanel(gameId, { stackId = '', preset = null, onPlaced = n
   let checks = [];
   let way = -1; // index in orients
   let pending = preset; // used once, for the first stack shown
+  let dropped = drop && stackId ? drop : null; // used once too
   let done = false;
   const baseStack = () => base.stacks.find((s) => s.id === stackSel.value);
   const current = () => ({ spot: spots[Number(spotSel.value)], orient: orients[way] ?? orients[0] });
@@ -80,7 +86,8 @@ export function openPutPanel(gameId, { stackId = '', preset = null, onPlaced = n
   function onStack() {
     const st = baseStack();
     if (!st) return;
-    const back = pending?.target.stackId === st.id && pending.target.row === 1; // a suggestion may start a back row
+    // a suggestion or a drop may start on a back row
+    const back = (pending?.target.stackId === st.id && pending.target.row === 1) || (dropped && st.id === stackId && dropped.row === 1);
     rowField.hidden = layoutStack2(st, store.getGame).rows < 2 && !back;
     rowSel.value = back ? '1' : rowField.hidden ? '0' : rowSel.value;
     fillSpots();
@@ -102,15 +109,26 @@ export function openPutPanel(gameId, { stackId = '', preset = null, onPlaced = n
     pending = null;
     // every spot × way up at once (Stephen), not one preview per choice
     checks = checkSpots(store.getPlan2(), store.getGames(), gameId, spots.map((s) => s.run));
+    let blockedDrop = null;
+    if (dropped && stackSel.value === stackId) {
+      const d = dropChoice(spots, checks, spots.findIndex((s) => s.key === dropped.key), st.id);
+      keep = d.keep;
+      blockedDrop = d.blocked;
+    }
+    dropped = null;
+    dropNote.hidden = !blockedDrop;
+    dropNote.textContent = blockedDrop ? `Not where you dropped it: ${blockedDrop.label} – ${blockedDrop.reason}` : '';
     const view = sortSpots(spots, checks, { keep, stackId: st.id });
 
     spotSel.replaceChildren(...view.working.map(({ i, spot }) => h('option', { value: String(i) }, spot.label)));
     blockedList.replaceChildren(...view.blocked.map(({ spot, reason }) =>
-      h('li', { 'aria-disabled': 'true' }, h('span', {}, spot.label), h('span', { class: 'map-blocked-why' }, reason))));
-    blockedList.hidden = true;
+      h('li', { 'aria-disabled': 'true', class: spot.key === blockedDrop?.key ? 'is-dropped' : null },
+        h('span', {}, spot.label), h('span', { class: 'map-blocked-why' }, reason))));
+    const open = !!blockedDrop; // a blocked drop shows the list, with the dropped spot marked
+    blockedList.hidden = !open;
     blockedLink.hidden = !view.blocked.length;
-    blockedLink.setAttribute('aria-expanded', 'false');
-    blockedLink.textContent = blockedLinkText(view.blocked.length) ?? '';
+    blockedLink.setAttribute('aria-expanded', String(open));
+    blockedLink.textContent = blockedLinkText(view.blocked.length, open) ?? '';
 
     const none = !view.working.length;
     nothing.hidden = !none;
