@@ -7,7 +7,7 @@ import { openGame } from '../core/contracts.js';
 import { fitToVisualViewport } from '../shell/viewport.js';
 import { movingSteps } from './checklist.js';
 
-const SECTIONS = [['takeOut', '1. Take out'], ['putIn', '2. Put in'], ['inside', '3. Inside boxes']];
+const SECTIONS = [['takeOut', 'Take out'], ['slide', 'Slide'], ['putIn', 'Put in'], ['inside', 'Inside boxes']];
 
 /** Ticked keys saved for this pair, or [] when the saved ticks belong to another pair. */
 export function savedTicks(meta, from, to) {
@@ -59,8 +59,10 @@ export function openChecklist({ from, to, sideOf }) {
     count.textContent = progressText(done.size, all.length);
     hide.setAttribute('aria-pressed', String(hideDone));
     hide.classList.toggle('btn-primary', hideDone);
-    results.replaceChildren(...SECTIONS.map(([k, name]) => {
+    let number = 0;
+    results.replaceChildren(...SECTIONS.map(([k, label]) => {
       if (!steps[k].length) return null;
+      const name = `${++number}. ${label}`;
       const shown = hideDone ? steps[k].filter((s) => !done.has(s.key)) : steps[k];
       return h('section', { class: 'ver-group' }, h('h3', {}, `${name} (${steps[k].length})`),
         shown.length ? h('ul', { class: 'ver-lines' }, ...shown.map(row)) : h('p', { class: 'muted ver-caption' }, 'All done.'));

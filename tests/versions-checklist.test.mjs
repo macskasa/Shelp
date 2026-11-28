@@ -62,19 +62,43 @@ test('a bridge is put in only after both supports', () => {
   replay(a, b, r);
 });
 
-test('a stack moved along the shelf: all its boxes are lifted; a stack that is only renumbered gives nothing', () => {
+test('a stack moved along the shelf is one slide; a stack that is only renumbered gives nothing', () => {
   const a = side(plan({ stacks: [stack('B1', [box('g1'), box('g2', { on: ['g1'] })], { x: 10 }), stack('B2', [box('g3')], { x: 100 })] }));
   const b = side(plan({ stacks: [stack('B1', [box('g1'), box('g2', { on: ['g1'] })], { x: 25 }), stack('B7', [box('g3')], { x: 100 })] }));
   const r = movingSteps(a, b);
-  assert.deepEqual(texts(r.takeOut), ['Take Dixit off B1', 'Take Ark Nova off B1']);
-  assert.deepEqual(texts(r.putIn), ['Put back Ark Nova on B1 · on the shelf from 25 cm · flat', 'Put back Dixit on B1 · on Ark Nova · flat']);
+  assert.deepEqual([r.takeOut, r.putIn, r.inside], [[], [], []]);
+  assert.deepEqual(texts(r.slide), ['Slide B1 15 cm towards the wall (to 25 cm)']);
+  assert.equal(r.slide[0].key, 'slide:B1');
   replay(a, b, r);
+});
+
+test('slides: toward the wall rightmost first, away leftmost first; a stack that loses its top box does not slide', () => {
+  const a = side(plan({ stacks: [stack('B1', [box('g1')], { x: 10 }), stack('B2', [box('g2')], { x: 60 }), stack('B3', [box('g3')], { x: 100 }), stack('B4', [box('g4')], { x: 150 })] }));
+  const b = side(plan({ stacks: [stack('B1', [box('g1')], { x: 5 }), stack('B2', [box('g2')], { x: 50 }), stack('B3', [box('g3')], { x: 110 }), stack('B4', [box('g4')], { x: 160 })] }));
+  assert.deepEqual(texts(movingSteps(a, b).slide), [
+    'Slide B4 10 cm towards the wall (to 160 cm)', 'Slide B3 10 cm towards the wall (to 110 cm)',
+    'Slide B1 5 cm away from the wall (to 5 cm)', 'Slide B2 10 cm away from the wall (to 50 cm)']);
+  const c = side(plan({ stacks: [stack('B1', [box('g1'), box('g2', { on: ['g1'] })], { x: 10 })] }));
+  const d = side(plan({ stacks: [stack('B1', [box('g1')], { x: 20 })], board: [{ game: 'g2' }] }));
+  const r = movingSteps(c, d);
+  assert.equal(r.slide.length, 0);
+  assert.deepEqual(texts(r.takeOut), ['Take Dixit off B1 → board', 'Take Ark Nova off B1']);
+  replay(c, d, r);
+});
+
+test('pushToWall on the seed is exactly two slides', async () => {
+  await store.init({ seed, storage: memory() });
+  const before = { games: store.getGames(), plan: store.getPlan2() };
+  store.pushToWall('bottom');
+  const r = movingSteps(before, { games: store.getGames(), plan: store.getPlan2() });
+  assert.deepEqual([r.takeOut, r.putIn, r.inside], [[], [], []]);
+  assert.deepEqual(r.slide.map((s) => s.key), ['slide:B8', 'slide:B7']);
 });
 
 test('joining two stacks and shifting x between stack and box give no steps', () => {
   const a = side(plan({ stacks: [stack('B1', [box('g1')], { x: 10 }), stack('B2', [box('g2')], { x: 50 })] }));
   const b = side(plan({ stacks: [stack('B1', [box('g1'), box('g2', { x: 40 })], { x: 10 })] }));
-  assert.deepEqual(movingSteps(a, b), { takeOut: [], putIn: [], inside: [] });
+  assert.deepEqual(movingSteps(a, b), { takeOut: [], slide: [], putIn: [], inside: [] });
   const c = side(plan({ stacks: [stack('Z9', [box('g1', { x: 3 })], { x: 7 })] }));
   const d = side(plan({ stacks: [stack('Z1', [box('g1', { x: 0 })], { x: 10 })] }));
   assert.deepEqual(movingSteps(c, d).takeOut, []);
@@ -101,7 +125,7 @@ test('board, cupboard, new and removed games', () => {
   assert.deepEqual(texts(r.takeOut), ['Take Dixit off B1 → board', 'Take Azul off B1 → cupboard', 'Take Zoo off B1 (not in the app any more)']);
   assert.deepEqual(texts(r.putIn), ['Put Lairs on B1 · on the shelf from 30 cm · flat · from the cupboard', 'Put Newbie on B1 · on the shelf from 60 cm · flat · new']);
   const c = movingSteps(side(plan({ board: [{ game: 'g1' }] })), side(plan({ cupboard: [{ game: 'g1' }] })));
-  assert.deepEqual(c, { takeOut: [], putIn: [], inside: [] });
+  assert.deepEqual(c, { takeOut: [], slide: [], putIn: [], inside: [] });
   const d = movingSteps(side(plan()), side(plan({ stacks: [stack('B1', [box('g2')])] })));
   assert.deepEqual(texts(d.putIn), ['Put Dixit on B1 · on the shelf from 0 cm · flat · from the board']);
 });
@@ -128,7 +152,7 @@ test('the seed against itself has no steps; the seed with a box moved replays cl
   await store.init({ seed, storage: memory() });
   const now = () => ({ games: store.getGames(), plan: store.getPlan2() });
   const before = now();
-  assert.deepEqual(movingSteps(before, now()), { takeOut: [], putIn: [], inside: [] });
+  assert.deepEqual(movingSteps(before, now()), { takeOut: [], slide: [], putIn: [], inside: [] });
   const withStack = store.getPlan2().stacks.find((s) => s.boxes.length >= 3);
   const id = withStack.boxes[0].game;
   store.moveToBoard(id);

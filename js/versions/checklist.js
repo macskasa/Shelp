@@ -1,10 +1,11 @@
 // The moving checklist (D7): in what order to do a change with your hands. Plain data function, no DOM, no store.
 //
-//   movingSteps(a, b) -> { takeOut: [Step], putIn: [Step], inside: [Step] }      Step = { key, id, title, text }
+//   movingSteps(a, b) -> { takeOut: [Step], slide: [Step], putIn: [Step], inside: [Step] }      Step = { key, id, title, text }
 //
 // a and b are { games, plan } (schema 2), "from a to b". `key` is `phase:gameId` (takeOut / putIn / inside / outside).
 // A box *stays* when it is in the same zone at the same shelf x (stack x + box x), row, side up and turn, and
-// everything under it stays too. Everything else is lifted off top down and put in bottom up.
+// everything under it stays too. A stack that only moves along its shelf, as a whole, is one Slide step (its boxes
+// stay). Everything else is lifted off top down and put in bottom up.
 import { locations2 } from '../core/plan2.js';
 import { ZONES } from '../core/shelves.js';
 import { poseText } from './compare.js';
@@ -28,14 +29,14 @@ const shelfOrder = (p, q) =>
   zoneOrder.indexOf(p.zone) - zoneOrder.indexOf(q.zone) || p.x - q.x || p.id.localeCompare(q.id);
 
 /** The ids of boxes that stay where they are. */
-function staying(A, B) {
+function staying(A, B, slid = new Set()) {
   const memo = new Map();
   const stays = (id, seen = new Set()) => {
     if (memo.has(id)) return memo.get(id);
     const p = A.get(id);
     const q = B.get(id);
     let ok = !!p && !!q && !seen.has(id)
-      && p.stack.zone === q.stack.zone && Math.abs(p.shelfX - q.shelfX) <= SAME_X
+      && (slid.has(id) || (p.stack.zone === q.stack.zone && Math.abs(p.shelfX - q.shelfX) <= SAME_X))
       && p.row === q.row && p.up === q.up && p.rot === q.rot
       && p.on.length === q.on.length && p.on.every((s) => q.on.includes(s));
     if (ok) {
@@ -63,6 +64,28 @@ function ordered(boxes, before) {
   return out;
 }
 
+/** Stacks of `a` that move as a whole along their shelf: [{ from, to, delta, ids }]. */
+function slides(A, B, a) {
+  const claimed = new Set();
+  const out = [];
+  for (const st of a.plan.stacks) {
+    const ids = st.boxes.map((x) => x.game);
+    const q0 = B.get(ids[0]);
+    if (!q0 || claimed.has(q0.stack.id)) continue;
+    const delta = q0.shelfX - A.get(ids[0]).shelfX;
+    const whole = Math.abs(delta) > SAME_X && ids.every((id) => {
+      const p = A.get(id);
+      const q = B.get(id);
+      return q && q.stack.id === q0.stack.id && q.stack.zone === st.zone && Math.abs(q.shelfX - p.shelfX - delta) <= SAME_X
+        && p.row === q.row && p.up === q.up && p.rot === q.rot && p.on.length === q.on.length && p.on.every((o) => q.on.includes(o));
+    });
+    if (!whole) continue;
+    claimed.add(q0.stack.id);
+    out.push({ from: st, to: q0.stack, delta, ids });
+  }
+  return out;
+}
+
 const nameOf = (...lists) => {
   const map = new Map();
   for (const games of lists) for (const g of games) if (!map.has(g.id)) map.set(g.id, g.title);
@@ -72,7 +95,8 @@ const nameOf = (...lists) => {
 export function movingSteps(a, b) {
   const A = boxesOf(a.plan);
   const B = boxesOf(b.plan);
-  const stays = staying(A, B);
+  const moves = slides(A, B, a);
+  const stays = staying(A, B, new Set(moves.flatMap((m) => m.ids)));
   const inA = new Map(a.games.map((g) => [g.id, g]));
   const inB = new Map(b.games.map((g) => [g.id, g]));
   const nameA = nameOf(a.games, b.games);
@@ -102,6 +126,17 @@ export function movingSteps(a, b) {
         text: `Take ${nameA(box.id)} off ${stack.id}${last}`,
       });
     }
+  }
+
+  const slide = [];
+  const toWall = moves.filter((m) => m.delta > 0).sort((p, q) => zoneOrder.indexOf(p.to.zone) - zoneOrder.indexOf(q.to.zone) || q.to.x - p.to.x);
+  const away = moves.filter((m) => m.delta < 0).sort((p, q) => shelfOrder(p.to, q.to));
+  for (const m of [...toWall, ...away]) {
+    const way = m.delta > 0 ? 'towards the wall' : 'away from the wall';
+    slide.push({
+      key: `slide:${m.to.id}`, id: m.to.id, title: m.to.id,
+      text: `Slide ${m.to.id} ${round1(Math.abs(m.delta))} cm ${way} (to ${round1(m.to.x)} cm)`,
+    });
   }
 
   const putIn = [];
@@ -143,5 +178,5 @@ export function movingSteps(a, b) {
       inside.push({ key: `inside:${id}`, id, title: nameB(id), text: `Put ${nameB(id)} inside ${nameB(hostB[id])}` });
     }
   }
-  return { takeOut, putIn, inside };
+  return { takeOut, slide, putIn, inside };
 }
