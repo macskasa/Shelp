@@ -12,6 +12,7 @@
 // #/map?family=<name> (showFamily, part-b4 item 1) marks every member and dims the rest
 // (view-family.js); Back, Esc and the × leave it, an unknown family toasts and goes to #/map.
 // Input (hover, tap, keys) is in view-input.js, the caption and what it highlights in view-caption.js.
+// Drag and drop with the mouse (part-b3 item 6) is in view-drag.js.
 import { h, loadCss, toast } from '../core/dom.js';
 import { on } from '../core/bus.js';
 import * as store from '../core/store.js';
@@ -30,6 +31,7 @@ import { boardStrip } from './board-strip.js';
 import { textMeasurer } from './measure.js';
 import { wireInput, ZOOM_STEP } from './view-input.js';
 import { createPlacing } from './view-placing.js';
+import { createDrag } from './view-drag.js';
 import { askRenumber } from './stack-confirm.js';
 import { lookupFamily, viewForFamily } from './view-family.js';
 import { createCaption } from './view-caption.js';
@@ -79,6 +81,10 @@ export function mountMap(el, params) {
   const placing = createPlacing({ stage, panZoom, getScene: () => scene, openOver, onLeave: (how) => leavePlacing(how) });
   const root = h('section', { class: 'map-view', 'aria-label': 'Shelves' }, caption, rows.el, body, placing.el);
   el.append(root);
+  const drag = createDrag({
+    root, stage, frame, panZoom, getScene: () => scene, getView: () => view, openOver,
+    isOff: () => !!placing.gameId || !!selected || !!document.querySelector('dialog[open]'),
+  });
   const measure = textMeasurer(root);
 
   function render() {
@@ -279,6 +285,7 @@ export function mountMap(el, params) {
     },
     destroy() {
       off();
+      drag.destroy();
       clearTimeout(refitTimer);
       widthWatch.disconnect();
       sizeWatch.disconnect();
