@@ -7,6 +7,7 @@
 // A box of a game with a family has a chip with its name: showFamily (part-b4 item 2; go() closes the panel).
 // Each box line ends with its reach (part-b4 item 4, Stephen's reachAll) in the muted style.
 // Item 5: Move stack (stack-move-panel.js) and Remove stack (stack-confirm.js; asks first when it has games).
+// part-b6: ← Join with M1 / Join with M3 → for the stacks right next to it on the shelf (stack-confirm.js).
 import { h, showPanel, toast } from '../core/dom.js';
 import { on } from '../core/bus.js';
 import * as store from '../core/store.js';
@@ -17,7 +18,8 @@ import { stackDetails, boxLine } from './details.js';
 import { categoryChips, warningList } from './ui.js';
 import { openPickUp } from './pickup-sheet.js';
 import { openStackMove } from './stack-move-panel.js';
-import { removeStack } from './stack-confirm.js';
+import { removeStack, askJoin } from './stack-confirm.js';
+import { joinNeighbours } from './join.js';
 
 let uniq = 0;
 
@@ -46,6 +48,7 @@ export function openStackPanel(stackId, { onClose } = {}) {
       return;
     }
     const plan = store.getPlan2();
+    const near = joinNeighbours(plan, stackId);
     // reach of every box at once (part-b4 item 4), not reachOf per box
     const d = stackDetails(st, layoutStack2(st, store.getGame), store.getGame, reachAll(plan, store.getGame));
     // overlaps are reported once per pair; forStack shows them on both stacks
@@ -70,6 +73,8 @@ export function openStackPanel(stackId, { onClose } = {}) {
           : h('p', { class: 'muted' }, d.count ? 'No boxes here.' : 'An empty stack. To put a game here, pick it up and tap this stack.'))),
       h('div', { class: 'map-stack-actions' },
         h('button', { type: 'button', class: 'btn', onclick: () => openStackMove(stackId) }, 'Move stack'),
+        near.left ? h('button', { type: 'button', class: 'btn', onclick: () => askJoin(stackId, near.left) }, `← Join with ${near.left}`) : null,
+        near.right ? h('button', { type: 'button', class: 'btn', onclick: () => askJoin(stackId, near.right) }, `Join with ${near.right} →`) : null,
         h('button', { type: 'button', class: 'btn btn-danger', onclick: () => removeStack(stackId) }, 'Remove stack')),
     ));
   }
