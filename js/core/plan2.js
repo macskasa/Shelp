@@ -214,7 +214,15 @@ export function insertOn(plan, getGame, id, { stackId, row = 0, on = [], index, 
   }
   const sibs = siblings(stack, row, on, id);
   const at = index == null ? sibs.length : Math.max(0, Math.min(index, sibs.length));
-  const base = on.length ? Math.min(...on.map((s) => stack.boxes.find((b) => b.game === s).x)) : 0;
+  const sups = on.map((s) => stack.boxes.find((b) => b.game === s));
+  let base = on.length ? Math.min(...sups.map((b) => b.x)) : 0;
+  if (on.length === 2) {
+    // a bridge reaches right across to its other support, so it starts right of the boxes already resting on its
+    // left support (anything there but other bridges on the same pair): on that box's open strip
+    const left = sups.reduce((m, b) => (b.x < m.x ? b : m));
+    const there = stack.boxes.filter((b) => b.game !== id && (b.row ?? 0) === row && b.on.includes(left.game) && !sameSet(b.on, on));
+    if (there.length) base = Math.max(base, ...there.map((b) => b.x + widthOf(b, getGame)));
+  }
   const x = at === 0 ? base : sibs[at - 1].x + widthOf(sibs[at - 1], getGame);
   const box = { game: id, row, x: round(x), up, rot: !!rot, on: [...on] };
   const w = widthOf(box, getGame);
