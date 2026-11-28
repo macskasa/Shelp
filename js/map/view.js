@@ -12,7 +12,7 @@
 // #/map?family=<name> (showFamily, part-b4 item 1) marks every member and dims the rest
 // (view-family.js); Back, Esc and the × leave it, an unknown family toasts and goes to #/map.
 // Input (hover, tap, keys) is in view-input.js, the caption and what it highlights in view-caption.js.
-// Drag and drop with the mouse (part-b3 item 6) is in view-drag.js.
+// Drag and drop with the mouse (part-b3 item 6) is in view-drag.js. Free space (#/map?free=1, part-b7): view-free.js.
 import { h, loadCss, toast } from '../core/dom.js';
 import { on } from '../core/bus.js';
 import * as store from '../core/store.js';
@@ -36,6 +36,8 @@ import { askRenumber } from './stack-confirm.js';
 import { lookupFamily, viewForFamily } from './view-family.js';
 import { createCaption } from './view-caption.js';
 import { onHighlight } from './highlight.js';
+import { createFree } from './view-free.js';
+import { freeHash } from './free-layer.js';
 
 loadCss(new URL('./map.css', import.meta.url));
 
@@ -45,7 +47,8 @@ const NEW = '+new'; // `selected` while the "New stack here" sheet is open (no s
 /** Mount the map into el. Returns { update(params), destroy() }. */
 export function mountMap(el, params) {
   const caption = h('div', { class: 'map-caption', role: 'status', hidden: true });
-  const captions = createCaption(caption);
+  const clearRoute = () => go('map', free.on ? { free: '1' } : {}); // the × and Esc keep the free space on
+  const captions = createCaption(caption, { onClear: clearRoute });
   const stage = h('div', { class: 'map-stage' });
   const tip = h('div', { class: 'map-tip', hidden: true, 'aria-hidden': 'true' });
   const tool = (label, text, onclick) => h('button', { type: 'button', class: 'btn map-tool', 'aria-label': label, title: label, onclick }, text);
@@ -68,9 +71,12 @@ export function mountMap(el, params) {
     type: 'button', class: 'btn map-renumber', title: 'Rename the stacks of every shelf left to right', onclick: () => askRenumber(),
   }, 'Renumber');
   rows.el.firstChild.after(renumber); // beside the row switch: no extra line on a phone
+  const free = createFree({ getRoute: () => current, onChange: (p) => { current = p; applyParams(); } });
+  renumber.before(free.btn);
   rows.el.append(board.el);
 
   let current = params ?? {};
+  free.route(current);
   let scene = null;
   let drawing = null;
   let selected = null; // id of the stack whose details panel is open
@@ -101,6 +107,7 @@ export function mountMap(el, params) {
     scene = buildScene(plan, store.getGame, { view });
     drawing = drawScene(scene, store.getGame);
     drawing.svg.setAttribute('preserveAspectRatio', 'xMinYMin meet');
+    free.attach(drawing.svg, scene);
     stage.replaceChildren(drawing.svg);
     layoutFrame();
     fittedK = 0;
@@ -123,6 +130,7 @@ export function mountMap(el, params) {
     const refit = () => {
       fittedK = panZoom.view.k;
       drawing.refit(fittedK, measure);
+      free.refit(fittedK, measure);
     };
     clearTimeout(refitTimer);
     if (!fittedK) refit();
@@ -162,7 +170,8 @@ export function mountMap(el, params) {
     root.classList.toggle('map-placing-on', !!placing.gameId);
     placing.showBar();
     // placing mode: the bar replaces the caption; only the stack being placed on is marked
-    const shown = placing.gameId ? captions.hide() : captions.forParams(current, scene, view);
+    const shown = placing.gameId ? captions.hide()
+      : free.band ? captions.show(free.caption(), () => free.clear()) : captions.forParams(current, scene, view);
     const { family } = shown;
     let { target } = shown;
     drawing.markFamily(family?.focus ?? null);
@@ -186,6 +195,7 @@ export function mountMap(el, params) {
    * Only on a route change – never on a redraw, or every store change would open the panel again.
    */
   function afterRoute() {
+    free.route(current);
     let v = current.game ? viewForLocation(store.locate2(current.game)) : null;
     if (current.family) {
       const fam = lookupFamily(current.family);
@@ -248,6 +258,7 @@ export function mountMap(el, params) {
     panZoom, titleOf, showKey, stackRect,
     onClick: (e) => {
       if (placing.gameId) placing.tap(e.clientX, e.clientY);
+      else if (free.tap(e, stage, panZoom.view)) return;
       else if (e.target.closest?.('[data-stack]')) openDetails(e.target.closest('[data-stack]').dataset.stack);
     },
     onEnter: (stackId) => (placing.gameId ? placing.openSpot(stackId) : openDetails(stackId)),
@@ -268,15 +279,15 @@ export function mountMap(el, params) {
   const off = on('store:changed', () => render());
   // after Join (part-b6): mark the joined stack, #/map?stack=<id>, without opening its panel over the toast
   const offHighlight = onHighlight((id) => {
-    history.replaceState(history.state, '', `#/map?stack=${encodeURIComponent(id)}`);
-    current = { stack: id };
+    current = free.on ? { stack: id, free: '1' } : { stack: id };
+    history.replaceState(history.state, '', freeHash(current, free.on));
     applyParams({ reveal: true });
   });
   // Esc leaves placing mode, or a family's highlight, once no panel is open (a panel's Esc closes the panel first)
   const onEscape = (e) => {
     if (e.key !== 'Escape' || e.defaultPrevented || document.querySelector('dialog[open]')) return;
     if (placing.gameId) leavePlacing('cancel');
-    else if (current.family) go('map');
+    else if (current.family) clearRoute();
     else return;
     e.preventDefault();
   };

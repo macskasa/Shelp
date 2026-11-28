@@ -8,6 +8,7 @@
 // Each box line ends with its reach (part-b4 item 4, Stephen's reachAll) in the muted style.
 // Item 5: Move stack (stack-move-panel.js) and Remove stack (stack-confirm.js; asks first when it has games).
 // part-b6: ← Join with M1 / Join with M3 → for the stacks right next to it on the shelf (stack-confirm.js).
+// part-b7: Push to the wall (+2.5 cm) when the stack is one its unit's push (freeSpace, #100) moves.
 import { h, showPanel, toast } from '../core/dom.js';
 import { on } from '../core/bus.js';
 import * as store from '../core/store.js';
@@ -18,8 +19,10 @@ import { stackDetails, boxLine } from './details.js';
 import { categoryChips, warningList } from './ui.js';
 import { openPickUp } from './pickup-sheet.js';
 import { openStackMove } from './stack-move-panel.js';
-import { removeStack, askJoin } from './stack-confirm.js';
+import { removeStack, askJoin, pushWall } from './stack-confirm.js';
 import { joinNeighbours } from './join.js';
+import { freeSpace } from '../core/space.js';
+import { pushForStack, pushLabel } from './free-layer.js';
 
 let uniq = 0;
 
@@ -49,6 +52,7 @@ export function openStackPanel(stackId, { onClose } = {}) {
     }
     const plan = store.getPlan2();
     const near = joinNeighbours(plan, stackId);
+    const push = pushForStack(freeSpace(plan, store.getGame), stackId);
     // reach of every box at once (part-b4 item 4), not reachOf per box
     const d = stackDetails(st, layoutStack2(st, store.getGame), store.getGame, reachAll(plan, store.getGame));
     // overlaps are reported once per pair; forStack shows them on both stacks
@@ -75,6 +79,7 @@ export function openStackPanel(stackId, { onClose } = {}) {
         h('button', { type: 'button', class: 'btn', onclick: () => openStackMove(stackId) }, 'Move stack'),
         near.left ? h('button', { type: 'button', class: 'btn', onclick: () => askJoin(stackId, near.left) }, `← Join with ${near.left}`) : null,
         near.right ? h('button', { type: 'button', class: 'btn', onclick: () => askJoin(stackId, near.right) }, `Join with ${near.right} →`) : null,
+        push ? h('button', { type: 'button', class: 'btn', onclick: () => pushWall(push.zone) }, pushLabel(push)) : null,
         h('button', { type: 'button', class: 'btn btn-danger', onclick: () => removeStack(stackId) }, 'Remove stack')),
     ));
   }
