@@ -3,7 +3,7 @@
 **Where is each board game on the shelves?** Shelp is a personal web app for Adam's board game collection. It shows a to-scale drawing of the IKEA BOAXEL shelves with every box on it, finds any game, keeps box sizes and categories, imports the BoardGameGeek collection export, and works offline on a phone.
 
 - **Live app:** https://macskasa.github.io/Shelp/
-- **Status:** the MVP is done. Phase A (Tony) moved the data to schema 2: games on games, bridges, which side is up, pizza games, the board, and undo. Phase B moved the three parts onto it, and the old v1 code is gone. **Phase C is moving games by hand:** saved versions, compare, Delete game, placing mode, the board strip and stacks (new, moved, removed, renumbered) are in; drag and drop on desktop comes after Adam has tried moving on his phone. Game families (B2) and the Free space screen (D3) are in too. What works and what isn't built yet: [Releases and stories](#releases-and-stories).
+- **Status:** the MVP is done. Phase A (Tony) moved the data to schema 2: games on games, bridges, which side is up, pizza games, the board, and undo. Phase B moved the three parts onto it, and the old v1 code is gone. **Phase C, moving games by hand, is done:** saved versions, compare, Delete game, placing mode, the board strip, stacks (new, moved, removed, renumbered, joined), only working spots, and drag and drop on desktop. Game families (B2), the Free space screen (D3) and easy to reach (#48) are in too. What works and what isn't built yet: [Releases and stories](#releases-and-stories).
 
 ## Contents
 
@@ -44,7 +44,7 @@ The data model, the shared modules and all conventions are in [docs/CONTEXT.md](
 
 ## Releases and stories
 
-Status on 2026-11-27: ✅ in the app · 🚧 partly built · ⬜ not built yet.
+Status on 2026-11-28: ✅ in the app · 🚧 partly built · ⬜ not built yet.
 
 **Bug or missing feature?** If something marked ✅ misbehaves, it's a bug: please raise an issue. If it's 🚧 or ⬜, or it's listed under [Not built yet](#not-built-yet), it's a feature that's still missing. Raise an issue anyway if you want it sooner or differently.
 
@@ -75,9 +75,9 @@ Size: S ≈ 1–2 points, M ≈ 3–5, L ≈ 8, XL ≈ 13.
 |---|---|---|---|---|
 | A4 | Add games that aren't in my BGG list | S1 | Stephen | ✅ (and Delete game, #50) |
 | B2 | Game families (Azul, 7 Wonders, Mars…) | S2 | Tony (schema) · Stephen · Bruce · Peter | ✅ Family in the game panel and suggested families on the Data screen, the "spread out" warning, suggestions keep families together (#76); a family highlighted on the map (#81); a Family filter, family in the rows and in search (#79) |
-| D1 | Move a game (drag on desktop, pick a spot on phone) | L8 | Bruce | ✅ from lists, by tapping the drawing (phone) and by drag and drop (desktop), with stacks and only working spots; 🚧 joining two stacks ([part-b6](docs/part-b6.md)) |
+| D1 | Move a game (drag on desktop, pick a spot on phone) | L8 | Bruce | ✅ from lists, by tapping the drawing (phone) and by drag and drop (desktop), with stacks, joining two stacks and only working spots |
 | D2 | Rule checker (1 cm overhang rule, heights, brackets, 2 deep only in easy spots…) | M5 | Stephen | ✅ (Data screen; behind every move) |
-| D3 | Free space at a glance | S2 | Tony (logic) · Peter (screen) | ✅ the Free space screen (#74), with the width of the room on top (#85); 🚧 standing spaces and tilted surfaces (#88, #89, [part-c7](docs/part-c7.md)) |
+| D3 | Free space at a glance | S2 | Tony (logic) · Peter (screen) | ✅ the Free space screen (#74): room on top with its width (#85), standing spaces and tilted surfaces (#91); ⬜ the room behind shallow boxes (#93) |
 | D4 | Suggest a spot for a new game | L8 | Stephen (logic) · Bruce (screen) | ✅ placing mode shows three suggestions, on a stack or as a new stack |
 | D6 | Undo and saved versions | M5 | Tony · Peter | ✅ (undo/redo, save, restore, compare) |
 | E3 | Export to spreadsheet (CSV) | S1 | Stephen | ✅ |
@@ -90,7 +90,7 @@ Size: S ≈ 1–2 points, M ≈ 3–5, L ≈ 8, XL ≈ 13.
 - ✅ **Stacks** (#75): tap empty shelf in placing mode for **New stack here** (it slides into the gap if the box would run into the next stack); **Move stack** and **Remove stack** in stack details; empty stacks show as a dashed outline; **Renumber** left to right.
 - ✅ **Only working spots** (#87): the spot sheet lists only spots that work, best first, with "Show N blocked spots".
 - ✅ **Drag and drop on desktop** (#92): drag a box or a board chip onto a stack or empty shelf; the outline shows where it would sit (red with the reason when blocked); dropping opens the spot sheet with that spot chosen. Touch keeps tapping.
-- ⬜ Next (Bruce): **Join with the next stack** ([part-b6](docs/part-b6.md)), so a box can rest across two stacks' tops.
+- ✅ **Join with the next stack** (#94, #97): two neighbouring stacks become one, every box staying put, so a box can rest across both tops ("Across Csúcstámadás and SETI: Space Agencies").
 
 ### Later
 
@@ -102,8 +102,8 @@ Size: S ≈ 1–2 points, M ≈ 3–5, L ≈ 8, XL ≈ 13.
 
 ### Not built yet
 
-- **Easy to reach in stack details** (#48): the reach score is in (suggestions rank by it, the plan CSV shows it, #80); Bruce shows it in stack details next.
 - Counting the room behind shallow boxes in free space (#93), the moving checklist (D7), live BGG refresh (E4).
+- (Easy to reach, #48, is in: the reach score ranks the suggestions, shows in stack details and in the plan CSV.)
 
 The full story texts are in the "App user stories" tab of the planning workbook and, for the MVP, in the part briefs.
 
