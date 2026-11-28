@@ -2,16 +2,19 @@
 // Owner: Bruce (Part B). Shows where the new stack goes, which way up the game lies, the stack as
 // it would be and the new problems. Place writes one batch(createStack + placeBox) = one undo step.
 // part-b5: Which way up lists only the ways without a block at the fitted x; none: why, no Place.
+// part-b7: when the tapped gap runs to the wall end of a wall shelf, the stack goes against the wall end
+// (its box ends at 208), unless that adds a rule problem the tapped spot doesn't have (free-layer.js).
 import { h, showPanel, closePanels, toast } from '../core/dom.js';
 import * as store from '../core/store.js';
 import { ZONES } from '../core/shelves.js';
 import { formatDims } from '../core/format.js';
 import { layoutStack2 } from '../core/geometry.js';
 import { orientationChoices } from './spots.js';
-import { newStackFn, checkMove, fitNewStack } from './stacks.js';
+import { newStackFn, checkMove } from './stacks.js';
 import { warningList } from './ui.js';
 import { newStackWays } from './working.js';
 import { stackPicture } from './stack-preview.js';
+import { newStackAt } from './free-layer.js';
 
 const num = (n) => (Math.round(n * 10) / 10).toLocaleString('en', { maximumFractionDigits: 1 });
 let uniq = 0;
@@ -52,7 +55,11 @@ export function openNewStackPanel(gameId, { zone, x, up = 's', rot = false, onPl
   let way = start;
   let checks = [];
   const orient = () => orients[way] ?? orients[0];
-  const atFor = (o) => fitNewStack(store.getPlan2(), store.getGame, zone, x, o.w);
+  const placed = new Map(); // way up → x: the wall end needs two previews, so once per way
+  const atFor = (o) => {
+    if (!placed.has(o)) placed.set(o, newStackAt(store, gameId, zone, x, o));
+    return placed.get(o);
+  };
   const at = () => atFor(orient());
   const fn = () => newStackFn(store, gameId, zone, at(), orient());
 

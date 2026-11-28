@@ -535,3 +535,28 @@ dialog.panel.map-put { width: min(520px, calc(100vw - 24px)); max-height: min(90
 .map-drag-note.is-blocked { background: var(--danger); color: #fff; }
 .map-drop-note { color: var(--danger); font-weight: 600; margin: 0 0 8px; }
 .map-blocked li.is-dropped { opacity: 1; color: var(--text); font-weight: 600; }
+
+/* ---- free space on the map (part-b7): --focus, not a category or warning colour ------------------ */
+.map-free-btn { flex: none; min-height: 40px; padding: 6px 12px; font-size: 0.9rem; }
+.map-free-btn[aria-pressed='true'] { background: color-mix(in srgb, var(--focus) 16%, var(--surface)); border-color: var(--focus); }
+.map-layer-free { pointer-events: none; }
+.map-layer-free:not(.is-on),
+.map-placing-on .map-layer-free, .map-placing-on .map-free-btn,
+.map-dragging .map-layer-free { display: none; }
+.map-free-air {
+  fill: color-mix(in srgb, var(--focus) 10%, transparent);
+  stroke: color-mix(in srgb, var(--focus) 70%, transparent);
+  stroke-width: 1px; stroke-dasharray: 3 2; vector-effect: non-scaling-stroke;
+}
+.map-free-rest { stroke: var(--focus); stroke-width: 3px; stroke-linecap: butt; vector-effect: non-scaling-stroke; }
+.map-free-hatch { fill: color-mix(in srgb, var(--focus) 55%, transparent); }
+.map-free-gap { stroke: color-mix(in srgb, var(--focus) 60%, transparent); stroke-width: 1px; vector-effect: non-scaling-stroke; }
+.map-free-band.is-selected .map-free-air { fill: color-mix(in srgb, var(--focus) 26%, transparent); stroke: var(--focus); stroke-dasharray: none; stroke-width: 2px; }
+.map-free-band.is-selected .map-free-gap { stroke: var(--focus); stroke-width: 2px; }
+.map-svg .map-free-label {
+  fill: var(--focus); font-weight: 600;
+  paint-order: stroke; stroke: var(--surface); stroke-width: calc(3px / var(--k)); stroke-linejoin: round;
+}
+.map-free-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; margin-top: 4px !important; }
+.map-free-actions .btn { min-height: 40px; padding: 6px 12px; font-size: 0.9rem; }
+.map-free-actions a { display: inline-flex; align-items: center; min-height: 40px; }

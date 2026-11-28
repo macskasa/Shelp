@@ -2,7 +2,7 @@
 // An empty stack is removed at once; one with games asks first (they go to the board).
 // Renumber lists the renames from a preview of renumberStacks(), then runs it.
 // Join with the next stack (part-b6 item 1): the new problems from a preview, or the store's refusal
-// (then no Join button). Every one is one undo step, closes the panels and toasts with Undo.
+// (then no Join button). Push to the wall (part-b7 item 4). Every one is one undo step, closes the panels and toasts with Undo.
 import { h, showPanel, closePanels, toast } from '../core/dom.js';
 import * as store from '../core/store.js';
 import { removeText, renameLines, checkMove } from './stacks.js';
@@ -81,6 +81,18 @@ export function askJoin(aId, bId) {
       toast(err.message, { error: true });
     }
   });
+}
+
+/** Push the stacks of a wall shelf's wall-end unit to the wall (part-b7 item 4, #100): one undo step. */
+export function pushWall(zone) {
+  try {
+    const p = store.pushToWall(zone);
+    const ids = p.moves.map((m) => m.stackId);
+    const gain = (Math.round(p.gain * 10) / 10).toLocaleString('en');
+    closePanels(() => toast(`Pushed ${ids.join(' and ')} to the wall: ${gain} cm more room`, { action: undo }));
+  } catch (err) {
+    toast(err.message, { error: true });
+  }
 }
 
 /** verb null: no confirm button (the action is refused), only Cancel. */

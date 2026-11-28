@@ -14,7 +14,8 @@ import { checkSpots } from '../rules/index.js';
 import { tapTarget } from './placing.js';
 import { blockReason, newStackWays } from './working.js';
 import { spotChoices, orientationChoices } from './spots.js';
-import { newStackX, fitNewStack, newStackFn, checkMove } from './stacks.js';
+import { newStackX, newStackFn, checkMove } from './stacks.js';
+import { newStackAt } from './free-layer.js';
 
 /** Screen px the mouse must move with the button down before a press becomes a drag. */
 export const DRAG_SLOP = 4;
@@ -208,7 +209,11 @@ export function probeEmpty(store, gameId, zone, x) {
   const game = store.getGame(gameId);
   if (at == null || !game?.dims) return null;
   const orients = orientationChoices(game);
-  const fit = (o) => fitNewStack(store.getPlan2(), store.getGame, zone, at, o.w);
+  const placed = new Map(); // the same x as New stack here: the wall end when it works (part-b7)
+  const fit = (o) => {
+    if (!placed.has(o)) placed.set(o, newStackAt(store, gameId, zone, at, o));
+    return placed.get(o);
+  };
   const r = newStackWays(orients, (o) => checkMove(store, newStackFn(store, gameId, zone, fit(o), o), 'Place'));
   const o = orients[r.chosen] ?? orients[0];
   return { zone, x: at, works: r.list.length > 0, reason: r.reason, way: { up: o.up, rot: o.rot }, at: fit(o), size: { w: o.w, h: o.h } };
