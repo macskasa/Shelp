@@ -3,6 +3,7 @@
 //   UNITS                       the units in shelf order: each wall shelf as left 60 | middle 80 | right 60
 //                               (top, middle, bottom), the three parts under the stairs, the narrow shelf
 //   freeSpace(plan, getGame)    -> Unit[] for a v2 plan (store.getPlan2(), store.getGame), same order
+//   wallPush(plan, getGame, zoneId) -> the stacks of a wall shelf's wall-end unit pushed to the wall (#100), or null
 //
 //   Unit = {
 //     id: 'bottom-2', zone: 'bottom', label: 'Bottom shelf · middle', x0: 60, x1: 140, length: 80,
@@ -18,7 +19,11 @@
 //     slots: [Slot],     room on top of the stacks (kind 'top') whose surface lies (mostly) in this unit, most height first
 //     standing: [Slot],  standing spaces (kind 'standing') in this unit, most height first
 //     room: Slot | null, slots[0]: the room on top with the most height (null: none)
+//     push: Push | null, wall-end units only: what pushing their stacks to the wall would free (wallPush)
 //   }
+//   Push = { zone, moves: [{ stackId, from, to }], gap: { x, w }, gain }
+//     moves  the stacks that move, right to left; gap: the empty stretch left of them afterwards;
+//     gain   how much wider that gap gets (under MIN_GAP: no Push, nothing worth pushing)
 //   Slot = { kind, stackId, stackIds, y, h, x, w, rest: { x, w }, tilt, on: [gameId] }
 //     kind   'top': on top of a stack; 'standing': a ledge lower down, beside something taller, e.g. the open
 //            edge of Anachrony next to KLASK: narrow and tall, where a box can stand (#88)
@@ -140,6 +145,55 @@ export function zoneSlots(zone, pieces) {
   return out.sort((m, n) => n.h - m.h || m.x - n.x);
 }
 
+/**
+ * Push the stacks of a wall shelf's wall-end unit (the part right of the last joint) towards the wall (#100).
+ * The 8 cm overhang past the wall end is room too, as KLASK uses it on the top shelf. Right to left, each
+ * stack that lies in that unit goes as far as the wall end (length + overhang) or the next stack, and past a
+ * bracket only when every box that would newly cross it is low enough there (bracketLimit, so no new bracket
+ * warning). Stacks never move left. The free floor then collects in one gap on the left of the unit.
+ * Returns a Push (see above) or null when the gap on the left would grow by less than MIN_GAP.
+ */
+export function wallPush(plan, getGame, zoneId) {
+  const zone = ZONES[zoneId];
+  if (!zone || zone.group !== 'wall') return null;
+  const x0 = zone.joints[zone.joints.length - 1];
+  const end = zone.length + zone.overhang;
+  const brackets = zone.brackets.map((j) => ({ x0: j - BRACKET.width / 2, x1: j + BRACKET.width / 2 }));
+  const all = plan.stacks
+    .filter((st) => st.zone === zoneId && st.boxes?.length)
+    .map((st) => {
+      const lay = layoutStack2(st, getGame);
+      const parts = lay.boxes.map((b) => ({ x0: b.x, x1: b.x + b.w, top: b.y + b.h, d: b.d }));
+      if (lay.topper) parts.push({ x0: lay.topper.x, x1: lay.topper.x + lay.topper.w, top: lay.topper.y + lay.topper.h, d: zone.depth });
+      return { id: st.id, x: st.x, w: lay.w, parts };
+    })
+    .sort((a, b) => a.x - b.x);
+  const stacks = all.filter((st) => st.x >= x0 - EPS); // a stack across the joint stays where it is
+  if (!stacks.length) return null;
+  const crosses = (a, b, br) => a < br.x1 - EPS && b > br.x0 + EPS;
+  const moves = [];
+  let limit = end;
+  for (const st of [...stacks].reverse()) {
+    let by = Math.max(0, limit - (st.x + st.w));
+    for (const p of st.parts) {
+      for (const br of brackets) {
+        if (crosses(st.x + p.x0, st.x + p.x1, br) || !crosses(st.x + p.x0 + by, st.x + p.x1 + by, br)) continue;
+        if (p.top > bracketLimit(zone, p.d) + EPS) by = Math.max(0, Math.min(by, br.x0 - (st.x + p.x1)));
+      }
+    }
+    by = Math.floor(by * 10 + EPS) / 10;
+    const to = r1(st.x + by);
+    if (by > 0) moves.push({ stackId: st.id, from: st.x, to });
+    limit = Math.min(to, st.x + by);
+  }
+  const after = new Map(moves.map((m) => [m.stackId, m.to]));
+  const left = Math.max(x0, ...all.filter((st) => st.x < x0 - EPS).map((st) => st.x + st.w));
+  const first = Math.min(...stacks.map((st) => after.get(st.id) ?? st.x));
+  const gain = r1(first - stacks[0].x);
+  if (gain < MIN_GAP - EPS) return null;
+  return { zone: zoneId, moves, gap: { x: r1(left), w: r1(Math.max(0, first - left)) }, gain };
+}
+
 export function freeSpace(plan, getGame) {
   const byZone = new Map();
   const pieces = new Map();
@@ -182,6 +236,7 @@ export function freeSpace(plan, getGame) {
       slots: here.filter((q) => q.kind === 'top'),
       standing: here.filter((q) => q.kind === 'standing'),
       room: here.find((q) => q.kind === 'top') ?? null,
+      push: ZONES[u.zone].group === 'wall' && u.x1 === ZONES[u.zone].length ? wallPush(plan, getGame, u.zone) : null,
     };
   });
 }

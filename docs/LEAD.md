@@ -25,7 +25,7 @@ Tony is the lead and code reviewer.
   - **D4 suggest a spot**, and **#48 reach** (score per box, shown in stack details).
   - **`box-overlap`:** a block rule for boxes taking the same place in a stack (#96).
 - **Open issue:** #93, the room behind shallow boxes (depth) in free space. Tony's core first (the API is in `docs/part-c9.md`), then Peter's screen.
-- **Briefs written, threads not started:** `part-c8.md` (Peter, D7 checklist), `part-b7.md` (Bruce, free space on the map), both from `main`; `part-c9.md` (Peter, #93) after Tony's core. E4 needs a decision from Adam first (a server or proxy, and a BGG API token).
+- **Briefs written, threads not started:** `part-c8.md` (Peter, D7 checklist), `part-b7.md` (Bruce, free space on the map), both from `main`; `part-c9.md` (Peter, #93 and the #100 line) after Tony's #93 core. #100 (push to the wall) core is in #99; b7 and c9 use it. Stephen's suggestions preferring the wall end: a later brief. E4 needs a decision from Adam first (a server or proxy, and a BGG API token).
 - **Possible next work** (ask Adam; don't start on your own):
   - #93 (depth);
   - D7 moving checklist, on top of Peter's compare;
