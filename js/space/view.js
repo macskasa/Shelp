@@ -1,10 +1,10 @@
 // The Free space screen: one card per shelf unit with the floor left, the room above and a to-scale bar.
-import { h, clear, loadCss } from '../core/dom.js';
+import { h, clear, loadCss, toast } from '../core/dom.js';
 import { on } from '../core/bus.js';
 import * as store from '../core/store.js';
 import { showStack } from '../core/contracts.js';
 import { freeSpace } from '../core/space.js';
-import { barModel, cardTitle, floorText, groupUnits, moreRoom, moreRoomLabel, roomText, standingLabel, standingRoom, summaryText } from './logic.js';
+import { barModel, behindLabel, behindRoom, cardTitle, floorText, groupUnits, moreRoom, moreRoomLabel, pushText, roomText, standingLabel, standingRoom, summaryText } from './logic.js';
 
 loadCss(new URL('./space.css', import.meta.url));
 
@@ -52,7 +52,8 @@ const nameOf = (id) => store.getGame(id)?.title ?? id;
 /** A toggle with a list under it: label and lines, or null without lines. */
 function toggle(label, lines) {
   if (!lines.length) return null;
-  const list = h('ul', { class: 'space-more-list', hidden: true }, lines.map((t) => h('li', {}, t)));
+  const list = h('ul', { class: 'space-more-list', hidden: true }, lines.map((t) => (typeof t === 'string'
+    ? h('li', {}, t) : h('li', { class: t.easy ? '' : 'space-muted' }, t.text))));
   const btn = h('button', { type: 'button', class: 'space-more-toggle', 'aria-expanded': 'false' }, label);
   btn.addEventListener('click', () => {
     const open = list.hidden;
@@ -65,6 +66,26 @@ function toggle(label, lines) {
 const more = (unit) => toggle(moreRoomLabel(unit, nameOf), moreRoom(unit, nameOf));
 const standing = (unit) => toggle(standingLabel(unit, nameOf), standingRoom(unit, nameOf));
 
+const behind = (unit) => toggle(behindLabel(unit), behindRoom(unit));
+
+/** The "Push M6 and M7 to the wall" line with its button, or null. */
+function pushLine(unit) {
+  if (!unit.push) return null;
+  const run = () => {
+    try {
+      store.pushToWall(unit.push.zone);
+      toast('Pushed to the wall', { action: { label: 'Undo', run: store.undo } });
+    } catch (err) {
+      toast(err.message, { error: true });
+    }
+  };
+  const text = pushText(unit);
+  const cut = text.indexOf(':');
+  return h('p', { class: 'space-push' },
+    h('span', { class: 'space-push-text' }, h('strong', {}, text.slice(0, cut + 1)), text.slice(cut + 1)),
+    h('button', { type: 'button', class: 'space-push-btn', onclick: run }, 'Push'));
+}
+
 function card(unit) {
   const floor = floorText(unit);
   const room = roomText(unit, nameOf);
@@ -73,9 +94,11 @@ function card(unit) {
     h('p', { class: 'space-floor' },
       h('strong', { class: floor.main === 'Full' ? 'space-full' : '' }, floor.main),
       floor.extra ? h('span', { class: 'space-extra' }, ` · ${floor.extra}`) : null),
+    pushLine(unit),
     h('p', { class: 'space-room' }, room || ' '),
     more(unit),
     standing(unit),
+    behind(unit),
     bar(unit));
 }
 
