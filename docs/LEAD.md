@@ -1,30 +1,54 @@
 # Lead handover · Tony
 
-For a fresh Tony chat. Read this, `docs/CONTEXT.md` and `README.md`, and nothing else until a task needs it.
+For a fresh Tony chat. Read this, `docs/CONTEXT.md` and `README.md`, and nothing else until a task needs it. `docs/kickoff.md` has the thread prompt template.
 
 ## Role
 
 Tony is the lead and code reviewer.
-- **Owns:** `js/core/`, `js/app.js`, `index.html`, `css/base.css`, `data/`, `docs/`, `tests/store.test.mjs`, `tests/plan2.test.mjs`, `tests/fixtures/v5-geometry.json`, `tests/fixtures/seed-v1.json` and `.github/`.
-- **Never edits the developers' files.** Changes they need go to them as review notes.
-- **Messages to Adam:** only problems, decisions he has to make, and actions he has to take ("#66 ready to merge"). No summaries of what was done or tested; that goes on the PR.
+- **Owns:** `js/core/`, `js/app.js`, `index.html`, `css/base.css`, `data/`, `docs/`, `README.md`, `.github/`, `tests/store.test.mjs`, `tests/plan2.test.mjs`, `tests/core-*.test.mjs`, `tests/fixtures/v5-geometry.json`, `tests/fixtures/seed-v1.json`.
+- **Never edits the developers' files.** Changes they need go to them as review notes or a message to their thread.
+- **Messages to Adam:** only problems, decisions he has to make, and actions he has to take ("#66 ready to merge", "merge #95 first"). What was done and tested goes on the PR.
 - **Team:**
   - Adam: product owner, merges PRs.
   - Stephen: Part A, data, rules and export (Sonnet).
   - Bruce: Part B, the map (Opus).
-  - Peter: Part C, catalog, search, frame and offline (Sonnet).
+  - Peter: Part C, catalog, search, frame, offline, free space (Sonnet).
 
-## Where things stand (2026-11-28)
+## Where things stand (2026-11-28, handover)
 
-- **Merged:** everything up to #94. D1 is done apart from joining stacks: lists, tapping (phone), drag and drop (desktop, #92), stacks, only working spots. B2, D3 (widths, standing spaces, tilt) and #48 are done. `store.joinStacks` is in (#94). README "Releases and stories" is current.
-- **Tony's PR** (`ccr-96632897-bcu0g0`): the bridge placement fix in `insertOn` (Bruce found a bridge landing inside a box on its left support) and `docs/part-a8.md`.
-- **Threads running** (each sends Tony one line when its PR is green):
-  - **Bruce**, `bruce/join-stacks`: `docs/part-b6.md` ("Join with …", across pairs). He merges Tony's branch for the `insertOn` fix.
-  - **Stephen**, `stephen/box-overlap`: `docs/part-a8.md` (block rule `box-overlap`).
-- **Open issues:** #93 (free space: the room behind shallow boxes, depth; Tony's core, then Peter; about M3; not scheduled).
-- **Later:** D7 moving checklist (on top of Peter's compare); Bruce may show the D3 numbers on the map after drag and drop.
-- **How the team runs:** a Claude Code project since 2026-11-27. The project conversation is Tony. Each piece of developer work is a thread (a new session from `create_session`, one PR each, Opus for Bruce, Sonnet for Stephen and Peter) whose prompt names the brief item, the branch (`outcome_branch`) and asks for a one-line `send_message` to Tony when the PR is green. A thread whose work needs an unmerged core PR starts from that PR's branch (`source_revision`) and still opens its PR into `main`. Tony verifies on GitHub, reviews, and tells Adam one line. The opening messages are in `docs/kickoff.md`.
-- **Tony's branch:** each Tony session has its own branch name from the session settings (this one: `ccr-96632897-bcu0g0`). Push only there; restart it from `main` after its PR merges.
+- **Merged:** everything up to #97. Nothing is open, and no threads are running. `main` is green and deployed.
+- **Done:**
+  - MVP and Phases A–C: schema 2, undo, saved versions and compare.
+  - **D1, moving games:** Pick up, Turn, Move, placing mode, the board strip, stacks (new, move, remove, renumber), only working spots in the spot sheet, drag and drop on desktop, and **Join with the next stack** (#94, #95, #97) with bridges across two tops whose open edges meet.
+  - **B2 families:** editing, the "spread out" rule, the catalog filter, the map highlight.
+  - **D3 free space:** room on top with both widths, standing spaces, tilt (#84–#91).
+  - **D4 suggest a spot**, and **#48 reach** (score per box, shown in stack details).
+  - **`box-overlap`:** a block rule for boxes taking the same place in a stack (#96).
+- **Open issue:** #93, the room behind shallow boxes (depth) in free space. Tony's core first, then Peter's screen; about M3; not scheduled.
+- **Possible next work** (ask Adam; don't start on your own):
+  - #93 (depth);
+  - D7 moving checklist, on top of Peter's compare;
+  - Bruce shows the D3 numbers on the map;
+  - E4 live BGG refresh (needs a server);
+  - D5 full re-plan (in chat; no planner in the repo).
+- **Small leftovers, for a later brief:**
+  - Ties in the spot sheet keep the spotChoices order; Stephen could return `best`'s rank (reach, height) from `checkSpots` for Bruce to sort by.
+  - In free space, "standing" means "below the top of the pile", so wide ledges land there too.
+  - An "Across M1 and M2" slot could point to the Join action.
+- **Adam's real plan differs from the seed** (he has moved things; e.g. M1 has Scythe standing at its left, pile at 10–39.7 cm). When a question depends on his data, ask him to upload a fresh backup into the chat (see Environment notes).
+
+## How the team runs
+
+- A Claude Code project since 2026-11-27. The project conversation is Tony.
+- **One thread per PR:** each piece of developer work is a new session from `create_session`:
+  - `model`: `opus` for Bruce, `sonnet` for Stephen and Peter;
+  - `source_url`: `https://github.com/macskasa/Shelp`;
+  - `outcome_branch`: e.g. `bruce/join-stacks`;
+  - `source_revision`: only when the work needs an unmerged branch (a core PR, or a developer's earlier PR). The thread starts from it and still opens its PR into `main`.
+- **The prompt** follows the template in `docs/kickoff.md`. It names the brief item and branch, and asks the thread to read CONTEXT and the brief, use `context.route` for browser checks, open the PR with the GitHub MCP tools, wait for the green "Tests" check, and send Tony one line ("#n green") with `send_message` to Tony's session id.
+- **Tony's own work** goes on the session's branch (its name is in the session settings, e.g. `ccr-…`). Push only there. Open a PR for core and docs work, and restart the branch from `main` after its PR merges (a plain push fast-forwards; force pushes are refused).
+- **Order:** core first (Tony's PR with the field or function plus the briefs), then the threads, started from that branch while it's open. Tell Adam the merge order ("#84 first").
+- **Briefs** are `docs/part-<a|b|c><n>.md`, one per round: the story, Adam's decision, what the core gives, numbered items, tests, rules, "Not yours". Check every number you quote in a brief against the code first (an example in `part-c6.md` was wrong).
 
 ## Adam's decisions (don't reopen)
 
@@ -37,47 +61,50 @@ Tony is the lead and code reviewer.
 - **Stack names:** they keep their ids. A new stack gets the next free number on its shelf, and "Renumber left to right" is an explicit action.
 - **Thunder Road: Vendetta:** the BGG id in the workbook is a typo (8807105); the seed uses 342070.
 - **Lean workflow:** see CONTEXT sections 8 and 9.
-- **Moving (2026-11-27):** the spot sheet lists only spots that work, with a "Show N blocked spots" link; stacks on the map are not dimmed and Turn keeps its ways. Drag and drop on desktop is the way to move there.
-- **Free space:** the room on top shows both widths, the air and the box it rests on. Surfaces within 0.5 cm count as one (tilt), also across two stacks; standing spaces count (#88, #89).
-- **Join stacks (2026-11-28):** "Join with the next stack" is how a box comes to rest across two stacks. Depth (room behind shallow boxes) is issue #93, for later.
-- **B2 "far apart":** a family warns unless its boxes on shelves are on one stack, or on one shelf with no other stack between them. The board and the cupboard don't count; a box inside another counts where its host is. 0 warnings on today's plan.
-- **D3, where it shows:** Tony's core `js/core/space.js`, and Peter's Free space screen in `js/space/`. Bruce may show the numbers on the map later.
+- **B2 "far apart":** a family warns unless its boxes on shelves are on one stack, or on one shelf with no other stack between them. The board and the cupboard don't count; a box inside another counts where its host is.
+- **D3, where it shows:** Tony's core `js/core/space.js` and Peter's Free space screen (`js/space/`). Bruce may show the numbers on the map later.
+- **Free space:** the room on top shows both widths, the air and the box it rests on. Surfaces within 0.5 cm side by side count as one (tilt), also across two stacks but never across a bracket. Standing spaces count (#88, #89).
+- **#48 reach:** brief it (2026-11-27). Tony's score, which Adam didn't object to: +4 outside an easy zone, +2 back row (on every shelf, not only the bottom ones), +1 per box on top, counting at most 3. The text shows the real count.
+- **Moving (2026-11-27):** the spot sheet lists only spots that work, with a "Show N blocked spots" link. Stacks on the map are not dimmed, and Turn keeps all its ways. Drag and drop on desktop is "the way to do it" there; the phone keeps tapping.
+- **Join stacks (2026-11-28):** "Join with the next stack" is how a box comes to rest across two stacks. Depth is issue #93, for later.
 
 ## How to review a PR
 
-1. `gh api repos/macskasa/shelp/pulls/<n> --jq '"\(.head.ref) → \(.base.ref) draft=\(.draft) \(.mergeable_state)"'` and read the body. The base must be `main`.
-2. **Tests:**
-   - Single PR: trust the "Tests" check: `gh api repos/macskasa/shelp/commits/<sha>/check-runs --jq '.check_runs[] | .conclusion'`.
-   - Several related open PRs: merge them locally on a scratch branch and run `node --test --test-reporter=dot`.
-3. **Read the diff** (`git diff main...origin/<branch>`), and open full files only where needed.
-4. **UI changes:** headless Chrome via Playwright (`/usr/bin/google-chrome`, `--no-sandbox`).
-   - Phone: 384 × 832, `is_mobile`, `has_touch`, DPR 2.8125.
-   - Desktop: 1440 × 900.
-   - Serve with `python3 -m http.server 8765` and open `/?nosw`; block service workers in the context.
-   - Prefer text checks. Take screenshots only for visual changes.
-5. **Post the review on the PR only:** `gh api repos/macskasa/shelp/pulls/<n>/reviews -f event=COMMENT -f body=…`. The verdict first, then the action items, then one line on what was tested.
-   - GitHub refuses APPROVE (same account), so the comment is the approval.
-   - Tell Adam one line.
+1. **Verify on GitHub.** `gh api repos/macskasa/shelp/pulls/<n> --jq '"\(.head.ref) → \(.base.ref) draft=\(.draft) \(.state) \(.mergeable_state) \(.head.sha)"'`, then read the body. The base must be `main`.
+2. **Tests:** `gh api repos/macskasa/shelp/commits/<sha>/check-runs --jq '.check_runs[] | "\(.name): \(.conclusion)"'` ("test" must be success). For PRs that land together, merge them locally in a scratch worktree and run `node --test`.
+3. **Read the diff:** `git fetch origin <branch>` and `git diff origin/main...origin/<branch>`. When the branch starts from an unmerged core branch, diff against that branch to see only the developer's part. Check module sizes (about 300 lines) and that only their files changed.
+4. **Browser check:** `git worktree add --detach <scratchpad>/wt<n> origin/<branch>`, then a Node script with `require('playwright')` and `chromium.launch()` (pre-installed; never `playwright install`). Serve the worktree's files with `context.route('http://shelp.test/**', …)` (no local server), open `/?nosw`, and pass `serviceWorkers: 'block'`.
+   - Phone: 384 × 832, `isMobile`, `hasTouch`. Desktop: 1440 × 900 (and 1024 × 768 for tables).
+   - Prefer text checks: `innerText`, hashes, `exportData().plan` before and after Undo. Drive the store from the page with `await import('/js/core/store.js')`.
+   - Adam's data: `store.importData(JSON.parse(backup))` in the page.
+   - Remove the worktree afterwards (`git worktree remove --force …`).
+5. **Post the review on the PR only:** the GitHub MCP tool `pull_request_review_write` (load it with ToolSearch), `method: create`, `event: COMMENT`, `commitID` = the **full** head SHA (a short one fails). Put the verdict first ("Approved: ready to merge" or "Almost ready: …"), then the action items or nits, then what was tested, then the footer. GitHub refuses APPROVE (same account), so the comment is the approval.
+6. **Action items** go to the thread too, with `send_message`. Then tell Adam one line.
 
 ## Lessons learned
 
 - **Check that a PR is still open before pushing to its branch.** Commits pushed after a merge are lost (that happened with #5).
-- **Double-check PR numbers** before writing them in comments.
-- **Check each PR's base branch** (`.base.ref`), not only its head. A stacked PR targets the developer's other branch: #31 was merged into `stephen/rules-v2` after #27 was already in main, so it never reached main (fixed by #34). Tell the developer to retarget it to `main` once its base is merged, or open the PR yourself from their unchanged branch.
-- **Undo after a move:** a modal panel makes the header Undo unreachable on the phone. So moving actions close the panels and show a toast with an Undo button (Phase C rule).
+- **Double-check PR numbers**, and Adam's: "89 is merged" meant PR #90 (#89 was the issue).
+- **Check each PR's base branch** (`.base.ref`), not only its head. A stacked PR into a developer's branch never reaches main (#31, fixed by #34). Threads open their PRs into `main` even when they start from another branch.
+- **Undo after a move:** a modal panel makes the header Undo unreachable on the phone. So moving actions close the panels and show a toast with an Undo button.
 - **Don't edit a file a developer owns,** even to fix a conflict. Give them the exact code instead.
-- **A core change can break a developer's test** (#51: the topper fix broke one assertion in `tests/map-scene.test.mjs`). Run the full suite before opening the PR. Put the exact test change in the PR body and ask the developer to push it to your branch, so both land together.
-- **Two docs PRs both append to CONTEXT's Changes list,** so the second one conflicts (#51). Merge `main` into the branch and keep both entries; never force-push.
-- **A thread can stall on a permission prompt** (Stephen's #62 thread waited on "may I start a local web server?"). Check a quiet thread with `get_session`. Browser checks don't need a server: serve the repo with Playwright's `context.route`, and put that in the thread prompt.
-- **A message that crosses a review isn't the answer to it:** Bruce's "#75 green" was sent before the review arrived and covered only the earlier note. Compare the message time with the review time, and check the commits before calling a PR ready.
-- **Wall-clock limits in tests flake on CI:** `node --test` runs the files in parallel on a small shared runner (#58's first run: 215 ms against a 200 ms limit). Ask for best-of-N and headroom, not a bare limit.
+- **A core change can break a developer's test** (#51). Run the full suite before opening the PR. Prefer additive, backward-compatible fields: in #90, standing spaces went into a new `standing` list so Peter's `slots` tests kept passing.
+- **Two docs PRs both append to CONTEXT's Changes list,** so the second one conflicts. Merge `main` in and keep both entries; never force-push.
+- **A thread can stall, or finish without its message.** Stephen's #62 thread waited on a permission prompt; Bruce's "#92 green" arrived after Tony had already reviewed. When a PR is green and no message came, check the thread with `get_session` and review anyway.
+- **A message that crosses a review isn't the answer to it:** compare the message time with the review time, and check the commits before calling a PR ready (#75, #97).
+- **Wall-clock limits in tests flake on CI:** ask for best-of-N and headroom, not a bare limit.
+- **Don't silently drop data as "noise":** #84 left ledges out of free space, and Adam found them missing (#88). When a heuristic hides something real, say so or ask.
+- **Check fixes against Adam's real data** when he reports a problem: his plan differs from the seed (#89 only showed up with his backup).
+- **Developers find core bugs while building on the core** (Bruce found the bridge placement in `insertOn`, #95). Fix it in the core quickly on Tony's branch, message the thread how to merge it, and add a rule as a safety net (#96).
 
 ## Environment notes
 
-- **GitHub:** REST only; GraphQL is blocked. In a project session, `gh api` works for reads (PRs, check runs, issues, job logs) and the GitHub MCP tools post reviews (`pull_request_review_write`, event `COMMENT`). That means:
-  - Tony can't take a PR out of draft (Adam taps "Ready for review");
-  - Tony can't delete branches (the proxy refuses).
-- **Push:** `git -c push.negotiate=true push -u origin <branch>`.
+- **GitHub:**
+  - `gh api` works for repository reads (PRs, check runs, issues, job logs). The GitHub MCP tools (load with ToolSearch) create PRs, issues and reviews. GraphQL is blocked.
+  - Tony can't take a PR out of draft, and can't delete branches. Old `tony/*` branches are left over; Adam can delete them.
+  - **Attachments on issues** (`github.com/user-attachments/…`) can't be fetched from the session. Ask Adam to upload the file into the chat; it lands under `/root/.claude/uploads/…`.
+- **Push:** `git -c push.negotiate=true push -u origin <branch>`. Force pushes are refused by the auto mode.
 - **Pages:** https://macskasa.github.io/Shelp/. Use `?nosw` to skip the service worker.
+- **CI checks:** "test" (the suite), plus build and deploy on `main`.
 - **Planning workbook:** a Claude Docs artifact (Catalog, Shelf plan, Not identified, App user stories): https://claude.ai/artifact/RX9eSK3arZSpGBZR6mqh9k
 - **The v5 planner is not in the repo.** It was Python in the first Tony chat's sandbox. A full re-plan (D5) would need a new planner on schema 2, ideally reusing `js/core/geometry.js`.
