@@ -18,6 +18,7 @@ export const SEVERITY = {
   'size-missing': 'block',
   pizza: 'block',
   overlap: 'block',
+  'box-overlap': 'block',
   length: 'block',
   'shelf-height': 'block',
   'bridge-level': 'block',
@@ -64,6 +65,23 @@ export function checkStack2(stack, getGame, layout = layoutStack2(stack, getGame
   for (const b of layout.boxes) {
     if (getGame(b.gameId)?.pizza === true && b.up !== 's') {
       add('pizza', `${title(b.gameId)} is a pizza game and may only lie flat, but it is ${UP_TEXT[b.up] ?? b.up} in stack ${stack.id}.`, b.gameId);
+    }
+  }
+
+  // block: two boxes of one stack, in the same row, may not take the same place in the front view
+  // (a box and what it rests on only touch). A topper may only overlap air.
+  const taken = (a, b) => a.x + a.w - SLACK > b.x && b.x + b.w - SLACK > a.x && a.y + a.h - SLACK > b.y && b.y + b.h - SLACK > a.y;
+  const bs = layout.boxes;
+  for (let i = 0; i < bs.length; i++) {
+    for (let j = i + 1; j < bs.length; j++) {
+      if (bs[i].row !== bs[j].row || !taken(bs[i], bs[j])) continue;
+      const [lo, hi] = bs[i].y + SLACK < bs[j].y || (Math.abs(bs[i].y - bs[j].y) <= SLACK && bs[i].x < bs[j].x) ? [bs[i], bs[j]] : [bs[j], bs[i]];
+      add('box-overlap', `${title(lo.gameId)} and ${title(hi.gameId)} take the same place in stack ${stack.id}.`, hi.gameId);
+    }
+  }
+  if (layout.topper) {
+    for (const b of bs) {
+      if (taken(b, layout.topper)) add('box-overlap', `${title(b.gameId)} and the ${layout.topper.label} take the same place in stack ${stack.id}.`, b.gameId);
     }
   }
 

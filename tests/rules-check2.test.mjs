@@ -2,6 +2,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { layoutStack2 } from '../js/core/geometry.js';
 import * as store from '../js/core/store.js';
 import { checkStack2, checkPlan2, overlapsWith, RULES2, SEVERITY, blocking, forStack, groupWarnings, boardLine } from '../js/rules/index.js';
 
@@ -47,10 +48,10 @@ test('a good stack gives nothing; every warning has the full shape', () => {
   }
 });
 
-test('RULES2 lists the thirteen rules, six of them blocking', () => {
-  assert.equal(RULES2.length, 13);
+test('RULES2 lists the fourteen rules, seven of them blocking', () => {
+  assert.equal(RULES2.length, 14);
   assert.deepEqual(RULES2.filter((r) => SEVERITY[r] === 'block'),
-    ['size-missing', 'pizza', 'overlap', 'length', 'shelf-height', 'bridge-level']);
+    ['size-missing', 'pizza', 'overlap', 'box-overlap', 'length', 'shelf-height', 'bridge-level']);
 });
 
 // ---------------------------------------------------------------- blocks
@@ -316,6 +317,56 @@ test('a bridge that fits like a brick in a wall gives no warnings', () => {
   const s2 = game('w2', [7, 15, 37]);
   const br = game('w3', [7, 30, 37]);
   assert.deepEqual(checkStack2(stack('A', 'bottom', 0, [box(s1), box(s2, { x: 15 }), box(br, { on: [s1, s2] })]), getGame), []);
+});
+
+// ---------------------------------------------------------------- box-overlap
+
+test('box-overlap (block): a second box at the same x on one support takes the same place', () => {
+  const a = game('bo1', [7, 20, 37]);
+  const b = game('bo2', [7, 20, 37]);
+  const c = game('bo3', [7, 20, 37]);
+  const bad = checkStack2(stack('A', 'bottom', 0, [box(a), box(b, { on: [a] }), box(c, { on: [a] })]), getGame);
+  assert.deepEqual(rules(bad), ['box-overlap']);
+  assert.equal(bad[0].severity, 'block');
+  assert.ok([b, c].includes(bad[0].gameId));
+  assert.match(bad[0].message, /^BO[23] and BO[23] take the same place in stack A\.$/);
+});
+
+test('box-overlap: the higher box is named, a bridge pushed into its neighbours is caught', () => {
+  const s1 = game('bq1', [7, 15, 37]);
+  const s2 = game('bq2', [7, 15, 37]);
+  const rest = game('bq3', [7, 15, 37]);
+  const br = game('bq4', [7, 30, 37]);
+  // rest sits on s1 at x 0; the bridge over s1 + s2 also starts at x 0, so it lands inside rest
+  const bad = only(checkStack2(stack('A', 'bottom', 0, [box(s1), box(s2, { x: 15 }), box(rest, { on: [s1] }), box(br, { on: [s1, s2] })]), getGame), 'box-overlap');
+  assert.equal(bad.length, 1);
+  assert.ok([rest, br].includes(bad[0].gameId));
+  assert.match(bad[0].message, /BQ3/);
+  assert.match(bad[0].message, /BQ4/);
+});
+
+test('box-overlap: touching boxes, a box on its support, a bridge on two supports and two rows give nothing', () => {
+  const a = game('bt1', [7, 15, 37]);
+  const b = game('bt2', [7, 15, 37]);
+  const on = game('bt3', [7, 15, 37]);
+  const br = game('bt4', [7, 30, 37]);
+  assert.deepEqual(only(checkStack2(stack('A', 'bottom', 0, [box(a), box(b, { x: 15 })]), getGame), 'box-overlap'), []);
+  assert.deepEqual(only(checkStack2(stack('B', 'bottom', 0, [box(a), box(on, { on: [a] })]), getGame), 'box-overlap'), []);
+  assert.deepEqual(only(checkStack2(stack('C', 'bottom', 0, [box(a), box(b, { x: 15 }), box(br, { on: [a, b] })]), getGame), 'box-overlap'), []);
+  assert.deepEqual(only(checkStack2(stack('D', 'bottom', 0, [box(a), box(b, { row: 1 })]), getGame), 'box-overlap'), []);
+});
+
+test('box-overlap: a topper standing on the pile overlaps only air', () => {
+  const a = game('bp1', [7, 20, 37]);
+  const ok = stack('A', 'bottom', 0, [box(a)], { topper: { label: 'castle', w: 10, h: 10 } });
+  assert.deepEqual(only(checkStack2(ok, getGame), 'box-overlap'), []);
+  // a topper sunk into the box (a hand-made layout) counts
+  const layout = layoutStack2(ok, getGame);
+  layout.topper = { ...layout.topper, y: layout.topper.y - 3 };
+  const bad = only(checkStack2(ok, getGame, layout), 'box-overlap');
+  assert.equal(bad.length, 1);
+  assert.equal(bad[0].gameId, a);
+  assert.match(bad[0].message, /castle/);
 });
 
 // ---------------------------------------------------------------- the plan, the card
