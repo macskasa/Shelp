@@ -17,21 +17,49 @@ export function floorText(unit) {
   };
 }
 
+/** "M2" / "M1 and M2": where a slot is. */
+const stacksOf = (slot) => (slot.stackIds?.length > 1 ? slot.stackIds.join(' and ') : slot.stackId);
+
+/** "rests on Port Royal, 12.7 cm" (or just "rests on 12.7 cm" without names). */
+function restsOn(slot, nameOf) {
+  const names = (slot.on ?? []).map((id) => nameOf(id));
+  return `rests on ${names.length ? `${names.join(' + ')}, ` : ''}${cm(slot.rest.w)} cm`;
+}
+
 /**
- * One slot in words: "On M2: 4.1 cm high · 32.7 cm of air · rests on Port Royal, 12.7 cm".
- * The air is left out when it is no wider than what the box rests on (+ 2 cm). "No room on top" when the height rounds to 0.
- * nameOf(gameId) -> the game's title (defaults to the id).
+ * One slot of room on top in words: "On M2: 4.1 cm high · 32.7 cm of air · rests on Port Royal, 12.7 cm".
+ * The air is left out when it is no wider than what the box rests on (+ 2 cm), except across two stacks.
+ * A surface across two stacks: "Across M1 and M2: 7.4 cm high · … · 0.4 cm tilt" ("tilt" only when it is above 0).
+ * "No room on top" when the height rounds to 0. nameOf(gameId) -> the game's title (defaults to the id).
  */
 export function slotText(slot, nameOf = (id) => id) {
   if (cm(slot.h) === '0') return 'No room on top';
-  const parts = [`On ${slot.stackId}: ${cm(slot.h)} cm high`];
+  const across = slot.stackIds?.length > 1;
+  const parts = [`${across ? 'Across' : 'On'} ${stacksOf(slot)}: ${cm(slot.h)} cm high`];
   const rest = slot.rest;
-  if (rest && slot.w > rest.w + 2) parts.push(`${cm(slot.w)} cm of air`);
-  if (rest) {
-    const names = (slot.on ?? []).map((id) => nameOf(id));
-    parts.push(`rests on ${names.length ? `${names.join(' + ')}, ` : ''}${cm(rest.w)} cm`);
-  }
+  if (rest && (across || slot.w > rest.w + 2)) parts.push(`${cm(slot.w)} cm of air`);
+  if (rest) parts.push(restsOn(slot, nameOf));
+  if (cm(slot.tilt ?? 0) !== '0') parts.push(`${cm(slot.tilt)} cm tilt`);
   return parts.join(' · ');
+}
+
+/** A standing space in words, the width first (it limits a standing box): "On T8: 4.3 cm wide · 31.8 cm high · rests on Anachrony, 4 cm". */
+export function standingText(slot, nameOf = (id) => id) {
+  const parts = [`${slot.stackIds?.length > 1 ? 'Across' : 'On'} ${stacksOf(slot)}: ${cm(slot.w)} cm wide · ${cm(slot.h)} cm high`];
+  if (slot.rest) parts.push(restsOn(slot, nameOf));
+  if (cm(slot.tilt ?? 0) !== '0') parts.push(`${cm(slot.tilt)} cm tilt`);
+  return parts.join(' · ');
+}
+
+/** The unit's standing spaces, one text each, most height first. */
+export function standingRoom(unit, nameOf) {
+  return (unit.standing ?? []).filter((s) => cm(s.h) !== '0').map((s) => standingText(s, nameOf));
+}
+
+/** "Standing room (3)" for the toggle, "" when there is none. */
+export function standingLabel(unit, nameOf) {
+  const n = standingRoom(unit, nameOf).length;
+  return n ? `Standing room (${n})` : '';
 }
 
 /** The room line of a unit: its best slot in words; "" without stacks; "(not measured)" is added for approximate units. */
@@ -105,7 +133,8 @@ export function groupUnits(units) {
  * It spans x0 .. end; `shelf` is the part up to x1 (the rest is the overhang, drawn fainter).
  * Slots are the room on top: a band `left`/`width` wide and `height` high (a share of the usable height, from the top
  * down), with the open part `restLeft`/`restWidth` inside it; all clipped at the unit's edges like the stacks.
- * -> { shelf, stacks: [{ id, left, width, fill }], gaps: [{ left, width }], slots: [{ id, left, width, height, restLeft, restWidth }] }
+ * Standing spaces are bands from their surface `y` up: `bottom` and `height` are shares of the usable height.
+ * -> { shelf, stacks, gaps, slots: [{ id, left, width, height, restLeft, restWidth }], standing: [{ id, left, width, bottom, height, restLeft, restWidth }] }
  */
 export function barModel(unit) {
   const span = unit.end - unit.x0;
@@ -114,19 +143,23 @@ export function barModel(unit) {
     const b = Math.min(x + w, unit.end);
     return { left: (a - unit.x0) / span, width: Math.max(0, b - a) / span };
   };
+  const band = (s) => {
+    const b = clip(s.x, s.w);
+    const rest = s.rest ? clip(s.rest.x, s.rest.w) : { left: b.left, width: 0 };
+    return { ...b, restLeft: rest.left, restWidth: rest.width };
+  };
+  const share = (v) => Math.min(1, Math.max(0, v / unit.height));
   return {
     shelf: (unit.x1 - unit.x0) / span,
     stacks: unit.stacks.map((s) => ({
-      id: s.id, ...clip(s.x, s.w), fill: Math.min(1, Math.max(0, s.h / unit.height)),
+      id: s.id, ...clip(s.x, s.w), fill: share(s.h),
     })),
     gaps: unit.gaps.map((g) => clip(g.x, g.w)),
-    slots: (unit.slots ?? []).filter((s) => s.h > 0).map((s) => {
-      const band = clip(s.x, s.w);
-      const rest = s.rest ? clip(s.rest.x, s.rest.w) : { left: band.left, width: 0 };
-      return {
-        id: s.stackId, ...band, height: Math.min(1, Math.max(0, s.h / unit.height)),
-        restLeft: rest.left, restWidth: rest.width,
-      };
-    }).filter((s) => s.width > 0),
+    slots: (unit.slots ?? []).filter((s) => s.h > 0).map((s) => ({ id: s.stackId, ...band(s), height: share(s.h) }))
+      .filter((s) => s.width > 0),
+    standing: (unit.standing ?? []).filter((s) => s.h > 0).map((s) => {
+      const bottom = share(s.y);
+      return { id: s.stackId, ...band(s), bottom, height: Math.min(share(s.h), 1 - bottom) };
+    }).filter((s) => s.width > 0 && s.height > 0),
   };
 }

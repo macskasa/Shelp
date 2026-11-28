@@ -4,7 +4,7 @@ import { on } from '../core/bus.js';
 import * as store from '../core/store.js';
 import { showStack } from '../core/contracts.js';
 import { freeSpace } from '../core/space.js';
-import { barModel, cardTitle, floorText, groupUnits, moreRoom, moreRoomLabel, roomText, summaryText } from './logic.js';
+import { barModel, cardTitle, floorText, groupUnits, moreRoom, moreRoomLabel, roomText, standingLabel, standingRoom, summaryText } from './logic.js';
 
 loadCss(new URL('./space.css', import.meta.url));
 
@@ -25,6 +25,16 @@ function bar(unit) {
     }
     el.append(band);
   }
+  for (const sl of m.standing) {
+    const band = h('div', {
+      class: 'space-bar-slot space-bar-standing', 'aria-hidden': 'true',
+      style: `left:${pct(sl.left)};width:${pct(sl.width)};bottom:calc(4px + (100% - 4px) * ${sl.bottom.toFixed(4)});height:calc((100% - 4px) * ${sl.height.toFixed(4)})`,
+    });
+    if (sl.restWidth > 0) {
+      band.append(h('div', { class: 'space-bar-rest', style: `left:${pct((sl.restLeft - sl.left) / sl.width)};width:${pct(sl.restWidth / sl.width)}` }));
+    }
+    el.append(band);
+  }
   for (const g of m.gaps) {
     el.append(h('div', { class: 'space-bar-gap', style: `left:${pct(g.left)};width:${pct(g.width)}`, 'aria-hidden': 'true' }));
   }
@@ -39,11 +49,11 @@ function bar(unit) {
 
 const nameOf = (id) => store.getGame(id)?.title ?? id;
 
-function more(unit) {
-  const lines = moreRoom(unit, nameOf);
+/** A toggle with a list under it: label and lines, or null without lines. */
+function toggle(label, lines) {
   if (!lines.length) return null;
   const list = h('ul', { class: 'space-more-list', hidden: true }, lines.map((t) => h('li', {}, t)));
-  const btn = h('button', { type: 'button', class: 'space-more-toggle', 'aria-expanded': 'false' }, moreRoomLabel(unit, nameOf));
+  const btn = h('button', { type: 'button', class: 'space-more-toggle', 'aria-expanded': 'false' }, label);
   btn.addEventListener('click', () => {
     const open = list.hidden;
     list.hidden = !open;
@@ -51,6 +61,9 @@ function more(unit) {
   });
   return h('div', { class: 'space-more' }, btn, list);
 }
+
+const more = (unit) => toggle(moreRoomLabel(unit, nameOf), moreRoom(unit, nameOf));
+const standing = (unit) => toggle(standingLabel(unit, nameOf), standingRoom(unit, nameOf));
 
 function card(unit) {
   const floor = floorText(unit);
@@ -62,6 +75,7 @@ function card(unit) {
       floor.extra ? h('span', { class: 'space-extra' }, ` · ${floor.extra}`) : null),
     h('p', { class: 'space-room' }, room || ' '),
     more(unit),
+    standing(unit),
     bar(unit));
 }
 

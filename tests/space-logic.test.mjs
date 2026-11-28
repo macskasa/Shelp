@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { freeSpace } from '../js/core/space.js';
-import { barModel, cardTitle, cm, floorText, groupUnits, moreRoom, moreRoomLabel, roomText, slotText, summaryText, totals } from '../js/space/logic.js';
+import { barModel, cardTitle, cm, floorText, groupUnits, moreRoom, moreRoomLabel, roomText, slotText, standingLabel, standingRoom, summaryText, totals } from '../js/space/logic.js';
 
 const seed = JSON.parse(readFileSync(new URL('../data/seed.json', import.meta.url), 'utf8'));
 const byId = new Map(seed.games.map((g) => [g.id, g]));
@@ -104,4 +104,35 @@ test('bar: a stack across a joint is cut at the unit edge', () => {
   const m = barModel(unit('top-2'));
   const t3 = m.stacks.find((s) => s.id === 'T3');
   assert.ok(t3 && t3.left >= 0 && t3.left + t3.width <= 1 + 1e-9);
+});
+
+test('standing spaces: Anachrony beside KLASK and Thunder Road beside M6 (#88)', () => {
+  const t = unit('top-3');
+  assert.equal(standingLabel(t, nameOf), 'Standing room (3)');
+  assert.equal(standingRoom(t, nameOf)[0], 'On T8: 4.3 cm wide · 31.8 cm high · rests on Anachrony: A jövő útjai, 4 cm');
+  assert.match(standingRoom(unit('middle-3'), nameOf)[0], /^On M5: 6\.5 cm wide · 29\.5 cm high · rests on /);
+  assert.equal(standingLabel({ standing: [] }), '');
+  assert.deepEqual(standingRoom({}), []);
+});
+
+test('standing band in the bar: from the surface up, as shares of the usable height', () => {
+  const t = unit('top-3');
+  const m = barModel(t);
+  assert.equal(m.standing.length, t.standing.length);
+  const s = m.standing[0];
+  assert.ok(Math.abs(s.bottom - 6.2 / t.height) < 1e-9);
+  assert.ok(Math.abs(s.height - 31.8 / t.height) < 1e-9);
+  assert.ok(s.bottom + s.height <= 1 + 1e-9 && s.restWidth > 0 && s.restWidth <= s.width);
+  assert.deepEqual(barModel({ ...t, standing: undefined }).standing, []);
+});
+
+test('tilted surface across two stacks (#89)', () => {
+  const slot = { kind: 'top', stackId: 'M1', stackIds: ['M1', 'M2'], y: 27.7, h: 7.4, x: 20, w: 22.9, tilt: 0.4,
+    rest: { x: 21, w: 21.7 }, on: ['a', 'b'] };
+  const names = { a: 'Csúcstámadás', b: 'SETI: Space Agencies' };
+  assert.equal(slotText(slot, (id) => names[id]),
+    'Across M1 and M2: 7.4 cm high · 22.9 cm of air · rests on Csúcstámadás + SETI: Space Agencies, 21.7 cm · 0.4 cm tilt');
+  assert.ok(!slotText({ ...slot, tilt: 0 }).includes('tilt'));
+  assert.ok(slotText({ ...slot, stackIds: ['M1'], tilt: 0.4 }).startsWith('On M1:'));
+  assert.equal(moreRoom({ room: null, slots: [slot] }, (id) => names[id]).length, 1);
 });
