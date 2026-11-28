@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { freeSpace } from '../js/core/space.js';
-import { barModel, cardTitle, cm, floorText, groupUnits, roomText, summaryText, totals } from '../js/space/logic.js';
+import { barModel, cardTitle, cm, floorText, groupUnits, moreRoom, moreRoomLabel, roomText, slotText, summaryText, totals } from '../js/space/logic.js';
 
 const seed = JSON.parse(readFileSync(new URL('../data/seed.json', import.meta.url), 'utf8'));
 const byId = new Map(seed.games.map((g) => [g.id, g]));
@@ -20,13 +20,51 @@ test('floor headline: free, full, and the widest gap when there are several', ()
   assert.deepEqual(floorText(unit('under-gap')), { main: '3 cm free', extra: 'widest 1.5 cm' });
 });
 
-test('room line: on top of the stack with most room, (not measured) when approximate', () => {
-  assert.equal(roomText(unit('middle-1')), 'up to 4.1 cm on top of M2');
+const nameOf = (id) => byId.get(id)?.title ?? id;
+
+test('room line: height, the air when it is wider, what it rests on; (not measured) when approximate', () => {
+  assert.equal(roomText(unit('middle-1'), nameOf), 'On M2: 4.1 cm high · 32.7 cm of air · rests on Port Royal, 12.7 cm');
+  assert.equal(roomText(unit('bottom-2'), nameOf), 'On B3: 8.8 cm high · 24 cm of air · rests on Compile: Main 2 + Kontroll, 16.6 cm');
   assert.equal(roomText({ room: null, approximate: false }), '');
-  assert.equal(roomText({ room: { stackId: 'U1', h: 5 }, approximate: true }), 'up to 5 cm on top of U1 (not measured)');
+  const slot = { stackId: 'U1', h: 5, x: 0, w: 20, rest: { x: 0, w: 20 }, on: ['a'] };
+  assert.equal(roomText({ room: slot, approximate: true }, () => 'Ice Cool'), 'On U1: 5 cm high · rests on Ice Cool, 20 cm (not measured)');
   assert.equal(roomText({ room: null, approximate: true }), '(not measured)');
   assert.equal(roomText({ room: { stackId: 'M2', h: 0 }, approximate: false }), 'No room on top');
   assert.equal(roomText({ room: { stackId: 'M2', h: 0.04 }, approximate: true }), 'No room on top (not measured)');
+  assert.equal(roomText(unit('bottom-3'), nameOf), 'On B8: 4 cm high · 43.3 cm of air · rests on Unmatched: Cobble & Fog, 15.2 cm');
+  assert.equal(roomText(unit('middle-2'), nameOf), 'On M5: 6.3 cm high · rests on A vörös katedrális, 16.9 cm'); // air 18.1 ≤ 16.9 + 2: left out
+  // air exactly rest + 2 is left out, a little more is shown
+  assert.ok(!slotText({ ...slot, w: 22 }).includes('air'));
+  assert.ok(slotText({ ...slot, w: 22.1 }).includes('22.1 cm of air'));
+});
+
+test('more room on top: the other slots, one line each, most height first', () => {
+  const u = unit('top-1');
+  assert.equal(moreRoomLabel(u, nameOf), 'More room on top (2)');
+  const lines = moreRoom(u, nameOf);
+  assert.equal(lines.length, 2);
+  assert.match(lines[0], /^On T1: 2\.4 cm high/);
+  assert.match(lines[1], /^On T3: 1\.6 cm high/);
+  assert.equal(moreRoomLabel(unit('middle-1'), nameOf), '');
+  assert.deepEqual(moreRoom({ slots: [], room: null }), []);
+});
+
+test('bar slots: bands clipped at the unit, with the open part inside', () => {
+  const u = unit('middle-1');
+  const m = barModel(u);
+  assert.equal(m.slots.length, 1);
+  const s = m.slots[0];
+  const span = u.end - u.x0;
+  assert.ok(Math.abs(s.left - (27.1 - u.x0) / span) < 1e-9);
+  assert.ok(Math.abs(s.width - 32.7 / span) < 1e-9);
+  assert.ok(Math.abs(s.height - 4.1 / u.height) < 1e-9);
+  assert.ok(s.restLeft >= s.left && s.restLeft + s.restWidth <= s.left + s.width + 1e-9);
+  assert.ok(Math.abs(s.restWidth - 12.7 / span) < 1e-9);
+  for (const x of list) for (const b of barModel(x).slots) assert.ok(b.left >= 0 && b.left + b.width <= 1 + 1e-9);
+  // a slot sticking out of the unit is cut at its edge
+  const cut = barModel({ ...u, slots: [{ stackId: 'X', h: 2, x: u.x0 - 10, w: 20, rest: { x: u.x0 - 10, w: 20 } }] }).slots[0];
+  assert.equal(cut.left, 0);
+  assert.ok(Math.abs(cut.width - 10 / span) < 1e-9);
 });
 
 test('summary: the total and the widest stretch', () => {

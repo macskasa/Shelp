@@ -9,8 +9,8 @@ import { openGame, showFamily } from '../core/contracts.js';
 import { CATEGORIES, OTHER } from '../core/categories.js';
 import { buildRow } from './row.js';
 import {
-  TIME_STEPS, WHERE_OPTIONS, PIZZA_OPTIONS, activeFilterCount, countLabel, familyOptions, knownFamily, makeEntry, matches,
-  shownFamily, sortEntries, stateFromParams, stateToParams,
+  TIME_STEPS, WHERE_OPTIONS, PIZZA_OPTIONS, activeFilterCount, catalogHash, countLabel, familyOptions, knownFamily, makeEntry, matches,
+  shownFamily, sortEntries, stateFromParams,
 } from './filter.js';
 
 loadCss(new URL('./catalog.css', import.meta.url));
@@ -151,9 +151,7 @@ export function mountCatalog(el, params) {
 
   function syncUrl() {
     if (history.state?.shelpPanel) return; // never touch the history entry of an open panel
-    const q = new URLSearchParams(Object.entries(stateToParams(state)).map(([k, v]) => [k, String(v)]))
-      .toString().replace(/%2C/g, ',');
-    const hash = `#/catalog${q ? `?${q}` : ''}`;
+    const hash = catalogHash(state); // a family that fell back to Any is gone from the URL too
     if (location.hash !== hash) history.replaceState(history.state, '', hash);
   }
 

@@ -2,7 +2,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { MIN_GAP, MIN_REST, UNITS, emptyStretches, freeSpace } from '../js/core/space.js';
+import { MIN_GAP, MIN_REST, TILT, UNITS, emptyStretches, freeSpace, zoneSlots } from '../js/core/space.js';
+import { ZONES } from '../js/core/shelves.js';
 
 const seed = JSON.parse(readFileSync(new URL('../data/seed.json', import.meta.url), 'utf8'));
 const byId = new Map(seed.games.map((g) => [g.id, g]));
@@ -28,6 +29,7 @@ test('an empty plan: every unit is free to its end, no room figure', () => {
     assert.equal(u.widest, u.free);
     assert.deepEqual(u.stacks, []);
     assert.deepEqual(u.slots, []);
+    assert.deepEqual(u.standing, []);
     assert.equal(u.room, null);
   }
 });
@@ -63,7 +65,7 @@ test('slots: the air above a stack top reaches over lower neighbours, up to a ta
   const portRoyal = seed.games.find((g) => g.title === 'Port Royal').id;
   // M2 (40.2–59.8, 31.4 high): from M1's narrower top box (ends at 27.1) to the bracket at 60 cm
   assert.deepEqual(unit(list, 'middle-1').room, {
-    stackId: 'M2', y: 31.4, h: 4.1, x: 27.1, w: 32.7, rest: { x: 40.2, w: 12.7 }, on: [portRoyal],
+    kind: 'top', stackId: 'M2', stackIds: ['M2'], y: 31.4, h: 4.1, x: 27.1, w: 32.7, rest: { x: 40.2, w: 12.7 }, tilt: 0, on: [portRoyal],
   });
   assert.deepEqual(unit(list, 'middle-1').stacks.find((s) => s.id === 'M2').slot, unit(list, 'middle-1').room);
   assert.equal(unit(list, 'middle-1').stacks.find((s) => s.id === 'M1').slot, null, 'M1 reaches the usable height');
@@ -73,13 +75,46 @@ test('slots: the air above a stack top reaches over lower neighbours, up to a ta
   assert.equal(b3.rest.w, 16.6);
   // the top shelf has no brackets: T3's air runs from the shelf's left end
   assert.equal(unit(list, 'top-1').slots.find((s) => s.stackId === 'T3').x, 0);
-  // a topper covering the top box: no slot (M3 bonsai, M4 castle)
-  assert.ok(!unit(list, 'middle-2').slots.some((s) => s.stackId === 'M3' || s.stackId === 'M4'));
+  // a topper covering the top box: no top slot (M3 bonsai, M4 castle)
+  assert.ok(!unit(list, 'middle-2').slots.some((s) => s.kind === 'top' && (s.stackId === 'M3' || s.stackId === 'M4')));
   for (const u of list) {
-    for (const s of u.slots) {
+    assert.ok(u.slots.every((s) => s.kind === 'top') && u.standing.every((s) => s.kind === 'standing'), u.id);
+    for (const s of [...u.slots, ...u.standing]) {
       assert.ok(s.rest.w >= MIN_REST && s.rest.x >= s.x - 1e-9 && s.rest.x + s.rest.w <= s.x + s.w + 1e-9, `${u.id} ${s.stackId}`);
       assert.ok(s.h >= 1 && s.y + s.h <= u.height + 1e-9, `${u.id} ${s.stackId}`);
+      assert.ok(s.tilt >= 0 && s.tilt <= TILT + 1e-9 && s.stackIds.includes(s.stackId), `${u.id} ${s.stackId}`);
     }
     assert.deepEqual(u.slots.map((s) => s.h), [...u.slots.map((s) => s.h)].sort((a, b) => b - a), `${u.id}: most height first`);
+    assert.equal(u.room, u.slots[0] ?? null, `${u.id}: room is the best top slot`);
   }
+});
+
+test('standing spaces (#88): the open edge of a box beside something taller', () => {
+  const list = freeSpace(seed.plan, getGame);
+  const title = (id) => getGame(id).title;
+  // Anachrony (T8, 6.2 cm) next to KLASK standing in T9: 4.3 cm wide, 31.8 cm high
+  const anachrony = unit(list, 'top-3').standing.find((s) => s.stackId === 'T8');
+  assert.match(title(anachrony.on[0]), /^Anachrony/);
+  assert.deepEqual([anachrony.x, anachrony.w, anachrony.h], [188.7, 4.3, 31.8]);
+  // Thunder Road (M5, 6 cm) next to M6: 6.5 cm wide, 29.5 cm high
+  const thunder = unit(list, 'middle-3').standing.find((s) => s.stackId === 'M5' && s.y === 6);
+  assert.match(title(thunder.on[0]), /^Thunder Road/);
+  assert.deepEqual([thunder.x, thunder.w, thunder.h], [145.9, 6.5, 29.5]);
+});
+
+test('tilt (#89): neighbouring surfaces within 0.5 cm make one, never across a bracket', () => {
+  const box = (stackId, gameId, x0, x1, top) => ({ stackId, gameId, x0, x1, top });
+  const middle = ZONES.middle; // brackets at 0, 60, 140, 200
+  // Adam's M1 / M2: an open edge of 2.8 cm at 28.1, then 0.5 cm air, then M2's top at 27.7
+  const pieces = [box('M1', 'a', 10, 39.7, 28.1), box('M1', 'b', 10, 36.9, 35.5), box('M2', 'c', 40.2, 58.6, 27.7)];
+  const [s] = zoneSlots(middle, pieces);
+  assert.deepEqual([s.kind, s.stackId, s.stackIds, s.y, s.tilt, s.rest, s.x, s.w], ['top', 'M2', ['M1', 'M2'], 28.1, 0.4, { x: 36.9, w: 21.7 }, 36.9, 22.9]);
+  assert.deepEqual(s.on, ['a', 'c']);
+  // 0.6 cm apart: two surfaces, and the higher one is a wall for the lower one
+  const apart = zoneSlots(middle, [box('M1', 'a', 10, 39.7, 28.3), box('M1', 'b', 10, 36.9, 35.5), box('M2', 'c', 40.2, 58.6, 27.7)]);
+  assert.equal(apart.length, 2);
+  assert.equal(apart.find((x) => x.stackId === 'M2').x, 39.7);
+  // a bracket between two level tops (at 60 cm): two surfaces
+  const bracket = zoneSlots(middle, [box('M2', 'c', 45, 59.8, 20), box('M3', 'd', 60.2, 75, 20)]);
+  assert.equal(bracket.length, 2);
 });

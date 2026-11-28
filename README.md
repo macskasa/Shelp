@@ -77,7 +77,7 @@ Size: S ≈ 1–2 points, M ≈ 3–5, L ≈ 8, XL ≈ 13.
 | B2 | Game families (Azul, 7 Wonders, Mars…) | S2 | Tony (schema) · Stephen · Bruce · Peter | ✅ Family in the game panel and suggested families on the Data screen, the "spread out" warning, suggestions keep families together (#76); a family highlighted on the map (#81); a Family filter, family in the rows and in search (#79) |
 | D1 | Move a game (drag on desktop, pick a spot on phone) | L8 | Bruce | 🚧 moving works from lists and by tapping the drawing, stacks too; next: the spot sheet lists only spots that work ([part-a7](docs/part-a7.md), [part-b5](docs/part-b5.md)), then drag and drop |
 | D2 | Rule checker (1 cm overhang rule, heights, brackets, 2 deep only in easy spots…) | M5 | Stephen | ✅ (Data screen; behind every move) |
-| D3 | Free space at a glance | S2 | Tony (logic) · Peter (screen) | ✅ the Free space screen (#74); 🚧 how wide the room on top is ([part-c6](docs/part-c6.md)) |
+| D3 | Free space at a glance | S2 | Tony (logic) · Peter (screen) | ✅ the Free space screen (#74), with the width of the room on top (#85); 🚧 standing spaces and tilted surfaces (#88, #89, [part-c7](docs/part-c7.md)) |
 | D4 | Suggest a spot for a new game | L8 | Stephen (logic) · Bruce (screen) | ✅ placing mode shows three suggestions, on a stack or as a new stack |
 | D6 | Undo and saved versions | M5 | Tony · Peter | ✅ (undo/redo, save, restore, compare) |
 | E3 | Export to spreadsheet (CSV) | S1 | Stephen | ✅ |
@@ -88,7 +88,8 @@ Size: S ≈ 1–2 points, M ≈ 3–5, L ≈ 8, XL ≈ 13.
 - ✅ **Placing mode** (`#/map?pick=<id>`, from Move): tap a stack on the drawing, or one of three suggested spots, to open the spot sheet with the stack as it would be. Cancel, Esc and Back leave it.
 - ✅ **The board strip** on the Shelves screen: "Board (n)" and a chip per game; a chip opens the pick-up sheet.
 - ✅ **Stacks** (#75): tap empty shelf in placing mode for **New stack here** (it slides into the gap if the box would run into the next stack); **Move stack** and **Remove stack** in stack details; empty stacks show as a dashed outline; **Renumber** left to right.
-- ⬜ Drag and drop on desktop (Bruce), after Adam has tried moving on his phone.
+- ✅ **Only working spots** (#87): the spot sheet lists only spots that work, best first, with "Show N blocked spots".
+- ⬜ Next (Bruce): drag and drop on desktop.
 
 ### Later
 
@@ -116,7 +117,7 @@ Each developer is a separate Claude chat with this repo attached. They don't see
 | **Tony** | Lead and code reviewer. Owns the shared core, data and docs. | – | `js/core/`, `js/app.js`, `index.html`, `css/base.css`, `data/`, `docs/` |
 | **Stephen** | Part A – data in and out: BGG import, game panel, backup and restore. Round 2: rule checker, CSV export, add a game. Phase B: rules, export and pizza on schema 2. Phase C: bracket rule per box, Move, suggest a spot (D4), game families (B2), easy to reach (#48), checking every spot on a stack | [part-a](docs/part-a.md), [a2](docs/part-a2.md), [a3](docs/part-a3.md), [a4](docs/part-a4.md), [a5](docs/part-a5.md), [a6](docs/part-a6.md), [a7](docs/part-a7.md) | `js/io/`, `js/game/`, `js/rules/` |
 | **Bruce** | Part B – shelf map: model, drawing, stack details, special placements, cupboard. Phase B: the map and the picker on schema 2. Phase C: moving by hand (pick up, placing mode, the board strip, stacks, drag and drop), a family on the map, only working spots | [part-b](docs/part-b.md), [b2](docs/part-b2.md), [b3](docs/part-b3.md), [b4](docs/part-b4.md), [b5](docs/part-b5.md) | `js/map/` |
-| **Peter** | Part C – catalog, search, app frame, offline. Phase B: search wording, the board, Undo. Phase C: saved versions (D6), compare, Move, free space (D3), families in the catalog, room on top with its width | [part-c](docs/part-c.md), [c2](docs/part-c2.md), [c3](docs/part-c3.md), [c4](docs/part-c4.md), [c5](docs/part-c5.md), [c6](docs/part-c6.md) | `js/catalog/`, `js/shell/`, `js/versions/`, `js/space/`, `sw.js`, `manifest.webmanifest`, `icons/` |
+| **Peter** | Part C – catalog, search, app frame, offline. Phase B: search wording, the board, Undo. Phase C: saved versions (D6), compare, Move, free space (D3), families in the catalog, room on top with its width, standing spaces | [part-c](docs/part-c.md), [c2](docs/part-c2.md), [c3](docs/part-c3.md), [c4](docs/part-c4.md), [c5](docs/part-c5.md), [c6](docs/part-c6.md), [c7](docs/part-c7.md) | `js/catalog/`, `js/shell/`, `js/versions/`, `js/space/`, `sw.js`, `manifest.webmanifest`, `icons/` |
 
 The three parts only meet through the contracts in `js/core/contracts.js` (`openGame`, `showOnMap`, `showStack`, `go`) and the store. Placeholders exist for each, so every part can start today and be merged in any order.
 
