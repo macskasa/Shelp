@@ -31,7 +31,7 @@ Tony is the lead and code reviewer.
   - D7 moving checklist, on top of Peter's compare;
   - Bruce shows the D3 numbers on the map;
   - E4 live BGG refresh (needs a server);
-  - D5 full re-plan (in chat; no planner in the repo).
+  - D5 full re-plan: goals decided (see Adam's decisions); after the #93 round, in a fresh budget, with Adam's backup.
 - **Small leftovers, for a later brief:**
   - Ties in the spot sheet keep the spotChoices order; Stephen could return `best`'s rank (reach, height) from `checkSpots` for Bruce to sort by.
   - In free space, "standing" means "below the top of the pile", so wide ledges land there too.
@@ -67,6 +67,11 @@ Tony is the lead and code reviewer.
 - **Free space:** the room on top shows both widths, the air and the box it rests on. Surfaces within 0.5 cm side by side count as one (tilt), also across two stacks but never across a bracket. Standing spaces count (#88, #89).
 - **#48 reach:** brief it (2026-11-27). Tony's score, which Adam didn't object to: +4 outside an easy zone, +2 back row (on every shelf, not only the bottom ones), +1 per box on top, counting at most 3. The text shows the real count.
 - **Moving (2026-11-27):** the spot sheet lists only spots that work, with a "Show N blocked spots" link. Stacks on the map are not dimmed, and Turn keeps all its ways. Drag and drop on desktop is "the way to do it" there; the phone keeps tapping.
+- **D5 re-plan, goals (2026-11-28):** Tony's planner, first version, no limit on moves (Adam won't re-plan often). Use Adam's real backup (expansions inside boxes and families are only there); keep every `inside` as it is. In order:
+  1. As few games as possible in the cupboard, then as many as possible in the front row. Back rows spare the cupboard: easy-to-reach spots first, then elsewhere too (the two-rows warning is accepted there).
+  2. Popular games in easy-to-reach spots, in the front row and near the top of their stacks (low reach score).
+  3. Categories kept together, then families inside them. "Together" is the B2 rule for both: on one stack, or on one shelf with no other stack between.
+  Blocks are never allowed (the plan import refuses them). Output a plan file Adam imports; the moving checklist (#101) gives the steps. Open: a game with several categories counts under the first in `CATEGORIES` order, unless Adam says otherwise.
 - **Join stacks (2026-11-28):** "Join with the next stack" is how a box comes to rest across two stacks. Depth is issue #93, for later.
 
 ## How to review a PR
