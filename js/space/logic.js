@@ -20,6 +20,23 @@ export function floorText(unit) {
 /** "M2" / "M1 and M2": where a slot is. */
 const stacksOf = (slot) => (slot.stackIds?.length > 1 ? slot.stackIds.join(' and ') : slot.stackId);
 
+/** The depth of the shelf of a unit: the deepest air of any slot, or the floor behind a stack up to the back wall. */
+export function shelfDepth(unit) {
+  if (unit.depth > 0) return unit.depth;
+  return Math.max(0, ...[...(unit.slots ?? []), ...(unit.standing ?? [])].map((s) => s.d ?? 0), ...(unit.behind ?? []).map((b) => b.z + b.d));
+}
+
+/** "On B6" / "Across M1 and M2" / "On a_way (front row)": where a slot is. */
+function placeText(slot, nameOf) {
+  if (slot.row === 0 && slot.on?.length) return `On ${slot.on.map((id) => nameOf(id)).join(' + ')} (front row)`;
+  return `${slot.stackIds?.length > 1 ? 'Across' : 'On'} ${stacksOf(slot)}${slot.row === 0 ? ' (front row)' : ''}`;
+}
+
+/** "only 9.5 cm deep" when the air is less deep than the shelf, "" otherwise. */
+function onlyDeep(slot, depth) {
+  return slot.d > 0 && depth > 0 && slot.d < depth && cm(slot.d) !== cm(depth) ? `only ${cm(slot.d)} cm deep` : '';
+}
+
 /** "rests on Port Royal, 12.7 cm" (or just "rests on 12.7 cm" without names). */
 function restsOn(slot, nameOf) {
   const names = (slot.on ?? []).map((id) => nameOf(id));
@@ -32,20 +49,22 @@ function restsOn(slot, nameOf) {
  * A surface across two stacks: "Across M1 and M2: 7.4 cm high · … · 0.4 cm tilt" ("tilt" only when it is above 0).
  * "No room on top" when the height rounds to 0. nameOf(gameId) -> the game's title (defaults to the id).
  */
-export function slotText(slot, nameOf = (id) => id) {
+export function slotText(slot, nameOf = (id) => id, depth = 0) {
   if (cm(slot.h) === '0') return 'No room on top';
   const across = slot.stackIds?.length > 1;
-  const parts = [`${across ? 'Across' : 'On'} ${stacksOf(slot)}: ${cm(slot.h)} cm high`];
+  const parts = [`${placeText(slot, nameOf)}: ${cm(slot.h)} cm high`];
   const rest = slot.rest;
   if (rest && (across || slot.w > rest.w + 2)) parts.push(`${cm(slot.w)} cm of air`);
+  if (onlyDeep(slot, depth)) parts.push(onlyDeep(slot, depth));
   if (rest) parts.push(restsOn(slot, nameOf));
   if (cm(slot.tilt ?? 0) !== '0') parts.push(`${cm(slot.tilt)} cm tilt`);
   return parts.join(' · ');
 }
 
 /** A standing space in words, the width first (it limits a standing box): "On T8: 4.3 cm wide · 31.8 cm high · rests on Anachrony, 4 cm". */
-export function standingText(slot, nameOf = (id) => id) {
-  const parts = [`${slot.stackIds?.length > 1 ? 'Across' : 'On'} ${stacksOf(slot)}: ${cm(slot.w)} cm wide · ${cm(slot.h)} cm high`];
+export function standingText(slot, nameOf = (id) => id, depth = 0) {
+  const parts = [`${placeText(slot, nameOf)}: ${cm(slot.w)} cm wide · ${cm(slot.h)} cm high`];
+  if (onlyDeep(slot, depth)) parts.push(onlyDeep(slot, depth));
   if (slot.rest) parts.push(restsOn(slot, nameOf));
   if (cm(slot.tilt ?? 0) !== '0') parts.push(`${cm(slot.tilt)} cm tilt`);
   return parts.join(' · ');
@@ -53,7 +72,7 @@ export function standingText(slot, nameOf = (id) => id) {
 
 /** The unit's standing spaces, one text each, most height first. */
 export function standingRoom(unit, nameOf) {
-  return (unit.standing ?? []).filter((s) => cm(s.h) !== '0').map((s) => standingText(s, nameOf));
+  return (unit.standing ?? []).filter((s) => cm(s.h) !== '0').map((s) => standingText(s, nameOf, shelfDepth(unit)));
 }
 
 /** "Standing room (3)" for the toggle, "" when there is none. */
@@ -64,20 +83,52 @@ export function standingLabel(unit, nameOf) {
 
 /** The room line of a unit: its best slot in words; "" without stacks; "(not measured)" is added for approximate units. */
 export function roomText(unit, nameOf) {
-  const base = unit.room ? slotText(unit.room, nameOf) : '';
+  const base = unit.room ? slotText(unit.room, nameOf, shelfDepth(unit)) : '';
   if (!unit.approximate) return base;
   return base ? `${base} (not measured)` : '(not measured)';
 }
 
 /** The unit's other slots, one text each, most height first (the best one is the room line). */
 export function moreRoom(unit, nameOf) {
-  return (unit.slots ?? []).filter((s) => s !== unit.room && cm(s.h) !== '0').map((s) => slotText(s, nameOf));
+  return (unit.slots ?? []).filter((s) => s !== unit.room && cm(s.h) !== '0').map((s) => slotText(s, nameOf, shelfDepth(unit)));
 }
 
 /** "More room on top (3)" for the toggle, "" when there is nothing more. */
 export function moreRoomLabel(unit, nameOf) {
   const n = moreRoom(unit, nameOf).length;
   return n ? `More room on top (${n})` : '';
+}
+
+/**
+ * The floor behind the stacks, one line each: { text, easy }.
+ * "Behind B3: 24 cm wide · 14 cm deep · 36.5 cm high"; " · 2 rows warn here" when it is not an easy spot;
+ * "about 20 cm deep" on a unit whose depth isn't measured.
+ */
+export function behindRoom(unit) {
+  return (unit.behind ?? []).map((b) => {
+    const deep = unit.approximate ? `about ${cm(b.d)} cm deep` : `${cm(b.d)} cm deep`;
+    const text = `Behind ${b.stackId}: ${cm(b.w)} cm wide · ${deep} · ${cm(b.h)} cm high${b.easy ? '' : ' · 2 rows warn here'}`;
+    return { text, easy: !!b.easy };
+  });
+}
+
+/** "Room behind (3)" for the toggle, "" when there is none. */
+export function behindLabel(unit) {
+  const n = behindRoom(unit).length;
+  return n ? `Room behind (${n})` : '';
+}
+
+/** "M6", "M6 and M7", "A, B and C": the moved stacks from left to right. */
+function namesText(ids) {
+  return ids.length < 2 ? ids.join('') : `${ids.slice(0, -1).join(', ')} and ${ids[ids.length - 1]}`;
+}
+
+/** The push-to-the-wall line of a unit ("" without a push): "Push M6 and M7 to the wall: the gap at 152.4 cm grows to 2.5 cm (+2.5)". */
+export function pushText(unit) {
+  const p = unit.push;
+  if (!p) return '';
+  const ids = [...p.moves].sort((a, b) => a.from - b.from).map((m) => m.stackId);
+  return `Push ${namesText(ids)} to the wall: the gap at ${cm(p.gap.x)} cm grows to ${cm(p.gap.w)} cm (+${cm(p.gain)})`;
 }
 
 /** Total free floor and the unit with the widest empty stretch (the first one on a tie). */

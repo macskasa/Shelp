@@ -136,3 +136,48 @@ test('tilted surface across two stacks (#89)', () => {
   assert.ok(slotText({ ...slot, stackIds: ['M1'], tilt: 0.4 }).startsWith('On M1:'));
   assert.equal(moreRoom({ room: null, slots: [slot] }, (id) => names[id]).length, 1);
 });
+
+// ── Depth (#93) and push to the wall (#100) ──
+import { behindLabel, behindRoom, pushText, shelfDepth, standingText } from '../js/space/logic.js';
+
+test('room behind: seed lines for B3, T3 (not easy) and N3 (about)', () => {
+  assert.equal(behindRoom(unit('bottom-2'))[0].text, 'Behind B3: 24 cm wide · 14 cm deep · 36.5 cm high');
+  const t3 = behindRoom(unit('top-1')).find((l) => l.text.startsWith('Behind T3'));
+  assert.equal(t3.text, 'Behind T3: 28 cm wide · 10 cm deep · 38 cm high · 2 rows warn here');
+  assert.equal(t3.easy, false);
+  assert.equal(behindRoom(unit('narrow')).find((l) => l.text.startsWith('Behind N3')).text, 'Behind N3: 18 cm wide · about 20 cm deep · 7.9 cm high');
+  assert.equal(behindLabel(unit('bottom-2')), 'Room behind (1)');
+  assert.equal(behindLabel(unit('top-3')), '');
+  assert.deepEqual(behindRoom({}), []);
+});
+
+test('depth in the room lines: only when less deep than the shelf; front row names the box', () => {
+  assert.equal(shelfDepth(unit('bottom-2')), 38);
+  const front = unit('bottom-2').slots.find((s) => s.row === 0);
+  const t = slotText(front, nameOf, 38);
+  assert.match(t, /^On .+ \(front row\): 10 cm high · only 16 cm deep/);
+  assert.ok(t.includes(nameOf(front.on[0])));
+  // today's lines don't change
+  assert.ok(!moreRoom(unit('middle-1'), nameOf).concat(roomText(unit('middle-1'), nameOf)).join().includes('deep'));
+  assert.ok(moreRoom(unit('bottom-2'), nameOf).some((x) => x.includes('only 16 cm deep')));
+  const card = standingRoom(unit('under-cards'), nameOf);
+  assert.ok(card.some((x) => x.includes('(front row)') && x.includes('only 10.8 cm deep')));
+  assert.ok(card.some((x) => !x.includes('deep')));
+});
+
+test('a slot limited by a back-row box (hand-made unit)', () => {
+  const slot = { stackId: 'A1', h: 6, x: 0, w: 10, d: 9.5, row: null, rest: { x: 0, w: 10, d: 5 }, on: ['a'] };
+  const u = { room: slot, approximate: false, slots: [slot, { ...slot, d: 30 }], standing: [] };
+  assert.equal(shelfDepth(u), 30);
+  assert.equal(roomText(u, () => 'Box'), 'On A1: 6 cm high · only 9.5 cm deep · rests on Box, 10 cm');
+  assert.equal(slotText({ ...slot, d: 30 }, () => 'Box', 30), 'On A1: 6 cm high · rests on Box, 10 cm');
+  assert.equal(standingText({ ...slot, y: 0, h: 12 }, () => 'Box', 30), 'On A1: 10 cm wide · 12 cm high · only 9.5 cm deep · rests on Box, 10 cm');
+});
+
+test('push line: the middle (M6 and M7) and bottom (B7 and B8) shelves; none on top', () => {
+  assert.equal(pushText(unit('middle-3')), 'Push M6 and M7 to the wall: the gap at 152.4 cm grows to 2.5 cm (+2.5)');
+  assert.equal(pushText(unit('bottom-3')), 'Push B7 and B8 to the wall: the gap at 144.5 cm grows to 3.8 cm (+3.8)');
+  assert.equal(pushText(unit('top-3')), '');
+  const p = { zone: 'z', moves: [{ stackId: 'C', from: 3 }, { stackId: 'A', from: 1 }, { stackId: 'B', from: 2 }], gap: { x: 1, w: 3 }, gain: 3 };
+  assert.equal(pushText({ push: p }), 'Push A, B and C to the wall: the gap at 1 cm grows to 3 cm (+3)');
+});
